@@ -1,0 +1,71 @@
+﻿node : file:///C:/Use
+rs/Iris%20Del%20Rosar
+io/Desktop/APP%20NUTR
+ICION/nutri-crm/node_
+modules/@supabase/sup
+abase-js/dist/index.m
+js:200
+En línea: 1 
+Carácter: 1
++ node 
+debug_hydration.js 
+2> debug_error.txt
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (file://   
+ /C:/User...t/ind    
+ex.mjs:200:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+		if (!supabaseKey) 
+throw new 
+Error("supabaseKey 
+is required.");
+		                   
+     ^
+
+Error: supabaseKey 
+is required.
+    at new 
+SupabaseClient (file:
+///C:/Users/Iris%20De
+l%20Rosario/Desktop/A
+PP%20NUTRICION/nutri-
+crm/node_modules/@sup
+abase/supabase-js/dis
+t/index.mjs:200:27)
+    at createClient (
+file:///C:/Users/Iris
+%20Del%20Rosario/Desk
+top/APP%20NUTRICION/n
+utri-crm/node_modules
+/@supabase/supabase-j
+s/dist/index.mjs:392:
+9)
+    at file:///C:/Use
+rs/Iris%20Del%20Rosar
+io/Desktop/APP%20NUTR
+ICION/nutri-crm/debug
+_hydration.js:10:18
+    at ModuleJob.run 
+(node:internal/module
+s/esm/module_job:413:
+25)
+    at async onImport
+.tracePromise.__proto
+__ (node:internal/mod
+ules/esm/loader:660:2
+6)
+    at async asyncRun
+EntryPointWithESMLoad
+er (node:internal/mod
+ules/run_main:101:5)
+
+Node.js v24.13.0

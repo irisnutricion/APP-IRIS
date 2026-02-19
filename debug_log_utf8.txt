@@ -1,0 +1,37 @@
+﻿Checking all queries...
+[PASS] patients
+[PASS] marketing_posts
+[PASS] plans
+[PASS] tasks
+[PASS] task_categories
+[PASS] task_types
+[PASS] user_profile
+[PASS] reviews
+[PASS] payments
+[PASS] payment_methods
+[PASS] payment_categories
+[PASS] referral_sources
+node : [FAIL] 
+clinical_options: Could 
+not find the table 
+'public.clinical_options' 
+in the schema cache
+En línea: 1 Carácter: 1
++ node debug_ids.js > 
+debug_log.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: ([  
+  FAIL] clinical...he s   
+ chema cache:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+[PASS] clinical_categories
+[PASS] patient_subscriptions
+[PASS] subscription_types
+[PASS] payment_rates
+[PASS] subscription_pauses

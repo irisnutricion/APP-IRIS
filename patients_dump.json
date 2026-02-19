@@ -1,0 +1,26 @@
+[
+  {
+    "id": "6178fedb-8b22-48b9-936f-0bb2ce8a39b1",
+    "first_name": "Álvaro",
+    "last_name": "Mollá Espinosa",
+    "subscription_end": "2026-03-05"
+  },
+  {
+    "id": "1e2efe51-9a63-4b9c-83a0-18a0b2055221",
+    "first_name": "Test",
+    "last_name": "Debug",
+    "subscription_end": null
+  },
+  {
+    "id": "dfcf01ab-fda2-43e6-a7a2-f47e429cf79c",
+    "first_name": "paciente pruena",
+    "last_name": "hiho",
+    "subscription_end": null
+  },
+  {
+    "id": "ecdaeee4-4f23-479a-a9af-59346c40966e",
+    "first_name": "Ángel",
+    "last_name": "López Blanco",
+    "subscription_end": "2026-01-14"
+  }
+]
