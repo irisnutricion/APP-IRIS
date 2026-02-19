@@ -93,7 +93,7 @@ const Team = () => {
                                     </div>
                                     <div>
                                         <h3 className="text-lg font-bold text-slate-800 dark:text-white">{nutri.label}</h3>
-                                        <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                                        <div className="flex flex-col gap-1 text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                                             {nutri.email && <span className="flex items-center gap-1"><Mail size={13} /> {nutri.email}</span>}
                                             {nutri.phone && <span className="flex items-center gap-1"><Phone size={13} /> {nutri.phone}</span>}
                                         </div>

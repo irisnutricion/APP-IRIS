@@ -888,7 +888,13 @@ export const DataProvider = ({ children }) => {
     };
     const updateNutritionist = async (id, updates) => {
         const { data, error } = await supabase.from('nutritionists').update(updates).eq('id', id).select().single();
-        if (!error) setNutritionists(prev => prev.map(n => n.id === id ? data : n));
+        if (!error) {
+            setNutritionists(prev => prev.map(n => n.id === id ? data : n));
+            // Keep profile name in sync when label (name) changes
+            if (updates.label && data?.user_id) {
+                await supabase.from('profiles').update({ full_name: updates.label }).eq('id', data.user_id);
+            }
+        }
     };
     const deleteNutritionist = async (id) => {
         const { error } = await supabase.from('nutritionists').delete().eq('id', id);

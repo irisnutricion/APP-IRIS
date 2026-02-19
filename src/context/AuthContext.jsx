@@ -9,6 +9,7 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [role, setRole] = useState(null);
     const [nutritionistId, setNutritionistId] = useState(null);
+    const [fullName, setFullName] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -57,7 +58,7 @@ export const AuthProvider = ({ children }) => {
             // Fetch Role from Profiles
             const { data: profileData, error: profileError } = await supabase
                 .from('profiles')
-                .select('role')
+                .select('role, full_name')
                 .eq('id', userId)
                 .single();
 
@@ -66,6 +67,7 @@ export const AuthProvider = ({ children }) => {
                 setRole('nutritionist'); // Fallback
             } else {
                 setRole(profileData?.role ?? 'nutritionist');
+                setFullName(profileData?.full_name ?? null);
             }
 
             // Fetch Nutritionist ID linked to this user
@@ -104,6 +106,7 @@ export const AuthProvider = ({ children }) => {
         user,
         role,
         nutritionistId,
+        fullName,
         isAdmin: role === 'admin',
         loading,
         signOut,

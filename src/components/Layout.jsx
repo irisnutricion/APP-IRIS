@@ -42,7 +42,7 @@ const SidebarItem = ({ icon: Icon, label, path, active }) => (
 
 const Sidebar = ({ isOpen, onClose }) => {
     const location = useLocation();
-    const { isAdmin, user, role } = useAuth();
+    const { isAdmin, user, role, fullName } = useAuth();
 
     // Navigation Items — roles control visibility
     const allNavItems = [
@@ -112,7 +112,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                             <UserCircle className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-900 truncate dark:text-slate-200">{user?.email?.split('@')[0] || 'Usuario'}</p>
+                            <p className="text-sm font-medium text-slate-900 truncate dark:text-slate-200">{fullName || user?.email?.split('@')[0] || 'Usuario'}</p>
                             <p className="text-xs text-slate-500 truncate capitalize dark:text-slate-400">{role === 'admin' ? 'Admin' : 'Nutricionista'}</p>
                         </div>
                     </div>
