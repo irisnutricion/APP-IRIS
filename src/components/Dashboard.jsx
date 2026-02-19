@@ -3,6 +3,7 @@ import { useData } from '../context/DataContext';
 import { Users, Clock, AlertTriangle, Plus, ChevronDown, MoreVertical, Search, Filter, TrendingUp, TrendingDown, CheckSquare, Square } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { addDays, isBefore, parseISO, isSameDay, format } from 'date-fns';
+import { useAuth } from '../context/AuthContext';
 
 const MetricItem = ({ title, value, change, isPositive }) => (
     <div className="flex flex-col p-4 bg-slate-50 rounded-lg border border-slate-100 dark:bg-slate-800 dark:border-slate-700">
@@ -19,66 +20,57 @@ const MetricItem = ({ title, value, change, isPositive }) => (
     </div>
 );
 
+
+
 const Dashboard = () => {
     const { patients, tasks, updateTask, reviews } = useData();
     const navigate = useNavigate();
+    const { isAdmin } = useAuth(); // Get role
 
     // Memoized calculations
-    const { activePatients, pendingRenewals, expiredPlans, marketingCount } = useMemo(() => {
+    const { activePatients, pendingRenewals, expiredPlans, todaysReviews } = useMemo(() => {
         const today = new Date();
-        const warningDate = addDays(today, 7);
+        const active = patients.filter(p => p.subscription_status === 'active').length;
 
+        // Pending renewals (next 7 days)
         const pending = patients.filter(p => {
-            if (!p.subscription?.endDate) return false;
-            const end = parseISO(p.subscription.endDate);
-            return isBefore(end, warningDate) && !isBefore(end, today);
+            if (p.subscription_status !== 'active' || !p.subscription_end) return false;
+            const endDate = parseISO(p.subscription_end);
+            return isBefore(endDate, addDays(today, 7)) && isBefore(today, endDate);
         }).length;
 
+        // Expired plans
         const expired = patients.filter(p => {
-            if (!p.subscription?.endDate) return false;
-            const end = parseISO(p.subscription.endDate);
-            return isBefore(end, today);
+            if (!p.subscription_end) return false; // Ignore if no end date
+            return isBefore(parseISO(p.subscription_end), today) && p.subscription_status === 'active';
         }).length;
+
+        // Today's Reviews
+        const reviewsToday = patients.filter(p => {
+            if (p.subscription_status !== 'active' || !p.subscription_start || !p.review_day) return false;
+
+            // Logic: A patient has a review if today matches their review_day (1=Mon, 7=Sun)
+            // date-fns getDay: 0=Sun, 1=Mon...6=Sat. 
+            // Our App: 1=Mon...7=Sun.
+            const todayDayOfWeek = today.getDay() === 0 ? 7 : today.getDay();
+            return p.review_day === todayDayOfWeek;
+        }).map(p => {
+            // Check if review exists for today
+            const reviewId = `review_${p.id}_${format(today, 'yyyy-MM-dd')}`;
+            const isCompleted = reviews[reviewId]?.completed || false;
+            return {
+                patientId: p.id,
+                patientName: p.name,
+                completed: isCompleted
+            };
+        });
 
         return {
-            activePatients: patients.length,
+            activePatients: active,
             pendingRenewals: pending,
-            expiredPlans: expired
+            expiredPlans: expired,
+            todaysReviews: reviewsToday
         };
-
-    }, [patients]);
-
-    // Calculate Today's Reviews
-    const todaysReviews = useMemo(() => {
-        const today = new Date();
-        return patients.flatMap(patient => {
-            if (!patient.subscription?.startDate) return [];
-            if (patient.subscription?.status === 'paused') return [];
-
-            const start = parseISO(patient.subscription.startDate);
-            const end = patient.subscription.endDate ? parseISO(patient.subscription.endDate) : addDays(start, 30);
-
-            // Check specific review dates
-            let reviewDate = addDays(start, 7);
-            const patientReviews = [];
-
-            while (reviewDate <= end) {
-                if (isSameDay(reviewDate, today)) {
-                    const reviewId = `review_${patient.id}_${format(reviewDate, 'yyyy-MM-dd')}`;
-                    const isCompleted = reviews?.[reviewId]?.completed || false;
-
-                    patientReviews.push({
-                        patientName: patient.name,
-                        patientId: patient.id,
-                        date: reviewDate,
-                        id: reviewId,
-                        completed: isCompleted
-                    });
-                }
-                reviewDate = addDays(reviewDate, 7);
-            }
-            return patientReviews;
-        });
     }, [patients, reviews]);
 
     return (
@@ -95,7 +87,9 @@ const Dashboard = () => {
             <div className="card performance-card">
                 <div className="card-header">
                     <div>
-                        <h2 className="card-title text-lg font-bold text-slate-800 dark:text-slate-100">Rendimiento General</h2>
+                        <h2 className="card-title text-lg font-bold text-slate-800 dark:text-slate-100">
+                            {isAdmin ? 'Rendimiento General' : 'Mi Rendimiento'}
+                        </h2>
                         <p className="card-subtitle text-sm text-slate-500 dark:text-slate-400">{new Date().toLocaleDateString('es-ES', { dateStyle: 'long' })}</p>
                     </div>
                     <div className="card-actions flex gap-2">

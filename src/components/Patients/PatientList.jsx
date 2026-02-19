@@ -1,17 +1,22 @@
 import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 import { Search, Plus, Filter, Trash2, CheckCircle, LayoutGrid, List, ChevronRight, Play } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import PlanStartModal from './PlanStartModal';
 
 const PatientList = () => {
     const { patients, updatePatient } = useData();
+    const { isAdmin, nutritionistId, role } = useAuth(); // Get admin status and nut id
     const navigate = useNavigate(); // Hook initialized
     const [searchTerm, setSearchTerm] = useState('');
     const [draggedPatientId, setDraggedPatientId] = useState(null);
     const [viewMode, setViewMode] = useState('board'); // 'list' or 'board'
     const [filterStatus, setFilterStatus] = useState('all');
+    const [filterScope, setFilterScope] = useState('all'); // 'all' (everyone) or 'mine' (only my cases)
+
+
     const [planStartModalOpen, setPlanStartModalOpen] = useState(false);
     const [selectedPatientId, setSelectedPatientId] = useState(null);
     const [sortOption, setSortOption] = useState('name');
@@ -63,11 +68,26 @@ const PatientList = () => {
         finished: { title: 'Finalizado / Inactivo', color: 'border-l-4 border-slate-400' }
     };
 
+    // Filter Helper Function
+    const filterByScope = (p) => {
+        if (!isAdmin) {
+            // Non-admins always see only their own clients
+            return nutritionistId ? p.nutritionist_id === nutritionistId : false;
+        }
+        // Admins: respect toggle
+        if (filterScope === 'all') return true;
+        if (filterScope === 'mine') return p.nutritionist_id === nutritionistId;
+        return true;
+    };
+
     // Group patients by status
     const groupedPatients = useMemo(() => {
         const groups = { waiting: [], active: [], warning: [], pending_payment: [], paused: [], finished: [], expired: [] };
 
         patients.forEach(p => {
+            // Scope Filter
+            if (!filterByScope(p)) return;
+
             // Search Filter
             if (searchTerm && !p.name.toLowerCase().includes(searchTerm.toLowerCase())) return;
 
@@ -77,11 +97,13 @@ const PatientList = () => {
             }
         });
         return groups;
-    }, [patients, searchTerm]);
+    }, [patients, searchTerm, filterScope, nutritionistId]);
 
     // List View Filtered Data
     const filteredListPatients = useMemo(() => {
         let result = patients.filter(p => {
+            if (!filterByScope(p)) return false;
+
             const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 p.email?.toLowerCase().includes(searchTerm.toLowerCase());
             const status = getPatientStatus(p);
@@ -97,7 +119,7 @@ const PatientList = () => {
             if (sortOption === 'date_asc') return new Date(a.created_at || 0) - new Date(b.created_at || 0);
             return 0;
         });
-    }, [patients, searchTerm, filterStatus, sortOption]);
+    }, [patients, searchTerm, filterStatus, sortOption, filterScope, nutritionistId]);
 
     // Drag Handlers
     const handleDragStart = (e, patientId) => {
@@ -145,6 +167,24 @@ const PatientList = () => {
                     </div>
 
                     <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+                        {/* Admin Filter Scope Toggle */}
+                        {isAdmin && (
+                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm p-1 rounded-lg flex">
+                                <button
+                                    onClick={() => setFilterScope('all')}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${filterScope === 'all' ? 'bg-slate-100 text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
+                                >
+                                    Todos
+                                </button>
+                                <button
+                                    onClick={() => setFilterScope('mine')}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${filterScope === 'mine' ? 'bg-slate-100 text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
+                                >
+                                    Mis Clientes
+                                </button>
+                            </div>
+                        )}
+
                         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm p-1 rounded-lg flex">
                             <button
                                 onClick={() => setViewMode('list')}

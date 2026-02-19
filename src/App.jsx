@@ -1,5 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { DataProvider } from './context/DataContext';
+import { AuthProvider } from './context/AuthContext';
+import Login from './components/Login';
+import ResetPassword from './components/ResetPassword';
+import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import PatientList from './components/Patients/PatientList';
@@ -16,28 +20,39 @@ import Team from './components/Team/Team';
 
 function App() {
   return (
-    <DataProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="patients" element={<PatientList />} />
-            <Route path="patients/new" element={<PatientForm />} />
-            <Route path="patients/:id" element={<PatientDetail />} />
-            <Route path="patients/:id/edit" element={<PatientForm />} />
-            <Route path="tracking" element={<TrackingCalendar />} />
-            <Route path="tasks" element={<Tasks />} />
-            <Route path="renewals" element={<Renewals />} />
-            <Route path="payments" element={<Payments />} />
-            <Route path="team" element={<Team />} />
+    <AuthProvider>
+      <DataProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
-            <Route path="statistics" element={<Statistics />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-      </Router>
-    </DataProvider>
+            <Route element={<ProtectedRoute />}>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="patients" element={<PatientList />} />
+                <Route path="patients/new" element={<PatientForm />} />
+                <Route path="patients/:id" element={<PatientDetail />} />
+                <Route path="patients/:id/edit" element={<PatientForm />} />
+                <Route path="tracking" element={<TrackingCalendar />} />
+                <Route path="tasks" element={<Tasks />} />
+
+                {/* Admin-only routes */}
+                <Route element={<ProtectedRoute requireAdmin />}>
+                  <Route path="renewals" element={<Renewals />} />
+                  <Route path="payments" element={<Payments />} />
+                  <Route path="team" element={<Team />} />
+                  <Route path="statistics" element={<Statistics />} />
+                  <Route path="settings" element={<Settings />} />
+                </Route>
+
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Route>
+          </Routes>
+        </Router>
+      </DataProvider>
+    </AuthProvider>
   );
 }
 

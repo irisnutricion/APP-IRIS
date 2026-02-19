@@ -1,9 +1,16 @@
+import { useState } from 'react';
 import { useData } from '../../context/DataContext';
-import { Users, User, Mail, Phone, UserX } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { Users, User, Mail, Phone, UserX, UserPlus, Link as LinkIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import AddMemberModal from './AddMemberModal';
+import LinkNutritionistModal from './LinkNutritionistModal';
 
 const Team = () => {
-    const { nutritionists, patients } = useData();
+    const { nutritionists, patients, refreshData } = useData(); // Assuming refreshData exists or will be added
+    const { isAdmin } = useAuth();
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
 
     // Group patients by nutritionist
     const activePatients = patients.filter(p => p.subscription_status === 'active' || p.subscription_status === 'paused');
@@ -17,11 +24,29 @@ const Team = () => {
 
     return (
         <div className="dashboard-container">
-            <div className="dashboard-header">
+            <div className="dashboard-header flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div>
                     <h1 className="page-title">Equipo</h1>
                     <p className="page-subtitle">Nutricionistas y sus clientes asignados</p>
                 </div>
+                {isAdmin && (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                        <button
+                            onClick={() => setIsLinkModalOpen(true)}
+                            className="btn-secondary flex items-center justify-center gap-2"
+                        >
+                            <LinkIcon size={18} />
+                            <span>Vincular Existente</span>
+                        </button>
+                        <button
+                            onClick={() => setIsAddModalOpen(true)}
+                            className="btn-primary flex items-center justify-center gap-2"
+                        >
+                            <UserPlus size={18} />
+                            <span>Añadir Miembro</span>
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Summary Stats */}
@@ -93,8 +118,8 @@ const Team = () => {
                                                     {p.first_name} {p.last_name}
                                                 </span>
                                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.subscription_status === 'active'
-                                                        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                                        : 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+                                                    ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                                    : 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
                                                     }`}>
                                                     {p.subscription_status === 'active' ? 'Activo' : 'Pausado'}
                                                 </span>
@@ -136,8 +161,8 @@ const Team = () => {
                                             {p.first_name} {p.last_name}
                                         </span>
                                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.subscription_status === 'active'
-                                                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                                : 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+                                            ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                            : 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
                                             }`}>
                                             {p.subscription_status === 'active' ? 'Activo' : 'Pausado'}
                                         </span>
@@ -148,6 +173,22 @@ const Team = () => {
                     </div>
                 )}
             </div>
+
+            <AddMemberModal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                onMemberAdded={() => {
+                    if (refreshData) refreshData();
+                }}
+            />
+
+            <LinkNutritionistModal
+                isOpen={isLinkModalOpen}
+                onClose={() => setIsLinkModalOpen(false)}
+                onLinked={() => {
+                    if (refreshData) refreshData();
+                }}
+            />
         </div>
     );
 };

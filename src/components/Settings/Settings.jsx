@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useData } from '../../context/DataContext';
+import { supabase } from '../../supabaseClient';
 import {
     Plus, Trash2, Edit2, Check, X, Settings as SettingsIcon, CreditCard, User, Database,
-    Download, Upload, ArrowDown, ArrowUp, Tag, Wallet, ChevronDown, ChevronRight, Layers, Heart, Users
+    Download, Upload, ArrowDown, ArrowUp, Tag, Wallet, ChevronDown, ChevronRight, Layers, Heart, Users, Link as LinkIcon, KeyRound
 } from 'lucide-react';
+import LinkNutritionistModal from '../Team/LinkNutritionistModal';
 
 const Settings = () => {
     const {
@@ -18,7 +20,8 @@ const Settings = () => {
         referralSources, addReferralSource, updateReferralSource, deleteReferralSource,
         clinicalOptions, addClinicalOption, updateClinicalOption, deleteClinicalOption,
         clinicalCategories, addClinicalCategory, updateClinicalCategory, deleteClinicalCategory,
-        nutritionists, addNutritionist, updateNutritionist, deleteNutritionist
+        nutritionists, addNutritionist, updateNutritionist, deleteNutritionist,
+        refreshData
     } = useData();
 
     // Active section for accordion
@@ -38,9 +41,10 @@ const Settings = () => {
     const [isEditingType, setIsEditingType] = useState(null);
     const [typeForm, setTypeForm] = useState({ label: '' });
 
-    // Profile State
-    const [isEditingProfile, setIsEditingProfile] = useState(false);
-    const [profileForm, setProfileForm] = useState({ name: '', email: '', initials: '' });
+    // Link Modal State
+    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+
+    // Profile State - REMOVED
 
     // Payment Method State
     const [isEditingPaymentMethod, setIsEditingPaymentMethod] = useState(null);
@@ -64,7 +68,10 @@ const Settings = () => {
 
     // Nutritionist State
     const [isEditingNutritionist, setIsEditingNutritionist] = useState(null);
-    const [nutriForm, setNutriForm] = useState({ id: '', label: '', email: '', phone: '' });
+    const [nutriForm, setNutriForm] = useState({ id: '', label: '', email: '', phone: '', is_active: true });
+    const [nutriPassword, setNutriPassword] = useState('');
+    const [nutriSaving, setNutriSaving] = useState(false);
+    const [nutriError, setNutriError] = useState(null);
 
     const colorOptions = [
         { label: 'Gris', value: 'bg-slate-100 text-slate-700' },
@@ -76,13 +83,13 @@ const Settings = () => {
     ];
 
     // Section definitions
+    // Section definitions
     const sections = [
         { id: 'tarifas', label: 'Tarifas y Planes', icon: CreditCard, description: 'Planes de suscripción' },
         { id: 'pagos', label: 'Pagos', icon: Wallet, description: 'Métodos y categorías de pago' },
         { id: 'equipo', label: 'Equipo', icon: Users, description: 'Nutricionistas y empleados' },
         { id: 'marketing', label: 'Captación', icon: User, description: 'Fuentes de captación de clientes' },
         { id: 'tareas', label: 'Tareas', icon: Tag, description: 'Etiquetas y tipos de tarea' },
-        { id: 'perfil', label: 'Perfil', icon: User, description: 'Tu información profesional' },
         { id: 'clinical', label: 'Datos Clínicos', icon: Heart, description: 'Opciones de patologías y alimentos' },
         { id: 'datos', label: 'Datos', icon: Database, description: 'Copias de seguridad' },
     ];
@@ -132,15 +139,7 @@ const Settings = () => {
         }
     };
 
-    const startEditProfile = () => {
-        setProfileForm(userProfile);
-        setIsEditingProfile(true);
-    };
 
-    const saveProfile = () => {
-        updateUserProfile(profileForm);
-        setIsEditingProfile(false);
-    };
 
     const handleSaveSubType = () => {
         if (!subTypeForm.label) return;
@@ -280,16 +279,57 @@ const Settings = () => {
     };
 
     // Nutritionist Handlers
-    const handleSaveNutritionist = () => {
+    const handleSaveNutritionist = async () => {
         if (!nutriForm.label) return;
-        const idToSave = nutriForm.id || nutriForm.label.toLowerCase().trim().replace(/\s+/g, '_');
-        if (isEditingNutritionist === 'new') {
-            addNutritionist({ id: idToSave, label: nutriForm.label, email: nutriForm.email || null, phone: nutriForm.phone || null, is_active: true });
-        } else {
-            updateNutritionist(isEditingNutritionist, { label: nutriForm.label, email: nutriForm.email || null, phone: nutriForm.phone || null });
+        setNutriSaving(true);
+        setNutriError(null);
+        try {
+            const idToSave = nutriForm.id || nutriForm.label.toLowerCase().trim().replace(/\s+/g, '_');
+            if (isEditingNutritionist === 'new') {
+                // First create the nutritionist ficha
+                const newNutri = await addNutritionist({ id: idToSave, label: nutriForm.label, email: nutriForm.email || null, phone: nutriForm.phone || null, is_active: nutriForm.is_active });
+                const nutriId = newNutri?.id || idToSave;
+
+                // If email + password provided, create auth user and link
+                // If email + password provided, create auth user and link
+                if (nutriForm.email && nutriPassword) {
+                    try {
+                        const { data: { session } } = await supabase.auth.getSession();
+                        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${session?.access_token}`,
+                            },
+                            body: JSON.stringify({
+                                email: nutriForm.email,
+                                password: nutriPassword,
+                                full_name: nutriForm.label,
+                                nutritionist_id: nutriId,
+                            }),
+                        });
+                        const result = await res.json();
+                        if (!res.ok || result.error) throw new Error(result.error || 'Error al crear el acceso');
+                    } catch (error) {
+                        console.error('Error creating user, rolling back nutritionist:', error);
+                        // Rollback: Delete the nutritionist we just created to prevent orphans/duplicates
+                        await deleteNutritionist(nutriId);
+                        // Re-throw so the UI shows the error
+                        throw error;
+                    }
+                }
+            } else {
+                updateNutritionist(isEditingNutritionist, { label: nutriForm.label, email: nutriForm.email || null, phone: nutriForm.phone || null, is_active: nutriForm.is_active });
+            }
+            setIsEditingNutritionist(null);
+            setNutriForm({ id: '', label: '', email: '', phone: '', is_active: true });
+            setNutriPassword('');
+            if (refreshData) refreshData();
+        } catch (err) {
+            setNutriError(err.message);
+        } finally {
+            setNutriSaving(false);
         }
-        setIsEditingNutritionist(null);
-        setNutriForm({ id: '', label: '', email: '', phone: '' });
     };
 
     const handleDeleteNutritionist = (id) => {
@@ -818,48 +858,6 @@ const Settings = () => {
         </div>
     );
 
-    const renderPerfilSection = () => (
-        <div>
-            {isEditingProfile ? (
-                <div className="space-y-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="form-label">Nombre</label>
-                            <input className="form-input" value={profileForm.name} onChange={e => setProfileForm({ ...profileForm, name: e.target.value })} />
-                        </div>
-                        <div>
-                            <label className="form-label">Email</label>
-                            <input className="form-input" value={profileForm.email} onChange={e => setProfileForm({ ...profileForm, email: e.target.value })} />
-                        </div>
-                        <div>
-                            <label className="form-label">Iniciales</label>
-                            <input className="form-input" value={profileForm.initials} onChange={e => setProfileForm({ ...profileForm, initials: e.target.value })} maxLength={2} />
-                        </div>
-                    </div>
-                    <div className="flex justify-end gap-2 pt-2">
-                        <button onClick={() => setIsEditingProfile(false)} className="btn btn-ghost text-slate-500">Cancelar</button>
-                        <button onClick={saveProfile} className="btn btn-primary">Guardar Cambios</button>
-                    </div>
-                </div>
-            ) : (
-                <div className="flex items-center gap-6 p-4">
-                    <div className="w-20 h-20 rounded-full bg-secondary-400 flex items-center justify-center text-white text-2xl font-bold shadow-md">
-                        {userProfile?.initials}
-                    </div>
-                    <div className="flex-1">
-                        <h4 className="text-lg font-bold text-primary-900 dark:text-white">{userProfile?.name}</h4>
-                        <p className="text-slate-500 dark:text-slate-400">{userProfile?.email}</p>
-                        <div className="mt-2 text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 py-1 px-3 rounded-full inline-block">
-                            Versión {userProfile?.version}
-                        </div>
-                    </div>
-                    <button onClick={startEditProfile} className="btn btn-sm btn-outline">
-                        <Edit2 size={16} className="mr-2" /> Editar Perfil
-                    </button>
-                </div>
-            )}
-        </div>
-    );
 
     const renderDatosSection = () => (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1113,13 +1111,18 @@ const Settings = () => {
                         </h4>
                         <p className="text-sm text-gray-500 mt-1">Gestiona tu equipo de nutricionistas y empleados.</p>
                     </div>
-                    <button onClick={() => { setIsEditingNutritionist('new'); setNutriForm({ id: '', label: '', email: '', phone: '' }); }} className="btn btn-outline shadow-sm" disabled={isEditingNutritionist !== null}>
-                        <Plus size={18} /> Nuevo Nutricionista
-                    </button>
+                    <div className="flex gap-2">
+                        <button onClick={() => setIsLinkModalOpen(true)} className="btn btn-outline shadow-sm">
+                            <LinkIcon size={18} /> Vincular Usuario
+                        </button>
+                        <button onClick={() => { setIsEditingNutritionist('new'); setNutriForm({ id: '', label: '', email: '', phone: '', is_active: true }); }} className="btn btn-outline shadow-sm" disabled={isEditingNutritionist !== null}>
+                            <Plus size={18} /> Nuevo Nutricionista
+                        </button>
+                    </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {nutritionists.map(nutri => (
-                        <div key={nutri.id} className="relative p-6 rounded-2xl border border-gray-100 bg-white dark:bg-slate-800 dark:border-slate-700 hover:shadow-lg transition-all">
+                        <div key={nutri.id} className={`relative p-6 rounded-2xl border transition-all ${nutri.is_active !== false ? 'border-gray-100 bg-white dark:bg-slate-800 dark:border-slate-700' : 'border-gray-100 bg-gray-50 opacity-70'} hover:shadow-lg`}>
                             {isEditingNutritionist === nutri.id ? (
                                 <div className="space-y-4">
                                     <div>
@@ -1134,6 +1137,16 @@ const Settings = () => {
                                         <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Teléfono</label>
                                         <input className="form-input mt-1" value={nutriForm.phone} onChange={e => setNutriForm({ ...nutriForm, phone: e.target.value })} />
                                     </div>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            id={`nutriActive-${nutri.id}`}
+                                            checked={nutriForm.is_active !== false}
+                                            onChange={e => setNutriForm({ ...nutriForm, is_active: e.target.checked })}
+                                            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                        />
+                                        <label htmlFor={`nutriActive-${nutri.id}`} className="text-sm text-gray-700 dark:text-gray-300">Nutricionista Activo</label>
+                                    </div>
                                     <div className="flex gap-2 justify-end pt-2">
                                         <button onClick={() => setIsEditingNutritionist(null)} className="btn btn-sm btn-ghost">Cancelar</button>
                                         <button onClick={handleSaveNutritionist} className="btn btn-sm btn-primary"><Check size={16} /></button>
@@ -1146,13 +1159,17 @@ const Settings = () => {
                                             <User size={20} />
                                         </div>
                                         <div className="flex gap-1">
-                                            <button onClick={() => { setIsEditingNutritionist(nutri.id); setNutriForm({ id: nutri.id, label: nutri.label, email: nutri.email || '', phone: nutri.phone || '' }); }} className="p-1.5 text-slate-400 hover:text-primary-600 rounded-md transition-colors"><Edit2 size={16} /></button>
+                                            <button onClick={() => { setIsEditingNutritionist(nutri.id); setNutriForm({ id: nutri.id, label: nutri.label, email: nutri.email || '', phone: nutri.phone || '', is_active: nutri.is_active }); }} className="p-1.5 text-slate-400 hover:text-primary-600 rounded-md transition-colors"><Edit2 size={16} /></button>
                                             <button onClick={() => handleDeleteNutritionist(nutri.id)} className="p-1.5 text-slate-400 hover:text-red-500 rounded-md transition-colors"><Trash2 size={16} /></button>
                                         </div>
                                     </div>
                                     <h4 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">{nutri.label}</h4>
                                     {nutri.email && <p className="text-sm text-slate-500 dark:text-slate-400">{nutri.email}</p>}
                                     {nutri.phone && <p className="text-sm text-slate-500 dark:text-slate-400">{nutri.phone}</p>}
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        {nutri.user_id && <span className="text-xs text-green-600 font-bold uppercase border border-green-200 bg-green-50 px-2 py-1 rounded">Acceso vinculado</span>}
+                                        {nutri.is_active === false && <span className="text-xs text-red-500 font-bold uppercase border border-red-200 bg-red-50 px-2 py-1 rounded">Inactivo</span>}
+                                    </div>
                                 </>
                             )}
                         </div>
@@ -1160,6 +1177,9 @@ const Settings = () => {
                     {isEditingNutritionist === 'new' && (
                         <div className="p-6 rounded-2xl border border-primary-500 bg-primary-50/20 ring-2 ring-primary-100 dark:ring-primary-900/30">
                             <h4 className="font-bold text-primary-700 mb-4 text-sm flex items-center gap-2"><Plus size={16} /> Nuevo Nutricionista</h4>
+                            {nutriError && (
+                                <div className="mb-3 p-3 rounded-lg bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 text-sm">{nutriError}</div>
+                            )}
                             <div className="space-y-4">
                                 <div>
                                     <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Nombre</label>
@@ -1173,15 +1193,40 @@ const Settings = () => {
                                     <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Teléfono</label>
                                     <input className="form-input mt-1" value={nutriForm.phone} onChange={e => setNutriForm({ ...nutriForm, phone: e.target.value })} placeholder="+34 600 000 000" />
                                 </div>
+                                <div>
+                                    <label className="text-xs font-bold uppercase text-gray-400 tracking-wider flex items-center gap-1"><KeyRound size={12} /> Contraseña de Acceso</label>
+                                    <input type="password" className="form-input mt-1" value={nutriPassword} onChange={e => setNutriPassword(e.target.value)} placeholder="Mínimo 6 caracteres" />
+                                    <p className="text-xs text-slate-400 mt-1">Si rellenas el email y la contraseña, el acceso a la app se crea automáticamente.</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        id="newNutriActive"
+                                        checked={nutriForm.is_active !== false}
+                                        onChange={e => setNutriForm({ ...nutriForm, is_active: e.target.checked })}
+                                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                    />
+                                    <label htmlFor="newNutriActive" className="text-sm text-gray-700 dark:text-gray-300">Nutricionista Activo</label>
+                                </div>
                                 <div className="flex gap-2 justify-end pt-2">
-                                    <button onClick={() => setIsEditingNutritionist(null)} className="btn btn-sm btn-ghost">Cancelar</button>
-                                    <button onClick={handleSaveNutritionist} className="btn btn-sm btn-primary">Crear</button>
+                                    <button onClick={() => { setIsEditingNutritionist(null); setNutriPassword(''); setNutriError(null); }} className="btn btn-sm btn-ghost">Cancelar</button>
+                                    <button onClick={handleSaveNutritionist} disabled={nutriSaving} className="btn btn-sm btn-primary">
+                                        {nutriSaving ? 'Guardando...' : 'Crear'}
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     )}
                 </div>
             </div>
+
+            <LinkNutritionistModal
+                isOpen={isLinkModalOpen}
+                onClose={() => setIsLinkModalOpen(false)}
+                onLinked={() => {
+                    if (refreshData) refreshData();
+                }}
+            />
         </div>
     );
 
@@ -1192,7 +1237,7 @@ const Settings = () => {
             case 'equipo': return renderEquipoSection();
             case 'marketing': return renderMarketingSection();
             case 'tareas': return renderTareasSection();
-            case 'perfil': return renderPerfilSection();
+
             case 'clinical': return renderClinicalSection();
             case 'datos': return renderDatosSection();
             default: return null;

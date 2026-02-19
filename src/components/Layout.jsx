@@ -19,6 +19,7 @@ import { UsersRound } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../utils/cn';
 import { ThemeToggle } from './ThemeToggle.jsx';
+import { useAuth } from '../context/AuthContext';
 
 // Sidebar Item Component
 // eslint-disable-next-line no-unused-vars
@@ -37,24 +38,26 @@ const SidebarItem = ({ icon: Icon, label, path, active }) => (
     </Link>
 );
 
+
+
 const Sidebar = ({ isOpen, onClose }) => {
     const location = useLocation();
+    const { isAdmin, user, role } = useAuth();
 
-    // Adapted Navigation Items for Nutri CRM
-    const navItems = [
-        { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-        { icon: Users, label: 'Clientes', path: '/patients' },
-        { icon: UsersRound, label: 'Equipo', path: '/team' },
-        { icon: Activity, label: 'Seguimiento', path: '/tracking' },
-        { icon: Repeat, label: 'Renovaciones', path: '/renewals' },
-        { icon: ClipboardList, label: 'Tareas', path: '/tasks' },
-
-        { icon: Wallet, label: 'Pagos', path: '/payments' },
-
-        { icon: PieChart, label: 'Estadísticas', path: '/statistics' },
-        { icon: CalendarDays, label: 'Calendario', path: '/calendar' }, // Future feature?
-        { icon: Settings, label: 'Configuración', path: '/settings' },
+    // Navigation Items — roles control visibility
+    const allNavItems = [
+        { icon: LayoutDashboard, label: 'Dashboard', path: '/', adminOnly: false },
+        { icon: Users, label: 'Clientes', path: '/patients', adminOnly: false },
+        { icon: Activity, label: 'Seguimiento', path: '/tracking', adminOnly: false },
+        { icon: ClipboardList, label: 'Tareas', path: '/tasks', adminOnly: false },
+        { icon: Repeat, label: 'Renovaciones', path: '/renewals', adminOnly: true },
+        { icon: Wallet, label: 'Pagos', path: '/payments', adminOnly: true },
+        { icon: UsersRound, label: 'Equipo', path: '/team', adminOnly: true },
+        { icon: PieChart, label: 'Estadísticas', path: '/statistics', adminOnly: true },
+        { icon: Settings, label: 'Configuración', path: '/settings', adminOnly: true },
     ];
+
+    const navItems = allNavItems.filter(item => isAdmin || !item.adminOnly);
 
     // Handle Closing on Mobile Navigation
     const handleNavClick = () => {
@@ -109,8 +112,8 @@ const Sidebar = ({ isOpen, onClose }) => {
                             <UserCircle className="w-5 h-5 text-primary-600 dark:text-primary-400" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-900 truncate dark:text-slate-200">Dra. Iris</p>
-                            <p className="text-xs text-slate-500 truncate capitalize dark:text-slate-400">Nutricionista</p>
+                            <p className="text-sm font-medium text-slate-900 truncate dark:text-slate-200">{user?.email?.split('@')[0] || 'Usuario'}</p>
+                            <p className="text-xs text-slate-500 truncate capitalize dark:text-slate-400">{role === 'admin' ? 'Admin' : 'Nutricionista'}</p>
                         </div>
                     </div>
                 </div>
@@ -121,12 +124,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
 export default function Layout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
-
-    // Mock Logout
-    const handleLogout = () => {
-        console.log("Logout clicked");
-        // Could implement real logout if needed
-    };
+    const { signOut } = useAuth();
 
     return (
         <div className="min-h-screen bg-slate-50 transition-colors duration-300 dark:bg-slate-950">
@@ -146,7 +144,7 @@ export default function Layout() {
                         <ThemeToggle />
                         <div className="h-6 w-px bg-slate-200 dark:bg-slate-700" aria-hidden="true" />
                         <button
-                            onClick={handleLogout}
+                            onClick={signOut}
                             className="flex items-center space-x-2 text-sm text-slate-600 hover:text-red-600 transition-colors dark:text-slate-400 dark:hover:text-red-400"
                         >
                             <LogOut className="w-4 h-4" />

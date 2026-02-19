@@ -884,6 +884,7 @@ export const DataProvider = ({ children }) => {
     const addNutritionist = async (nutri) => {
         const { data, error } = await supabase.from('nutritionists').insert([nutri]).select().single();
         if (!error) setNutritionists(prev => [...prev, data]);
+        return data; // Return the created record so callers can get the ID
     };
     const updateNutritionist = async (id, updates) => {
         const { data, error } = await supabase.from('nutritionists').update(updates).eq('id', id).select().single();
