@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
-import { ArrowLeft, User, Activity, Image as ImageIcon, Wallet, Play, Clock, RefreshCw, Edit2, Trash2, Calendar as CalendarIcon, Copy } from 'lucide-react';
+import { ArrowLeft, User, Activity, Image as ImageIcon, Wallet, Play, Clock, RefreshCw, Edit2, Trash2, Calendar as CalendarIcon, Copy, UtensilsCrossed } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -21,6 +21,7 @@ import ReviewsTab from './Tabs/ReviewsTab';
 import TrackingTab from './Tabs/TrackingTab';
 import PhotosTab from './Tabs/PhotosTab';
 import PaymentsTab from './Tabs/PaymentsTab';
+import PlansTab from './Tabs/PlansTab';
 
 // Modals
 import EditExtensionModal from './Modals/EditExtensionModal';
@@ -291,6 +292,12 @@ const PatientDetail = () => {
                     >
                         <div className="flex items-center gap-2"><Wallet size={18} /> Pagos y Renovaciones</div>
                     </button>
+                    <button
+                        onClick={() => setActiveTab('plans')}
+                        className={`pb-3 px-1 font-medium text-sm transition-all border-b-2 whitespace-nowrap ${activeTab === 'plans' ? 'border-primary text-primary dark:text-primary-400 dark:border-primary-400' : 'border-transparent text-muted hover:text-gray-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
+                    >
+                        <div className="flex items-center gap-2"><UtensilsCrossed size={18} /> Planes</div>
+                    </button>
                 </nav>
             </div>
 
@@ -313,6 +320,8 @@ const PatientDetail = () => {
                 {activeTab === 'reviews' && <ReviewsTab patient={patient} />}
 
                 {activeTab === 'photos' && <PhotosTab patient={patient} />}
+
+                {activeTab === 'plans' && <PlansTab patient={patient} />}
 
                 {activeTab === 'payments' && (
                     <PaymentsTab

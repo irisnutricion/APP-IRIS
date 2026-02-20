@@ -3,9 +3,8 @@ import { useData } from '../../context/DataContext';
 import { supabase } from '../../supabaseClient';
 import {
     Plus, Trash2, Edit2, Check, X, Settings as SettingsIcon, CreditCard, User, Database,
-    Download, Upload, ArrowDown, ArrowUp, Tag, Wallet, ChevronDown, ChevronRight, Layers, Heart, Users, Link as LinkIcon, KeyRound
+    Download, Upload, ArrowDown, ArrowUp, Tag, Wallet, ChevronDown, ChevronRight, Layers, Heart, Users, KeyRound
 } from 'lucide-react';
-import LinkNutritionistModal from '../Team/LinkNutritionistModal';
 
 const Settings = () => {
     const {
@@ -41,8 +40,7 @@ const Settings = () => {
     const [isEditingType, setIsEditingType] = useState(null);
     const [typeForm, setTypeForm] = useState({ label: '' });
 
-    // Link Modal State
-    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+
 
     // Profile State - REMOVED
 
@@ -1111,14 +1109,9 @@ const Settings = () => {
                         </h4>
                         <p className="text-sm text-gray-500 mt-1">Gestiona tu equipo de nutricionistas y empleados.</p>
                     </div>
-                    <div className="flex gap-2">
-                        <button onClick={() => setIsLinkModalOpen(true)} className="btn btn-outline shadow-sm">
-                            <LinkIcon size={18} /> Vincular Usuario
-                        </button>
-                        <button onClick={() => { setIsEditingNutritionist('new'); setNutriForm({ id: '', label: '', email: '', phone: '', is_active: true }); }} className="btn btn-outline shadow-sm" disabled={isEditingNutritionist !== null}>
-                            <Plus size={18} /> Nuevo Nutricionista
-                        </button>
-                    </div>
+                    <button onClick={() => { setIsEditingNutritionist('new'); setNutriForm({ id: '', label: '', email: '', phone: '', is_active: true }); }} className="btn btn-outline shadow-sm" disabled={isEditingNutritionist !== null}>
+                        <Plus size={18} /> Nuevo Nutricionista
+                    </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {nutritionists.map(nutri => (
@@ -1167,7 +1160,7 @@ const Settings = () => {
                                     {nutri.email && <p className="text-sm text-slate-500 dark:text-slate-400">{nutri.email}</p>}
                                     {nutri.phone && <p className="text-sm text-slate-500 dark:text-slate-400">{nutri.phone}</p>}
                                     <div className="flex flex-wrap gap-2 mt-2">
-                                        {nutri.user_id && <span className="text-xs text-green-600 font-bold uppercase border border-green-200 bg-green-50 px-2 py-1 rounded">Acceso vinculado</span>}
+                                        {nutri.user_id && <span className="text-xs text-green-600 font-bold uppercase border border-green-200 bg-green-50 px-2 py-1 rounded">Con acceso</span>}
                                         {nutri.is_active === false && <span className="text-xs text-red-500 font-bold uppercase border border-red-200 bg-red-50 px-2 py-1 rounded">Inactivo</span>}
                                     </div>
                                 </>
@@ -1186,17 +1179,17 @@ const Settings = () => {
                                     <input className="form-input mt-1" value={nutriForm.label} onChange={e => setNutriForm({ ...nutriForm, label: e.target.value })} placeholder="Ej. Ana García" autoFocus />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Email</label>
-                                    <input type="email" className="form-input mt-1" value={nutriForm.email} onChange={e => setNutriForm({ ...nutriForm, email: e.target.value })} placeholder="ana@nutricion.com" />
+                                    <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Email <span className="text-red-400">*</span></label>
+                                    <input type="email" className="form-input mt-1" value={nutriForm.email} onChange={e => setNutriForm({ ...nutriForm, email: e.target.value })} placeholder="ana@nutricion.com" required />
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Teléfono</label>
                                     <input className="form-input mt-1" value={nutriForm.phone} onChange={e => setNutriForm({ ...nutriForm, phone: e.target.value })} placeholder="+34 600 000 000" />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold uppercase text-gray-400 tracking-wider flex items-center gap-1"><KeyRound size={12} /> Contraseña de Acceso</label>
-                                    <input type="password" className="form-input mt-1" value={nutriPassword} onChange={e => setNutriPassword(e.target.value)} placeholder="Mínimo 6 caracteres" />
-                                    <p className="text-xs text-slate-400 mt-1">Si rellenas el email y la contraseña, el acceso a la app se crea automáticamente.</p>
+                                    <label className="text-xs font-bold uppercase text-gray-400 tracking-wider flex items-center gap-1"><KeyRound size={12} /> Contraseña Provisional <span className="text-red-400">*</span></label>
+                                    <input type="password" className="form-input mt-1" value={nutriPassword} onChange={e => setNutriPassword(e.target.value)} placeholder="Mínimo 6 caracteres" minLength={6} required />
+                                    <p className="text-xs text-slate-400 mt-1">El nutricionista la cambiará con "He olvidado mi contraseña".</p>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <input

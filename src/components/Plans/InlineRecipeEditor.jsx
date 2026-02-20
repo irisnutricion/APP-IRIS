@@ -1,0 +1,215 @@
+import { useState, useMemo } from 'react';
+import { X, Search, Plus, Trash2, Save, BookmarkPlus } from 'lucide-react';
+import { useData } from '../../context/DataContext';
+
+/**
+ * InlineRecipeEditor — edita un snapshot de receta sin tocar la original.
+ * Props:
+ *   snapshot: { name, source_recipe_id?, ingredients: [{ food_id, food_name, quantity_grams, kcal_per_100g, carbs, protein, fat }] } | null
+ *   onAccept(snapshot) — devuelve el snapshot editado al plan
+ *   onSaveAsRecipe(snapshot) — guarda como nueva receta en DB
+ *   onClose() — cierra sin cambios
+ */
+export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe, onClose }) {
+    const { foods = [] } = useData();
+
+    const initial = snapshot || { name: '', source_recipe_id: null, ingredients: [] };
+    const [name, setName] = useState(initial.name);
+    const [ingredients, setIngredients] = useState(initial.ingredients || []);
+    const [foodSearch, setFoodSearch] = useState('');
+    const [showFoodSearch, setShowFoodSearch] = useState(false);
+
+    const foodResults = useMemo(() => {
+        if (!foodSearch.trim()) return foods.slice(0, 12);
+        const q = foodSearch.toLowerCase();
+        return foods.filter(f => f.name.toLowerCase().includes(q)).slice(0, 12);
+    }, [foodSearch, foods]);
+
+    const addIngredient = (food) => {
+        // Don't add if already in list
+        if (ingredients.some(i => i.food_id === food.id)) return;
+        setIngredients(prev => [...prev, {
+            food_id: food.id,
+            food_name: food.name,
+            quantity_grams: 100,
+            kcal_per_100g: food.kcal_per_100g || 0,
+            carbs: food.carbs_per_100g || 0,
+            protein: food.protein_per_100g || 0,
+            fat: food.fat_per_100g || 0,
+        }]);
+        setFoodSearch('');
+        setShowFoodSearch(false);
+    };
+
+    const updateQty = (idx, qty) => {
+        setIngredients(prev => prev.map((ing, i) => i === idx ? { ...ing, quantity_grams: parseFloat(qty) || 0 } : ing));
+    };
+
+    const removeIngredient = (idx) => {
+        setIngredients(prev => prev.filter((_, i) => i !== idx));
+    };
+
+    // Calculate macros per ingredient
+    const calcIngMacros = (ing) => {
+        const factor = (ing.quantity_grams || 0) / 100;
+        return {
+            kcal: (ing.kcal_per_100g || 0) * factor,
+            carbs: (ing.carbs || 0) * factor,
+            protein: (ing.protein || 0) * factor,
+            fat: (ing.fat || 0) * factor,
+        };
+    };
+
+    // Total macros
+    const totalMacros = useMemo(() => {
+        return ingredients.reduce((acc, ing) => {
+            const m = calcIngMacros(ing);
+            return { kcal: acc.kcal + m.kcal, carbs: acc.carbs + m.carbs, protein: acc.protein + m.protein, fat: acc.fat + m.fat };
+        }, { kcal: 0, carbs: 0, protein: 0, fat: 0 });
+    }, [ingredients]);
+
+    const buildSnapshot = () => ({
+        name: name.trim() || 'Sin nombre',
+        source_recipe_id: initial.source_recipe_id || null,
+        ingredients,
+    });
+
+    const handleAccept = () => {
+        onAccept(buildSnapshot());
+    };
+
+    const handleSaveAsRecipe = () => {
+        onSaveAsRecipe(buildSnapshot());
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+                {/* Header */}
+                <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                    <input
+                        type="text"
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        placeholder="Nombre de la receta..."
+                        className="text-lg font-bold text-slate-800 dark:text-white bg-transparent border-b-2 border-transparent hover:border-slate-300 focus:border-primary-500 outline-none flex-1 mr-3"
+                    />
+                    <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg dark:hover:bg-slate-800">
+                        <X size={18} />
+                    </button>
+                </div>
+
+                {/* Totals bar */}
+                <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">MACROS TOTALES</span>
+                    <div className="flex gap-4 text-xs font-bold">
+                        <span className="text-orange-600">{Math.round(totalMacros.kcal)} kcal</span>
+                        <span className="text-amber-600">{totalMacros.carbs.toFixed(1)}g HC</span>
+                        <span className="text-blue-600">{totalMacros.protein.toFixed(1)}g Prot</span>
+                        <span className="text-rose-600">{totalMacros.fat.toFixed(1)}g Grasas</span>
+                    </div>
+                </div>
+
+                {/* Ingredients list */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                    {ingredients.length === 0 && !showFoodSearch && (
+                        <p className="text-sm text-slate-400 text-center py-6">Añade ingredientes a esta receta</p>
+                    )}
+
+                    {ingredients.map((ing, idx) => {
+                        const m = calcIngMacros(ing);
+                        return (
+                            <div key={idx} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg group">
+                                <div className="flex-1 min-w-0">
+                                    <span className="text-sm text-slate-700 dark:text-slate-300 font-medium truncate block">{ing.food_name}</span>
+                                    <div className="flex gap-2 text-[10px] text-slate-400 mt-0.5">
+                                        <span className="text-orange-500">{Math.round(m.kcal)} kcal</span>
+                                        <span className="text-amber-500">{m.carbs.toFixed(1)}g HC</span>
+                                        <span className="text-blue-500">{m.protein.toFixed(1)}g P</span>
+                                        <span className="text-rose-500">{m.fat.toFixed(1)}g G</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <input
+                                        type="number"
+                                        value={ing.quantity_grams}
+                                        onChange={e => updateQty(idx, e.target.value)}
+                                        className="w-16 text-center text-sm border border-slate-200 rounded-lg py-1 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                        min="0"
+                                    />
+                                    <span className="text-xs text-slate-400">g</span>
+                                    <button onClick={() => removeIngredient(idx)} className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
+
+                    {/* Add ingredient */}
+                    {showFoodSearch ? (
+                        <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                            <div className="p-2">
+                                <div className="relative">
+                                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                    <input
+                                        type="text"
+                                        value={foodSearch}
+                                        onChange={e => setFoodSearch(e.target.value)}
+                                        placeholder="Buscar alimento..."
+                                        className="w-full pl-7 pr-8 py-1.5 text-sm border border-slate-200 rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                        autoFocus
+                                    />
+                                    <button onClick={() => { setShowFoodSearch(false); setFoodSearch(''); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="max-h-36 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700">
+                                {foodResults.map(f => (
+                                    <button
+                                        key={f.id}
+                                        onClick={() => addIngredient(f)}
+                                        className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-300 flex items-center justify-between"
+                                    >
+                                        <span>{f.name}</span>
+                                        <span className="text-[10px] text-orange-400">{f.kcal_per_100g} kcal/100g</span>
+                                    </button>
+                                ))}
+                                {foodResults.length === 0 && (
+                                    <div className="px-3 py-4 text-center text-sm text-slate-400">Sin resultados</div>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => setShowFoodSearch(true)}
+                            className="w-full py-2 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-400 hover:border-primary-300 hover:text-primary-500 transition-all flex items-center justify-center gap-1"
+                        >
+                            <Plus size={14} /> Añadir ingrediente
+                        </button>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2">
+                    <button
+                        onClick={handleSaveAsRecipe}
+                        className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-purple-600 hover:bg-purple-50 rounded-lg transition-colors dark:text-purple-400 dark:hover:bg-purple-900/20"
+                        title="Guardar en la base de datos como nueva receta"
+                    >
+                        <BookmarkPlus size={16} /> Guardar como receta
+                    </button>
+                    <div className="flex gap-2">
+                        <button onClick={onClose} className="px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 rounded-lg dark:hover:bg-slate-800">
+                            Cancelar
+                        </button>
+                        <button onClick={handleAccept} className="btn btn-primary text-sm py-2">
+                            <Save size={16} /> Aceptar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}

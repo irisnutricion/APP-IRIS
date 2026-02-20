@@ -17,6 +17,8 @@ import TrackingCalendar from './components/Tracking/TrackingCalendar';
 import Tasks from './components/Tasks/Tasks';
 import Payments from './components/Payments/Payments';
 import Team from './components/Team/Team';
+import Foods from './components/Foods/Foods';
+import Recipes from './components/Recipes/Recipes';
 
 function App() {
   return (
@@ -44,6 +46,8 @@ function App() {
                   <Route path="team" element={<Team />} />
                   <Route path="statistics" element={<Statistics />} />
                   <Route path="settings" element={<Settings />} />
+                  <Route path="foods" element={<Foods />} />
+                  <Route path="recipes" element={<Recipes />} />
                 </Route>
 
                 <Route path="*" element={<Navigate to="/" replace />} />

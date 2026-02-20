@@ -16,6 +16,7 @@ import {
     Wallet
 } from 'lucide-react';
 import { UsersRound } from 'lucide-react';
+import { Apple, ChefHat } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../utils/cn';
 import { ThemeToggle } from './ThemeToggle.jsx';
@@ -55,6 +56,8 @@ const Sidebar = ({ isOpen, onClose }) => {
         { icon: UsersRound, label: 'Equipo', path: '/team', adminOnly: true },
         { icon: PieChart, label: 'Estadísticas', path: '/statistics', adminOnly: true },
         { icon: Settings, label: 'Configuración', path: '/settings', adminOnly: true },
+        { icon: Apple, label: 'Alimentos', path: '/foods', adminOnly: true },
+        { icon: ChefHat, label: 'Recetas', path: '/recipes', adminOnly: true },
     ];
 
     const navItems = allNavItems.filter(item => isAdmin || !item.adminOnly);

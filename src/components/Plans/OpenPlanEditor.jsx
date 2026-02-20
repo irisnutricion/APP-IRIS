@@ -1,0 +1,275 @@
+import { useState, useMemo, useEffect } from 'react';
+import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil } from 'lucide-react';
+import { useData } from '../../context/DataContext';
+import { calcSnapshotMacros, recipeToSnapshot } from './ClosedPlanEditor';
+import InlineRecipeEditor from './InlineRecipeEditor';
+
+export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpdatePlan, onSaveAsTemplate }) {
+    const { recipes = [], addRecipe } = useData();
+    const [planName, setPlanName] = useState(plan.name);
+    const [mealNames, setMealNames] = useState(plan.meal_names || ['Desayuno', 'Media mañana', 'Almuerzo', 'Merienda', 'Cena']);
+    const [sections, setSections] = useState({});
+    const [saving, setSaving] = useState(false);
+    const [activeSearch, setActiveSearch] = useState(null);
+    const [recipeSearch, setRecipeSearch] = useState('');
+    const [editingOption, setEditingOption] = useState(null); // { mealName, idx }
+
+    useEffect(() => {
+        const s = {};
+        mealNames.forEach(meal => { s[meal] = []; });
+        items.forEach(item => {
+            if (!s[item.meal_name]) s[item.meal_name] = [];
+            s[item.meal_name].push({
+                recipe_id: item.recipe_id,
+                free_text: item.free_text,
+                recipes: item.recipes,
+                custom_recipe_data: item.custom_recipe_data || null,
+            });
+        });
+        setSections(s);
+    }, [items, mealNames]);
+
+    const recipeResults = useMemo(() => {
+        if (!recipeSearch.trim()) return recipes.filter(r => r.is_active).slice(0, 10);
+        const q = recipeSearch.toLowerCase();
+        return recipes.filter(r => r.is_active && r.name.toLowerCase().includes(q)).slice(0, 10);
+    }, [recipeSearch, recipes]);
+
+    const addOption = (mealName, recipe) => {
+        const snapshot = recipeToSnapshot(recipe);
+        setSections(prev => ({
+            ...prev,
+            [mealName]: [...(prev[mealName] || []), { recipe_id: recipe.id, free_text: null, recipes: recipe, custom_recipe_data: snapshot }],
+        }));
+        setActiveSearch(null);
+        setRecipeSearch('');
+    };
+
+    const addTextOption = (mealName, text) => {
+        if (!text.trim()) return;
+        setSections(prev => ({
+            ...prev,
+            [mealName]: [...(prev[mealName] || []), { recipe_id: null, free_text: text.trim(), recipes: null, custom_recipe_data: null }],
+        }));
+        setActiveSearch(null);
+        setRecipeSearch('');
+    };
+
+    const createInlineOption = (mealName) => {
+        const newIdx = (sections[mealName] || []).length;
+        setSections(prev => ({
+            ...prev,
+            [mealName]: [...(prev[mealName] || []), { recipe_id: null, free_text: null, recipes: null, custom_recipe_data: { name: '', source_recipe_id: null, ingredients: [] } }],
+        }));
+        setEditingOption({ mealName, idx: newIdx });
+        setActiveSearch(null);
+    };
+
+    const removeOption = (mealName, idx) => {
+        setSections(prev => ({ ...prev, [mealName]: prev[mealName].filter((_, i) => i !== idx) }));
+    };
+
+    // Get display name
+    const getOptName = (opt) => {
+        if (opt?.custom_recipe_data?.name) return opt.custom_recipe_data.name;
+        if (opt?.recipes?.name) return opt.recipes.name;
+        return opt?.free_text || '—';
+    };
+
+    // Get macros
+    const getOptMacros = (opt) => {
+        if (opt?.custom_recipe_data) return calcSnapshotMacros(opt.custom_recipe_data);
+        return null;
+    };
+
+    // Average macros for a meal section
+    const getMealAvgMacros = (mealName) => {
+        const opts = (sections[mealName] || []).filter(o => o.custom_recipe_data || o.recipes);
+        if (opts.length === 0) return null;
+        const totals = opts.reduce((acc, o) => {
+            const m = getOptMacros(o) || { kcal: 0, carbs: 0, protein: 0, fat: 0 };
+            return { kcal: acc.kcal + m.kcal, carbs: acc.carbs + m.carbs, protein: acc.protein + m.protein, fat: acc.fat + m.fat };
+        }, { kcal: 0, carbs: 0, protein: 0, fat: 0 });
+        const n = opts.length;
+        return { kcal: totals.kcal / n, carbs: totals.carbs / n, protein: totals.protein / n, fat: totals.fat / n };
+    };
+
+    // Inline editor handlers
+    const handleInlineAccept = (snapshot) => {
+        const { mealName, idx } = editingOption;
+        setSections(prev => ({
+            ...prev,
+            [mealName]: prev[mealName].map((opt, i) => i === idx ? { ...opt, custom_recipe_data: snapshot } : opt),
+        }));
+        setEditingOption(null);
+    };
+
+    const handleInlineSaveAsRecipe = async (snapshot) => {
+        await addRecipe({
+            name: snapshot.name,
+            is_active: true,
+            tags: [],
+        }, snapshot.ingredients.map(ing => ({
+            food_id: ing.food_id,
+            quantity_grams: ing.quantity_grams,
+        })));
+        handleInlineAccept(snapshot);
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            if (planName !== plan.name || JSON.stringify(mealNames) !== JSON.stringify(plan.meal_names)) {
+                await onUpdatePlan({ name: planName, meal_names: mealNames, meals_per_day: mealNames.length });
+            }
+            const newItems = [];
+            mealNames.forEach(meal => {
+                (sections[meal] || []).forEach(opt => {
+                    newItems.push({
+                        meal_name: meal,
+                        day_of_week: null,
+                        recipe_id: opt.recipe_id || null,
+                        free_text: opt.free_text || null,
+                        custom_recipe_data: opt.custom_recipe_data || null,
+                    });
+                });
+            });
+            await onSaveItems(newItems);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const editingSnapshot = editingOption ? (sections[editingOption.mealName]?.[editingOption.idx]?.custom_recipe_data || null) : null;
+
+    return (
+        <div className="space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                    <button onClick={onBack} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl dark:hover:bg-slate-800">
+                        <ArrowLeft size={20} />
+                    </button>
+                    <input type="text" value={planName} onChange={e => setPlanName(e.target.value)} className="text-xl font-bold text-slate-800 dark:text-white bg-transparent border-b-2 border-transparent hover:border-slate-300 focus:border-primary-500 outline-none px-1" />
+                </div>
+                <div className="flex items-center gap-2">
+                    <button onClick={onSaveAsTemplate} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg dark:hover:bg-purple-900/20" title="Guardar como plantilla">
+                        <Copy size={18} />
+                    </button>
+                    <button onClick={handleSave} disabled={saving} className="btn btn-primary text-sm py-2">
+                        <Save size={16} /> {saving ? 'Guardando...' : 'Guardar'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Meal sections */}
+            <div className="space-y-4">
+                {mealNames.map(meal => {
+                    const opts = sections[meal] || [];
+                    const avgMacros = getMealAvgMacros(meal);
+                    return (
+                        <div key={meal} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                            <div className="p-4 bg-slate-50 dark:bg-slate-800 flex items-center justify-between">
+                                <h3 className="font-bold text-slate-700 dark:text-slate-200">{meal}</h3>
+                                <div className="flex items-center gap-4">
+                                    {avgMacros && (
+                                        <div className="flex gap-3 text-xs font-semibold">
+                                            <span className="text-orange-600">∅ {Math.round(avgMacros.kcal)} kcal</span>
+                                            <span className="text-amber-600">{avgMacros.carbs.toFixed(1)}g HC</span>
+                                            <span className="text-blue-600">{avgMacros.protein.toFixed(1)}g P</span>
+                                            <span className="text-rose-600">{avgMacros.fat.toFixed(1)}g G</span>
+                                        </div>
+                                    )}
+                                    <span className="text-xs text-slate-400">{opts.length} opciones</span>
+                                </div>
+                            </div>
+
+                            <div className="p-4">
+                                {opts.length === 0 && activeSearch !== meal && (
+                                    <p className="text-sm text-slate-400 text-center py-4">Sin opciones. Añade recetas o texto libre.</p>
+                                )}
+
+                                <div className="space-y-2">
+                                    {opts.map((opt, idx) => {
+                                        const macros = getOptMacros(opt);
+                                        return (
+                                            <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg group cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => (opt.custom_recipe_data || opt.recipes) && setEditingOption({ mealName: meal, idx })}>
+                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    <span className="text-xs font-bold text-slate-300 dark:text-slate-600 w-6">{idx + 1}</span>
+                                                    <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{getOptName(opt)}</span>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    {macros && (
+                                                        <div className="hidden md:flex gap-2 text-xs font-medium">
+                                                            <span className="text-orange-500">{Math.round(macros.kcal)}</span>
+                                                            <span className="text-amber-500">{macros.carbs.toFixed(1)}g</span>
+                                                            <span className="text-blue-500">{macros.protein.toFixed(1)}g</span>
+                                                            <span className="text-rose-500">{macros.fat.toFixed(1)}g</span>
+                                                        </div>
+                                                    )}
+                                                    <button onClick={(e) => { e.stopPropagation(); (opt.custom_recipe_data || opt.recipes) && setEditingOption({ mealName: meal, idx }); }} className="p-1 text-slate-300 hover:text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <Pencil size={14} />
+                                                    </button>
+                                                    <button onClick={(e) => { e.stopPropagation(); removeOption(meal, idx); }} className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Add option */}
+                                {activeSearch === meal ? (
+                                    <div className="mt-3 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                                        <div className="p-2">
+                                            <div className="relative">
+                                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                                <input type="text" value={recipeSearch} onChange={e => setRecipeSearch(e.target.value)} placeholder="Buscar receta..." className="w-full pl-7 pr-8 py-1.5 text-sm border border-slate-200 rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white" autoFocus />
+                                                <button onClick={() => { setActiveSearch(null); setRecipeSearch(''); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="max-h-40 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700">
+                                            {recipeResults.map(r => (
+                                                <button key={r.id} onClick={() => addOption(meal, r)} className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-300">
+                                                    {r.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="border-t border-slate-200 dark:border-slate-700 p-2">
+                                            <input type="text" placeholder="O escribe texto libre..." className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white" onKeyDown={e => { if (e.key === 'Enter') { addTextOption(meal, e.target.value); e.target.value = ''; } }} />
+                                        </div>
+                                        <div className="border-t border-slate-200 dark:border-slate-700 p-1 flex">
+                                            <button onClick={() => createInlineOption(meal)} className="flex-1 text-center py-1 text-xs text-primary-500 hover:text-primary-700 font-medium">
+                                                + Crear receta nueva
+                                            </button>
+                                            <button onClick={() => { setActiveSearch(null); setRecipeSearch(''); }} className="flex-1 text-center py-1 text-xs text-slate-400 hover:text-slate-600">
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button onClick={() => { setActiveSearch(meal); setRecipeSearch(''); }} className="mt-3 w-full py-2 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-400 hover:border-primary-300 hover:text-primary-500 transition-all flex items-center justify-center gap-1">
+                                        <Plus size={14} /> Añadir opción
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Inline Recipe Editor Modal */}
+            {editingOption && (
+                <InlineRecipeEditor
+                    snapshot={editingSnapshot}
+                    onAccept={handleInlineAccept}
+                    onSaveAsRecipe={handleInlineSaveAsRecipe}
+                    onClose={() => setEditingOption(null)}
+                />
+            )}
+        </div>
+    );
+}

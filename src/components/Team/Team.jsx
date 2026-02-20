@@ -1,16 +1,14 @@
 import { useState } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
-import { Users, User, Mail, Phone, UserX, UserPlus, Link as LinkIcon } from 'lucide-react';
+import { Users, User, Mail, Phone, UserX, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AddMemberModal from './AddMemberModal';
-import LinkNutritionistModal from './LinkNutritionistModal';
 
 const Team = () => {
-    const { nutritionists, patients, refreshData } = useData(); // Assuming refreshData exists or will be added
+    const { nutritionists, patients, refreshData } = useData();
     const { isAdmin } = useAuth();
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
 
     // Group patients by nutritionist
     const activePatients = patients.filter(p => p.subscription_status === 'active' || p.subscription_status === 'paused');
@@ -30,22 +28,13 @@ const Team = () => {
                     <p className="page-subtitle">Nutricionistas y sus clientes asignados</p>
                 </div>
                 {isAdmin && (
-                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                        <button
-                            onClick={() => setIsLinkModalOpen(true)}
-                            className="btn-secondary flex items-center justify-center gap-2"
-                        >
-                            <LinkIcon size={18} />
-                            <span>Vincular Existente</span>
-                        </button>
-                        <button
-                            onClick={() => setIsAddModalOpen(true)}
-                            className="btn-primary flex items-center justify-center gap-2"
-                        >
-                            <UserPlus size={18} />
-                            <span>Añadir Miembro</span>
-                        </button>
-                    </div>
+                    <button
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="btn-primary flex items-center justify-center gap-2"
+                    >
+                        <UserPlus size={18} />
+                        <span>Nuevo Nutricionista</span>
+                    </button>
                 )}
             </div>
 
@@ -178,14 +167,6 @@ const Team = () => {
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
                 onMemberAdded={() => {
-                    if (refreshData) refreshData();
-                }}
-            />
-
-            <LinkNutritionistModal
-                isOpen={isLinkModalOpen}
-                onClose={() => setIsLinkModalOpen(false)}
-                onLinked={() => {
                     if (refreshData) refreshData();
                 }}
             />

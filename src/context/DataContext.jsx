@@ -27,6 +27,11 @@ export const DataProvider = ({ children }) => {
     const [paymentRates, setPaymentRates] = useState([]);
     const [subscriptionExtensions, setSubscriptionExtensions] = useState([]);
     const [nutritionists, setNutritionists] = useState([]);
+    const [foods, setFoods] = useState([]);
+    const [recipeCategories, setRecipeCategories] = useState([]);
+    const [recipes, setRecipes] = useState([]);
+    const [mealPlans, setMealPlans] = useState([]);
+    const [mealPlanItems, setMealPlanItems] = useState([]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -52,6 +57,11 @@ export const DataProvider = ({ children }) => {
                 supabase.from('payment_rates').select('*').order('amount', { ascending: true }),
                 supabase.from('subscription_extensions').select('*').order('created_at', { ascending: false }),
                 supabase.from('nutritionists').select('*').order('label', { ascending: true }),
+                supabase.from('foods').select('*').order('name', { ascending: true }),
+                supabase.from('recipe_categories').select('*').order('label', { ascending: true }),
+                supabase.from('recipes').select('*, recipe_category_links(category_id), recipe_ingredients(*, foods(*))').order('name', { ascending: true }),
+                supabase.from('meal_plans').select('*').order('created_at', { ascending: false }),
+                supabase.from('meal_plan_items').select('*, recipes(*, recipe_ingredients(*, foods(*)))').order('sort_order', { ascending: true }),
             ]);
 
             const [
@@ -73,7 +83,12 @@ export const DataProvider = ({ children }) => {
                 subTypesResult,
                 paymentRatesResult,
                 subscriptionExtensionsResult,
-                nutritionistsResult
+                nutritionistsResult,
+                foodsResult,
+                recipeCategoriesResult,
+                recipesResult,
+                mealPlansResult,
+                mealPlanItemsResult
             ] = results;
 
             // Log errors for debugging
@@ -131,6 +146,11 @@ export const DataProvider = ({ children }) => {
             if (paymentRatesResult.status === 'fulfilled') setPaymentRates(paymentRatesResult.value.data || []);
             if (subscriptionExtensionsResult.status === 'fulfilled') setSubscriptionExtensions(subscriptionExtensionsResult.value.data || []);
             if (nutritionistsResult.status === 'fulfilled') setNutritionists(nutritionistsResult.value.data || []);
+            if (foodsResult.status === 'fulfilled') setFoods(foodsResult.value.data || []);
+            if (recipeCategoriesResult.status === 'fulfilled') setRecipeCategories(recipeCategoriesResult.value.data || []);
+            if (recipesResult.status === 'fulfilled') setRecipes(recipesResult.value.data || []);
+            if (mealPlansResult.status === 'fulfilled') setMealPlans(mealPlansResult.value.data || []);
+            if (mealPlanItemsResult.status === 'fulfilled') setMealPlanItems(mealPlanItemsResult.value.data || []);
 
             if (reviewsResult.status === 'fulfilled' && reviewsResult.value.data) {
                 const reviewsObj = reviewsResult.value.data.reduce((acc, r) => {
@@ -901,6 +921,130 @@ export const DataProvider = ({ children }) => {
         if (!error) setNutritionists(prev => prev.filter(n => n.id !== id));
     };
 
+    // FOODS
+    const addFood = async (food) => {
+        const { data, error } = await supabase.from('foods').insert([food]).select().single();
+        if (!error) setFoods(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+        return data;
+    };
+    const updateFood = async (id, updates) => {
+        const { data, error } = await supabase.from('foods').update(updates).eq('id', id).select().single();
+        if (!error) setFoods(prev => prev.map(f => f.id === id ? data : f));
+    };
+    const deleteFood = async (id) => {
+        const { error } = await supabase.from('foods').delete().eq('id', id);
+        if (!error) setFoods(prev => prev.filter(f => f.id !== id));
+    };
+
+    // RECIPES
+    const addRecipe = async (recipe, ingredients = [], categoryIds = []) => {
+        const { data, error } = await supabase.from('recipes').insert([{ name: recipe.name, description: recipe.description, tags: recipe.tags || [] }]).select().single();
+        if (error) return null;
+        // Link categories
+        if (categoryIds.length > 0) {
+            await supabase.from('recipe_category_links').insert(categoryIds.map(cid => ({ recipe_id: data.id, category_id: cid })));
+        }
+        // Add ingredients
+        if (ingredients.length > 0) {
+            await supabase.from('recipe_ingredients').insert(ingredients.map(ing => ({ recipe_id: data.id, food_id: ing.food_id, quantity_grams: ing.quantity_grams })));
+        }
+        await fetchData(); // Refetch to get joined data
+        return data;
+    };
+    const updateRecipe = async (id, recipe, ingredients = [], categoryIds = []) => {
+        await supabase.from('recipes').update({ name: recipe.name, description: recipe.description, tags: recipe.tags || [] }).eq('id', id);
+        // Replace categories
+        await supabase.from('recipe_category_links').delete().eq('recipe_id', id);
+        if (categoryIds.length > 0) {
+            await supabase.from('recipe_category_links').insert(categoryIds.map(cid => ({ recipe_id: id, category_id: cid })));
+        }
+        // Replace ingredients
+        await supabase.from('recipe_ingredients').delete().eq('recipe_id', id);
+        if (ingredients.length > 0) {
+            await supabase.from('recipe_ingredients').insert(ingredients.map(ing => ({ recipe_id: id, food_id: ing.food_id, quantity_grams: ing.quantity_grams })));
+        }
+        await fetchData();
+    };
+    const deleteRecipe = async (id) => {
+        const { error } = await supabase.from('recipes').delete().eq('id', id);
+        if (!error) setRecipes(prev => prev.filter(r => r.id !== id));
+    };
+
+    // RECIPE CATEGORIES
+    const addRecipeCategory = async (cat) => {
+        const { data, error } = await supabase.from('recipe_categories').insert([cat]).select().single();
+        if (!error) setRecipeCategories(prev => [...prev, data]);
+        return data;
+    };
+    const updateRecipeCategory = async (id, updates) => {
+        const { data, error } = await supabase.from('recipe_categories').update(updates).eq('id', id).select().single();
+        if (!error) setRecipeCategories(prev => prev.map(c => c.id === id ? data : c));
+    };
+    const deleteRecipeCategory = async (id) => {
+        const { error } = await supabase.from('recipe_categories').delete().eq('id', id);
+        if (!error) setRecipeCategories(prev => prev.filter(c => c.id !== id));
+    };
+
+    // MEAL PLANS
+    const addMealPlan = async (plan) => {
+        const { data, error } = await supabase.from('meal_plans').insert([plan]).select().single();
+        if (!error) setMealPlans(prev => [data, ...prev]);
+        return data;
+    };
+    const updateMealPlan = async (id, updates) => {
+        const { data, error } = await supabase.from('meal_plans').update(updates).eq('id', id).select().single();
+        if (!error) setMealPlans(prev => prev.map(p => p.id === id ? data : p));
+    };
+    const deleteMealPlan = async (id) => {
+        const { error } = await supabase.from('meal_plans').delete().eq('id', id);
+        if (!error) {
+            setMealPlans(prev => prev.filter(p => p.id !== id));
+            setMealPlanItems(prev => prev.filter(i => i.plan_id !== id));
+        }
+    };
+
+    // MEAL PLAN ITEMS
+    const saveMealPlanItems = async (planId, items) => {
+        // Replace all items for a plan
+        await supabase.from('meal_plan_items').delete().eq('plan_id', planId);
+        if (items.length > 0) {
+            const toInsert = items.map((item, idx) => ({
+                plan_id: planId,
+                meal_name: item.meal_name,
+                day_of_week: item.day_of_week || null,
+                sort_order: idx,
+                recipe_id: item.recipe_id || null,
+                free_text: item.free_text || null,
+                custom_recipe_data: item.custom_recipe_data || null,
+            }));
+            await supabase.from('meal_plan_items').insert(toInsert);
+        }
+        // Refetch items to get joined recipe data
+        const { data } = await supabase.from('meal_plan_items').select('*, recipes(*, recipe_ingredients(*, foods(*)))').eq('plan_id', planId).order('sort_order', { ascending: true });
+        if (data) {
+            setMealPlanItems(prev => [...prev.filter(i => i.plan_id !== planId), ...data]);
+        }
+    };
+
+    // Clone a plan (for templates)
+    const cloneMealPlan = async (sourcePlanId, overrides = {}) => {
+        const sourcePlan = mealPlans.find(p => p.id === sourcePlanId);
+        if (!sourcePlan) return null;
+        const { id, created_at, ...planData } = sourcePlan;
+        const newPlan = await addMealPlan({ ...planData, ...overrides, is_template: false });
+        if (!newPlan) return null;
+        const sourceItems = mealPlanItems.filter(i => i.plan_id === sourcePlanId);
+        const newItems = sourceItems.map(item => ({
+            meal_name: item.meal_name,
+            day_of_week: item.day_of_week,
+            sort_order: item.sort_order,
+            recipe_id: item.recipe_id,
+            free_text: item.free_text,
+        }));
+        await saveMealPlanItems(newPlan.id, newItems);
+        return newPlan;
+    };
+
     // PROFILE
     const updateUserProfile = async (updates) => {
         // User profile is a singleton row usually. ID=1 (from SQL sequence) or any.
@@ -1340,7 +1484,30 @@ export const DataProvider = ({ children }) => {
 
             reviews,
             saveReview,
-            refreshData: fetchData
+            refreshData: fetchData,
+
+            foods,
+            addFood,
+            updateFood,
+            deleteFood,
+
+            recipes,
+            addRecipe,
+            updateRecipe,
+            deleteRecipe,
+
+            recipeCategories,
+            addRecipeCategory,
+            updateRecipeCategory,
+            deleteRecipeCategory,
+
+            mealPlans,
+            mealPlanItems,
+            addMealPlan,
+            updateMealPlan,
+            deleteMealPlan,
+            saveMealPlanItems,
+            cloneMealPlan
         }}>
             {children}
         </DataContext.Provider>
