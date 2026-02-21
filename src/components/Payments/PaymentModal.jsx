@@ -35,7 +35,6 @@ const PaymentModal = ({ isOpen, onClose, initialData = null, defaultPatientId = 
                 plan_id: initialData.payment_rate_id || initialData.plan_id || '',
                 patient_id: targetPatientId || '', // Fix: ensure patient_id is set
                 category: category,
-                category: category,
                 status: initialData.status || 'pagado',
                 payment_method: initialData.payment_method || 'efectivo',
                 billing_period: initialData.billing_period || null,

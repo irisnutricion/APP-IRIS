@@ -1213,13 +1213,7 @@ const Settings = () => {
                 </div>
             </div>
 
-            <LinkNutritionistModal
-                isOpen={isLinkModalOpen}
-                onClose={() => setIsLinkModalOpen(false)}
-                onLinked={() => {
-                    if (refreshData) refreshData();
-                }}
-            />
+
         </div>
     );
 

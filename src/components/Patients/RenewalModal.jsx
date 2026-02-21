@@ -9,7 +9,6 @@ const RenewalModal = ({ isOpen, onClose, patient, suggestedStartDate }) => {
     const [formData, setFormData] = useState({
         subscriptionTypeId: '',
         paymentRateId: '',
-        paymentRateId: '',
         renewal_date: '',
         price: '',
         reviewDay: ''
@@ -43,7 +42,6 @@ const RenewalModal = ({ isOpen, onClose, patient, suggestedStartDate }) => {
 
             setFormData({
                 subscriptionTypeId: currentTypeId,
-                paymentRateId: currentRateId,
                 paymentRateId: currentRateId,
                 renewal_date: defaultDate,
                 price: currentPrice,
@@ -95,8 +93,6 @@ const RenewalModal = ({ isOpen, onClose, patient, suggestedStartDate }) => {
             paymentRateId: formData.paymentRateId,
             price: parseFloat(formData.price),
             startDate: formData.renewal_date,
-            endDate: format(endDate, 'yyyy-MM-dd'),
-            status: 'active',
             endDate: format(endDate, 'yyyy-MM-dd'),
             status: 'active',
             paymentStatus: 'pending',
