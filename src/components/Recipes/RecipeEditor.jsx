@@ -59,6 +59,42 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
         }, { kcal: 0, carbs: 0, protein: 0, fat: 0 });
     }, [ingredients]);
 
+    // Auto-calculate tags based on ingredients
+    useEffect(() => {
+        if (ingredients.length === 0) return;
+
+        const tagsToAutomate = ['sin_gluten', 'sin_lacteos', 'sin_huevo', 'sin_frutos_secos', 'bajo_fodmap', 'sin_legumbres', 'vegano', 'vegetariano'];
+        let commonTags = [...tagsToAutomate];
+
+        ingredients.forEach(ing => {
+            const foodTags = ing.food?.tags || [];
+            commonTags = commonTags.filter(tag => foodTags.includes(tag));
+        });
+
+        setForm(prev => {
+            const newTags = new Set(prev.tags || []);
+            let changed = false;
+
+            tagsToAutomate.forEach(tag => {
+                const hasTag = newTags.has(tag);
+                const shouldHaveTag = commonTags.includes(tag);
+
+                if (shouldHaveTag && !hasTag) {
+                    newTags.add(tag);
+                    changed = true;
+                } else if (!shouldHaveTag && hasTag) {
+                    newTags.delete(tag);
+                    changed = true;
+                }
+            });
+
+            if (changed) {
+                return { ...prev, tags: Array.from(newTags) };
+            }
+            return prev;
+        });
+    }, [ingredients]);
+
     const toggleCategory = (catId) => {
         setSelectedCategories(prev =>
             prev.includes(catId) ? prev.filter(c => c !== catId) : [...prev, catId]
@@ -154,8 +190,8 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
                                 type="button"
                                 onClick={() => toggleCategory(cat.id)}
                                 className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${selectedCategories.includes(cat.id)
-                                        ? 'bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-700'
-                                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-600'
+                                    ? 'bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-700'
+                                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-600'
                                     }`}
                             >
                                 {cat.label}
@@ -174,8 +210,8 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
                                 type="button"
                                 onClick={() => toggleTag(tag.id)}
                                 className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${form.tags.includes(tag.id)
-                                        ? 'bg-primary-100 text-primary-700 border-primary-300 dark:bg-primary-900/30 dark:text-primary-400 dark:border-primary-700'
-                                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-600'
+                                    ? 'bg-primary-100 text-primary-700 border-primary-300 dark:bg-primary-900/30 dark:text-primary-400 dark:border-primary-700'
+                                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-600'
                                     }`}
                             >
                                 {tag.label}

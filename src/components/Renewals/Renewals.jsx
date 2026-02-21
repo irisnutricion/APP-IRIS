@@ -10,8 +10,13 @@ const Renewals = () => {
     const { patients, payments } = useData();
     const [currentMonth] = useState(new Date());
 
-    // Filter patients with subscriptions and valid end date
-    const activeSubs = patients.filter(p => p.subscription && p.subscription.endDate);
+    // Filter patients with active subscriptions and valid end date (exclude finalizado/cancelled)
+    const activeSubs = patients.filter(p =>
+        p.subscription &&
+        p.subscription.endDate &&
+        p.subscription_status !== 'finalizado' &&
+        p.subscription_status !== 'cancelled'
+    );
 
     // Logic for status
     const getStatus = (endDate) => {
@@ -35,6 +40,7 @@ const Renewals = () => {
     });
 
     const unpaidRenewals = patients.filter(p => {
+        if (p.subscription_status === 'finalizado' || p.subscription_status === 'cancelled') return false;
         const terms = calculateSubscriptionTerms(p, payments);
         return terms.some(t => t.status === 'active' && !t.isPaid);
     });

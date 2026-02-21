@@ -21,6 +21,27 @@ export function calcRecipeMacros(recipe) {
     }, { kcal: 0, carbs: 0, protein: 0, fat: 0 });
 }
 
+// Utility: calculate automatic tags for a recipe based on its ingredients
+export function calcRecipeTags(recipe) {
+    const baseTags = recipe.tags || [];
+    const ingredients = recipe?.recipe_ingredients || [];
+
+    if (ingredients.length === 0) return baseTags;
+
+    const tagsToAutomate = ['sin_gluten', 'sin_lacteos', 'sin_huevo', 'sin_frutos_secos', 'bajo_fodmap', 'sin_legumbres', 'vegano', 'vegetariano'];
+    let commonTags = [...tagsToAutomate];
+
+    ingredients.forEach(ri => {
+        const food = ri.foods || ri.food;
+        const foodTags = food?.tags || [];
+        commonTags = commonTags.filter(tag => foodTags.includes(tag));
+    });
+
+    // Combine base tags with the automatic ones (avoiding duplicates)
+    const finalTags = new Set([...baseTags, ...commonTags]);
+    return Array.from(finalTags);
+}
+
 export default function Recipes() {
     const { recipes = [], recipeCategories = [], foods = [], addRecipe, updateRecipe, deleteRecipe } = useData();
     const [search, setSearch] = useState('');
@@ -39,7 +60,8 @@ export default function Recipes() {
             if (!recipe.is_active) return false;
             const matchesSearch = !search || recipe.name.toLowerCase().includes(search.toLowerCase());
             const matchesCategory = !activeCategoryFilter || (recipe.recipe_category_links || []).some(l => l.category_id === activeCategoryFilter);
-            const matchesTags = activeTagFilters.length === 0 || activeTagFilters.every(tag => recipe.tags?.includes(tag));
+            const computedTags = calcRecipeTags(recipe);
+            const matchesTags = activeTagFilters.length === 0 || activeTagFilters.every(tag => computedTags.includes(tag));
             return matchesSearch && matchesCategory && matchesTags;
         });
     }, [recipes, search, activeCategoryFilter, activeTagFilters]);
@@ -175,9 +197,9 @@ export default function Recipes() {
                             <div key={recipe.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 hover:shadow-lg transition-all group">
                                 <div className="flex items-start justify-between mb-3">
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-slate-800 dark:text-white truncate">{recipe.name}</h3>
+                                        <h3 className="font-bold text-slate-800 dark:text-white">{recipe.name}</h3>
                                         {recipe.description && (
-                                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{recipe.description}</p>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{recipe.description}</p>
                                         )}
                                     </div>
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
@@ -222,18 +244,22 @@ export default function Recipes() {
                                 </div>
 
                                 {/* Tags */}
-                                {recipe.tags?.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-3">
-                                        {recipe.tags.map(tagId => {
-                                            const tag = ALL_TAGS.find(t => t.id === tagId);
-                                            return tag ? (
-                                                <span key={tagId} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                                                    {tag.label}
-                                                </span>
-                                            ) : null;
-                                        })}
-                                    </div>
-                                )}
+                                {(() => {
+                                    const computedTags = calcRecipeTags(recipe);
+                                    if (computedTags.length === 0) return null;
+                                    return (
+                                        <div className="flex flex-wrap gap-1 mt-3">
+                                            {computedTags.map(tagId => {
+                                                const tag = ALL_TAGS.find(t => t.id === tagId);
+                                                return tag ? (
+                                                    <span key={tagId} className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                                        {tag.label}
+                                                    </span>
+                                                ) : null;
+                                            })}
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Ingredients count */}
                                 <div className="mt-3 text-xs text-slate-400 dark:text-slate-500">
