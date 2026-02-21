@@ -199,7 +199,7 @@ export default function Recipes() {
                                     <div className="flex-1 min-w-0">
                                         <h3 className="font-bold text-slate-800 dark:text-white">{recipe.name}</h3>
                                         {recipe.description && (
-                                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{recipe.description}</p>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-3">{recipe.description}</p>
                                         )}
                                     </div>
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
