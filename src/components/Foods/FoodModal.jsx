@@ -10,6 +10,7 @@ const ALL_TAGS = [
     { id: 'sin_frutos_secos', label: 'Sin frutos secos' },
     { id: 'bajo_fodmap', label: 'Bajo en FODMAP' },
     { id: 'sin_legumbres', label: 'Sin legumbres' },
+    { id: 'producto_comercial', label: 'Producto comercial' },
 ];
 
 export { ALL_TAGS };
@@ -132,8 +133,8 @@ export default function FoodModal({ isOpen, onClose, onSave, initialData }) {
                                     type="button"
                                     onClick={() => toggleTag(tag.id)}
                                     className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${form.tags.includes(tag.id)
-                                            ? 'bg-primary-100 text-primary-700 border-primary-300 dark:bg-primary-900/30 dark:text-primary-400 dark:border-primary-700'
-                                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-600'
+                                        ? 'bg-primary-100 text-primary-700 border-primary-300 dark:bg-primary-900/30 dark:text-primary-400 dark:border-primary-700'
+                                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-600'
                                         }`}
                                 >
                                     {tag.label}
