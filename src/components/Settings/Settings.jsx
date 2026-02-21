@@ -330,9 +330,47 @@ const Settings = () => {
         }
     };
 
-    const handleDeleteNutritionist = (id) => {
-        if (confirm('¿Seguro que deseas eliminar este nutricionista?')) {
-            deleteNutritionist(id);
+    const handleDeleteNutritionist = async (id, userId) => {
+        if (!confirm('¿Seguro que deseas eliminar este nutricionista? Esto revocará su acceso al sistema si tiene uno.')) return;
+
+        setNutriSaving(true);
+        setNutriError(null);
+        try {
+            if (userId) {
+                // Determine base URL depending on environment
+                const siteUrl = import.meta.env.VITE_SUPABASE_URL; // use project url to hit functions
+
+                // If nutritionist has an auth user, call Edge Function to delete the user completely
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) throw new Error('No hay sesión activa');
+
+                const res = await fetch(`${siteUrl}/functions/v1/delete-user`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
+                    body: JSON.stringify({ targetUserId: userId })
+                });
+
+                const result = await res.json();
+                if (!res.ok || result.error) throw new Error(result.error || 'Error al eliminar el usuario');
+
+                // Edge function deletion handles cascading deletion of profile and nutritionist,
+                // but we also locally update context just in case, or UI will update via subscription.
+            } else {
+                // If no auth user is linked, just delete the nutritionist record directly
+                await deleteNutritionist(id);
+            }
+
+            // Remove from context manually so UI updates immediately
+            setNutritionists(prev => prev.filter(n => n.id !== id));
+
+        } catch (err) {
+            console.error('Error deleting nutritionist:', err);
+            setNutriError(err.message || 'Error al eliminar');
+        } finally {
+            setNutriSaving(false);
         }
     };
 
@@ -1153,7 +1191,7 @@ const Settings = () => {
                                         </div>
                                         <div className="flex gap-1">
                                             <button onClick={() => { setIsEditingNutritionist(nutri.id); setNutriForm({ id: nutri.id, label: nutri.label, email: nutri.email || '', phone: nutri.phone || '', is_active: nutri.is_active }); }} className="p-1.5 text-slate-400 hover:text-primary-600 rounded-md transition-colors"><Edit2 size={16} /></button>
-                                            <button onClick={() => handleDeleteNutritionist(nutri.id)} className="p-1.5 text-slate-400 hover:text-red-500 rounded-md transition-colors"><Trash2 size={16} /></button>
+                                            <button onClick={() => handleDeleteNutritionist(nutri.id, nutri.user_id)} className="p-1.5 text-slate-400 hover:text-red-500 rounded-md transition-colors"><Trash2 size={16} /></button>
                                         </div>
                                     </div>
                                     <h4 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">{nutri.label}</h4>
