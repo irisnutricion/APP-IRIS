@@ -109,6 +109,23 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
         return { kcal: totals.kcal / n, carbs: totals.carbs / n, protein: totals.protein / n, fat: totals.fat / n };
     };
 
+    // Calculate total daily average (sum of averages of each meal)
+    const dailyAvgMacros = useMemo(() => {
+        const totals = { kcal: 0, carbs: 0, protein: 0, fat: 0 };
+        let hasData = false;
+        mealNames.forEach(meal => {
+            const avg = getMealAvgMacros(meal);
+            if (avg) {
+                hasData = true;
+                totals.kcal += avg.kcal;
+                totals.carbs += avg.carbs;
+                totals.protein += avg.protein;
+                totals.fat += avg.fat;
+            }
+        });
+        return hasData ? totals : null;
+    }, [sections, mealNames]);
+
     // Inline editor handlers
     const handleInlineAccept = async (mealName, idx, snapshot) => {
         const newSections = {
@@ -338,10 +355,23 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             {viewMode === 'summary' && (
                 <div className="space-y-6">
                     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
-                        <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                            <PieChart className="text-primary-500" />
-                            Resumen de Opciones y Macros
-                        </h3>
+                        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                <PieChart className="text-primary-500" />
+                                Resumen de Opciones y Macros
+                            </h3>
+                            {dailyAvgMacros && (
+                                <div className="text-right">
+                                    <span className="block text-xs text-slate-500 dark:text-slate-400 font-semibold mb-1 uppercase">Media Diaria Estimada</span>
+                                    <div className="flex gap-3 text-sm font-bold bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
+                                        <span className="text-orange-600">{Math.round(dailyAvgMacros.kcal)} kcal</span>
+                                        <span className="text-amber-600">{dailyAvgMacros.carbs.toFixed(1)}g HC</span>
+                                        <span className="text-blue-600">{dailyAvgMacros.protein.toFixed(1)}g P</span>
+                                        <span className="text-rose-600">{dailyAvgMacros.fat.toFixed(1)}g G</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                         {mealNames.map(meal => {
                             const opts = sections[meal] || [];
                             const avgMacros = getMealAvgMacros(meal);
