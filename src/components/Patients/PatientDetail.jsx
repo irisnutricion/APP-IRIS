@@ -303,9 +303,11 @@ const PatientDetail = () => {
 
             {/* Content */}
             <div className="animate-fade-in relative">
-                {activeTab === 'info' && <InformationTab patient={patient} onEditSubscription={() => handleEditSubscription()} />}
+                <div style={{ display: activeTab === 'info' ? 'block' : 'none' }}>
+                    <InformationTab patient={patient} onEditSubscription={() => handleEditSubscription()} />
+                </div>
 
-                {activeTab === 'tracking' && (
+                <div style={{ display: activeTab === 'tracking' ? 'block' : 'none' }}>
                     <TrackingTab
                         patient={patient}
                         onAddMeasurement={() => {
@@ -315,15 +317,21 @@ const PatientDetail = () => {
                         onEditMeasurement={handleEditMeasurement}
                         onDeleteMeasurement={(id) => deleteMeasurement(id, patient.id)}
                     />
-                )}
+                </div>
 
-                {activeTab === 'reviews' && <ReviewsTab patient={patient} />}
+                <div style={{ display: activeTab === 'reviews' ? 'block' : 'none' }}>
+                    <ReviewsTab patient={patient} />
+                </div>
 
-                {activeTab === 'photos' && <PhotosTab patient={patient} />}
+                <div style={{ display: activeTab === 'photos' ? 'block' : 'none' }}>
+                    <PhotosTab patient={patient} />
+                </div>
 
-                {activeTab === 'plans' && <PlansTab patient={patient} />}
+                <div style={{ display: activeTab === 'plans' ? 'block' : 'none' }}>
+                    <PlansTab patient={patient} />
+                </div>
 
-                {activeTab === 'payments' && (
+                <div style={{ display: activeTab === 'payments' ? 'block' : 'none' }}>
                     <PaymentsTab
                         patientId={patient.id}
                         subscriptionTerms={subscriptionTerms}
@@ -342,7 +350,7 @@ const PatientDetail = () => {
                             setIsEditExtensionModalOpen(true);
                         }}
                     />
-                )}
+                </div>
             </div>
 
             {/* Modals */}
