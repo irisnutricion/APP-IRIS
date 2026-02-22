@@ -45,13 +45,13 @@ function recipeToSnapshot(recipe) {
 
 export { calcSnapshotMacros, recipeToSnapshot };
 
-export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onUpdatePlan, onSaveAsTemplate }) {
+export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onUpdatePlan, onSaveAsTemplate, initialViewMode = 'grid' }) {
     const { recipes = [], addRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null } = useData();
     const [planName, setPlanName] = useState(plan.name);
     const [planIndications, setPlanIndications] = useState(plan.indications || '');
     const [mealNames, setMealNames] = useState(plan.meal_names || ['Desayuno', 'Media mañana', 'Almuerzo', 'Merienda', 'Cena']);
     const [grid, setGrid] = useState({});
-    const [viewMode, setViewMode] = useState('grid');
+    const [viewMode, setViewMode] = useState(initialViewMode);
     const [saving, setSaving] = useState(false);
     const [recipeSearch, setRecipeSearch] = useState('');
     const [activeCell, setActiveCell] = useState(null);

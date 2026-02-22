@@ -5,7 +5,7 @@ import { calcSnapshotMacros, recipeToSnapshot } from './ClosedPlanEditor';
 import InlineRecipeEditor from './InlineRecipeEditor';
 import { generatePlanPdf } from '../../utils/planPdfGenerator';
 
-export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpdatePlan, onSaveAsTemplate }) {
+export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpdatePlan, onSaveAsTemplate, initialViewMode = 'meals' }) {
     const { recipes = [], addRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null } = useData();
     const [planName, setPlanName] = useState(plan.name);
     const [planIndications, setPlanIndications] = useState(plan.indications || '');
@@ -15,7 +15,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     const [activeSearch, setActiveSearch] = useState(null);
     const [recipeSearch, setRecipeSearch] = useState('');
     const [expandedOptions, setExpandedOptions] = useState(new Set()); // Set of `${mealName}_${idx}`
-    const [viewMode, setViewMode] = useState('meals');
+    const [viewMode, setViewMode] = useState(initialViewMode);
     const [showTemplateMenu, setShowTemplateMenu] = useState(false);
 
     useEffect(() => {

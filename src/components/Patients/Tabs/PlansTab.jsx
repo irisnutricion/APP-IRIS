@@ -65,6 +65,7 @@ export default function PlansTab({ patient }) {
                 <OpenPlanEditor
                     plan={currentPlan}
                     items={planItems}
+                    initialViewMode={editingPlan.viewMode || 'meals'}
                     onBack={() => setEditingPlan(null)}
                     onSaveItems={(items) => saveMealPlanItems(currentPlan.id, items)}
                     onUpdatePlan={(updates) => updateMealPlan(currentPlan.id, updates)}
@@ -77,6 +78,7 @@ export default function PlansTab({ patient }) {
             <ClosedPlanEditor
                 plan={currentPlan}
                 items={planItems}
+                initialViewMode={editingPlan.viewMode || 'grid'}
                 onBack={() => setEditingPlan(null)}
                 onSaveItems={(items) => saveMealPlanItems(currentPlan.id, items)}
                 onUpdatePlan={(updates) => updateMealPlan(currentPlan.id, updates)}
@@ -159,8 +161,11 @@ export default function PlansTab({ patient }) {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => setEditingPlan(plan)} className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg dark:hover:bg-primary-900/20" title="Editar">
+                                        <button onClick={() => setEditingPlan(plan)} className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg dark:hover:bg-primary-900/20" title="Editar Menú">
                                             <Pencil size={14} />
+                                        </button>
+                                        <button onClick={() => setEditingPlan({ ...plan, viewMode: 'indications' })} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg dark:hover:bg-blue-900/20" title="Ver Recomendaciones/Indicaciones">
+                                            <FileText size={14} />
                                         </button>
                                         <button onClick={() => handleSaveAsTemplate(plan.id)} className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg dark:hover:bg-purple-900/20" title="Guardar como plantilla">
                                             <Copy size={14} />
