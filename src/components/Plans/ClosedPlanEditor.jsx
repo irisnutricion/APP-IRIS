@@ -137,14 +137,16 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
         });
     };
 
-    const handleInlineAccept = (cellKey, snapshot) => {
-        setGrid(prev => ({
-            ...prev,
+    const handleInlineAccept = async (cellKey, snapshot) => {
+        const newGrid = {
+            ...grid,
             [cellKey]: {
-                ...prev[cellKey],
+                ...grid[cellKey],
                 custom_recipe_data: snapshot,
             },
-        }));
+        };
+        setGrid(newGrid);
+        await performSave(newGrid);
     };
 
     const handleInlineSaveAsRecipe = async (cellKey, snapshot) => {
@@ -156,8 +158,8 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             food_id: ing.food_id,
             quantity_grams: ing.quantity_grams,
         })));
-        // Also accept the snapshot into the plan
-        handleInlineAccept(cellKey, snapshot);
+        // Also accept the snapshot into the plan and save
+        await handleInlineAccept(cellKey, snapshot);
     };
 
     // Create new recipe inline (no base recipe)
@@ -172,7 +174,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
         setActiveCell(null);
     };
 
-    const handleSave = async () => {
+    const performSave = async (currentGrid) => {
         setSaving(true);
         try {
             if (planName !== plan.name || JSON.stringify(mealNames) !== JSON.stringify(plan.meal_names) || planIndications !== (plan.indications || '')) {
@@ -182,7 +184,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             for (let dayIdx = 1; dayIdx <= 7; dayIdx++) {
                 mealNames.forEach(meal => {
                     const key = `${dayIdx}_${meal}`;
-                    const cell = grid[key];
+                    const cell = currentGrid[key];
                     if (cell && (cell.recipe_id || cell.free_text || cell.custom_recipe_data)) {
                         newItems.push({
                             meal_name: meal,
@@ -199,6 +201,8 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             setSaving(false);
         }
     };
+
+    const handleSave = () => performSave(grid);
 
     return (
         <div className="space-y-4">

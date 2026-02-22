@@ -110,11 +110,13 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     };
 
     // Inline editor handlers
-    const handleInlineAccept = (mealName, idx, snapshot) => {
-        setSections(prev => ({
-            ...prev,
-            [mealName]: prev[mealName].map((opt, i) => i === idx ? { ...opt, custom_recipe_data: snapshot } : opt),
-        }));
+    const handleInlineAccept = async (mealName, idx, snapshot) => {
+        const newSections = {
+            ...sections,
+            [mealName]: sections[mealName].map((opt, i) => i === idx ? { ...opt, custom_recipe_data: snapshot } : opt),
+        };
+        setSections(newSections);
+        await performSave(newSections);
     };
 
     const handleInlineSaveAsRecipe = async (mealName, idx, snapshot) => {
@@ -126,10 +128,10 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             food_id: ing.food_id,
             quantity_grams: ing.quantity_grams,
         })));
-        handleInlineAccept(mealName, idx, snapshot);
+        await handleInlineAccept(mealName, idx, snapshot);
     };
 
-    const handleSave = async () => {
+    const performSave = async (currentSections) => {
         setSaving(true);
         try {
             if (planName !== plan.name || JSON.stringify(mealNames) !== JSON.stringify(plan.meal_names) || planIndications !== (plan.indications || '')) {
@@ -137,7 +139,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             }
             const newItems = [];
             mealNames.forEach(meal => {
-                (sections[meal] || []).forEach(opt => {
+                (currentSections[meal] || []).forEach(opt => {
                     newItems.push({
                         meal_name: meal,
                         day_of_week: null,
@@ -152,6 +154,8 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             setSaving(false);
         }
     };
+
+    const handleSave = () => performSave(sections);
 
     return (
         <div className="space-y-4">
