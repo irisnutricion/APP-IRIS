@@ -1,6 +1,22 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, Plus, Search, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, GripVertical } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+function SortableIngredient({ id, children }) {
+    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
+    const style = { transform: CSS.Transform.toString(transform), transition };
+    return (
+        <div ref={setNodeRef} style={style} className="grid grid-cols-12 gap-2 items-center p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 text-sm group relative">
+            <div {...attributes} {...listeners} className="absolute -left-6 top-1/2 -translate-y-1/2 p-0.5 text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity">
+                <GripVertical size={14} />
+            </div>
+            {children}
+        </div>
+    );
+}
 import { ALL_TAGS } from '../Foods/FoodModal';
 
 export default function RecipeEditor({ recipe, onSave, onCancel }) {
@@ -15,6 +31,23 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
     const [ingredients, setIngredients] = useState([]);
     const [foodSearch, setFoodSearch] = useState('');
     const [editingIngredientId, setEditingIngredientId] = useState(null);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    );
+
+    const handleDragEnd = (event) => {
+        const { active, over } = event;
+        if (over && active.id !== over.id) {
+            setIngredients((items) => {
+                const oldIndex = items.findIndex(i => i.food_id === active.id);
+                const newIndex = items.findIndex(i => i.food_id === over.id);
+                return arrayMove(items, oldIndex, newIndex);
+            });
+        }
+    };
+
     const [showFoodSearch, setShowFoodSearch] = useState(false);
     const [saving, setSaving] = useState(false);
 
@@ -300,89 +333,93 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
                                 <div className="col-span-1 text-right text-rose-500">Grasas</div>
                                 <div className="col-span-2"></div>
                             </div>
-                            {ingredients.map(ing => {
-                                const food = ing.food;
-                                const factor = (ing.quantity_grams || 0) / 100;
-                                return (
-                                    <div key={ing.food_id} className="grid grid-cols-12 gap-2 items-center p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 text-sm group">
-                                        <div className="col-span-4 font-medium text-slate-700 dark:text-slate-300 truncate">
-                                            {editingIngredientId === ing.food_id ? (
-                                                <div className="relative">
-                                                    <div className="flex items-center">
-                                                        <Search className="absolute left-2 text-slate-400" size={12} />
-                                                        <input
-                                                            type="text"
-                                                            value={foodSearch}
-                                                            onChange={e => setFoodSearch(e.target.value)}
-                                                            placeholder="Buscar nuevo alimento..."
-                                                            className="w-full pl-6 pr-6 py-1 text-xs border border-primary-300 rounded-md dark:bg-slate-700 dark:border-primary-600 dark:text-white outline-none focus:ring-1 focus:ring-primary-500"
-                                                            autoFocus
-                                                        />
-                                                        <button onClick={() => { setEditingIngredientId(null); setFoodSearch(''); }} className="absolute right-2 text-slate-400 hover:text-slate-600">
-                                                            <X size={12} />
-                                                        </button>
-                                                    </div>
-                                                    {foodSearch.trim() && (
-                                                        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                                                            {availableFoods.map(f => (
-                                                                <button
-                                                                    key={f.id}
-                                                                    onClick={() => replaceIngredientFood(ing.food_id, f)}
-                                                                    className="w-full text-left px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs text-slate-700 dark:text-slate-300 block truncate"
-                                                                >
-                                                                    {f.name}
+                            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                <SortableContext items={ingredients.map(i => i.food_id)} strategy={verticalListSortingStrategy}>
+                                    {ingredients.map(ing => {
+                                        const food = ing.food;
+                                        const factor = (ing.quantity_grams || 0) / 100;
+                                        return (
+                                            <SortableIngredient key={ing.food_id} id={ing.food_id}>
+                                                <div className="col-span-4 font-medium text-slate-700 dark:text-slate-300 truncate">
+                                                    {editingIngredientId === ing.food_id ? (
+                                                        <div className="relative">
+                                                            <div className="flex items-center">
+                                                                <Search className="absolute left-2 text-slate-400" size={12} />
+                                                                <input
+                                                                    type="text"
+                                                                    value={foodSearch}
+                                                                    onChange={e => setFoodSearch(e.target.value)}
+                                                                    placeholder="Buscar nuevo alimento..."
+                                                                    className="w-full pl-6 pr-6 py-1 text-xs border border-primary-300 rounded-md dark:bg-slate-700 dark:border-primary-600 dark:text-white outline-none focus:ring-1 focus:ring-primary-500"
+                                                                    autoFocus
+                                                                />
+                                                                <button onClick={() => { setEditingIngredientId(null); setFoodSearch(''); }} className="absolute right-2 text-slate-400 hover:text-slate-600">
+                                                                    <X size={12} />
                                                                 </button>
-                                                            ))}
-                                                            {availableFoods.length === 0 && (
-                                                                <div className="px-2 py-1.5 text-xs text-slate-500">Sin resultados</div>
+                                                            </div>
+                                                            {foodSearch.trim() && (
+                                                                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                                                                    {availableFoods.map(f => (
+                                                                        <button
+                                                                            key={f.id}
+                                                                            onClick={() => replaceIngredientFood(ing.food_id, f)}
+                                                                            className="w-full text-left px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs text-slate-700 dark:text-slate-300 block truncate"
+                                                                        >
+                                                                            {f.name}
+                                                                        </button>
+                                                                    ))}
+                                                                    {availableFoods.length === 0 && (
+                                                                        <div className="px-2 py-1.5 text-xs text-slate-500">Sin resultados</div>
+                                                                    )}
+                                                                </div>
                                                             )}
                                                         </div>
+                                                    ) : (
+                                                        <span
+                                                            className="cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 block truncate transition-colors"
+                                                            onClick={() => {
+                                                                setEditingIngredientId(ing.food_id);
+                                                                setFoodSearch('');
+                                                            }}
+                                                            title="Haz clic para cambiar este alimento"
+                                                        >
+                                                            {food?.name}
+                                                        </span>
                                                     )}
                                                 </div>
-                                            ) : (
-                                                <span
-                                                    className="cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 block truncate transition-colors"
-                                                    onClick={() => {
-                                                        setEditingIngredientId(ing.food_id);
-                                                        setFoodSearch('');
-                                                    }}
-                                                    title="Haz clic para cambiar este alimento"
-                                                >
-                                                    {food?.name}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="col-span-2 flex items-center justify-center gap-1">
-                                            <input
-                                                type="number"
-                                                value={ing.quantity_grams}
-                                                onChange={e => updateIngredientQty(ing.food_id, e.target.value)}
-                                                min="0"
-                                                step="5"
-                                                className="w-16 px-1.5 py-1 border border-slate-300 rounded text-center text-xs dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                                            />
-                                            <span className="text-xs text-slate-400">g</span>
-                                        </div>
-                                        <div className="col-span-1 text-right text-xs font-semibold text-orange-600">
-                                            {Math.round((food?.kcal_per_100g || 0) * factor)}
-                                        </div>
-                                        <div className="col-span-1 text-right text-xs text-amber-600">
-                                            {((food?.carbs_per_100g || 0) * factor).toFixed(1)}
-                                        </div>
-                                        <div className="col-span-1 text-right text-xs text-blue-600">
-                                            {((food?.protein_per_100g || 0) * factor).toFixed(1)}
-                                        </div>
-                                        <div className="col-span-1 text-right text-xs text-rose-600">
-                                            {((food?.fat_per_100g || 0) * factor).toFixed(1)}
-                                        </div>
-                                        <div className="col-span-2 text-right">
-                                            <button type="button" onClick={() => removeIngredient(ing.food_id)} className="p-1 text-slate-400 hover:text-red-500 rounded">
-                                                <Trash2 size={14} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                                <div className="col-span-2 flex items-center justify-center gap-1">
+                                                    <input
+                                                        type="number"
+                                                        value={ing.quantity_grams}
+                                                        onChange={e => updateIngredientQty(ing.food_id, e.target.value)}
+                                                        min="0"
+                                                        step="5"
+                                                        className="w-16 px-1.5 py-1 border border-slate-300 rounded text-center text-xs dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                                    />
+                                                    <span className="text-xs text-slate-400">g</span>
+                                                </div>
+                                                <div className="col-span-1 text-right text-xs font-semibold text-orange-600">
+                                                    {Math.round((food?.kcal_per_100g || 0) * factor)}
+                                                </div>
+                                                <div className="col-span-1 text-right text-xs text-amber-600">
+                                                    {((food?.carbs_per_100g || 0) * factor).toFixed(1)}
+                                                </div>
+                                                <div className="col-span-1 text-right text-xs text-blue-600">
+                                                    {((food?.protein_per_100g || 0) * factor).toFixed(1)}
+                                                </div>
+                                                <div className="col-span-1 text-right text-xs text-rose-600">
+                                                    {((food?.fat_per_100g || 0) * factor).toFixed(1)}
+                                                </div>
+                                                <div className="col-span-2 text-right">
+                                                    <button type="button" onClick={() => removeIngredient(ing.food_id)} className="p-1 text-slate-400 hover:text-red-500 rounded">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </SortableIngredient>
+                                        );
+                                    })}
+                                </SortableContext>
+                            </DndContext>
 
                             {/* Total */}
                             <div className="grid grid-cols-12 gap-2 items-center p-2 rounded-lg bg-slate-100 dark:bg-slate-800 font-semibold text-sm border-t-2 border-slate-200 dark:border-slate-700">

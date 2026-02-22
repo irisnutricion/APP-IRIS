@@ -1,6 +1,22 @@
 import { useState, useMemo } from 'react';
-import { X, Search, Plus, Trash2, Save, BookmarkPlus } from 'lucide-react';
+import { Search, X, Trash2, GripVertical } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+function SortableIngredient({ id, children }) {
+    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
+    const style = { transform: CSS.Transform.toString(transform), transition };
+    return (
+        <div ref={setNodeRef} style={style} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg group relative">
+            <div {...attributes} {...listeners} className="absolute -left-6 top-1/2 -translate-y-1/2 p-0.5 text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity">
+                <GripVertical size={14} />
+            </div>
+            {children}
+        </div>
+    );
+}
 
 /**
  * InlineRecipeEditor — edita un snapshot de receta sin tocar la original.
@@ -63,6 +79,22 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
 
     const removeIngredient = (idx) => {
         setIngredients(prev => prev.filter((_, i) => i !== idx));
+    };
+
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    );
+
+    const handleDragEnd = (event) => {
+        const { active, over } = event;
+        if (over && active.id !== over.id) {
+            setIngredients((items) => {
+                const oldIndex = items.findIndex(i => i.food_id === active.id);
+                const newIndex = items.findIndex(i => i.food_id === over.id);
+                return arrayMove(items, oldIndex, newIndex);
+            });
+        }
     };
 
     // Calculate macros per ingredient
@@ -134,79 +166,85 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
                             <p className="text-sm text-slate-400 text-center py-4">Añade ingredientes a esta receta</p>
                         )}
 
-                        {ingredients.map((ing, idx) => {
-                            const m = calcIngMacros(ing);
-                            return (
-                                <div key={idx} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg group">
-                                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                        {editingIngredientIdx === idx ? (
-                                            <div className="relative">
-                                                <div className="flex items-center">
-                                                    <Search className="absolute left-2 text-slate-400" size={12} />
+                        {ingredients.length > 0 && (
+                            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                <SortableContext items={ingredients.map(i => i.food_id)} strategy={verticalListSortingStrategy}>
+                                    {ingredients.map((ing, idx) => {
+                                        const m = calcIngMacros(ing);
+                                        return (
+                                            <SortableIngredient key={ing.food_id} id={ing.food_id}>
+                                                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                                    {editingIngredientIdx === idx ? (
+                                                        <div className="relative">
+                                                            <div className="flex items-center">
+                                                                <Search className="absolute left-2 text-slate-400" size={12} />
+                                                                <input
+                                                                    type="text"
+                                                                    value={foodSearch}
+                                                                    onChange={e => setFoodSearch(e.target.value)}
+                                                                    placeholder="Buscar nuevo alimento..."
+                                                                    className="w-full pl-6 pr-6 py-1 text-xs border border-primary-300 rounded-md dark:bg-slate-700 dark:border-primary-600 dark:text-white outline-none focus:ring-1 focus:ring-primary-500"
+                                                                    autoFocus
+                                                                />
+                                                                <button onClick={() => { setEditingIngredientIdx(null); setFoodSearch(''); }} className="absolute right-2 text-slate-400 hover:text-slate-600">
+                                                                    <X size={12} />
+                                                                </button>
+                                                            </div>
+                                                            {foodSearch.trim() && (
+                                                                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                                                                    {foodResults.map(f => (
+                                                                        <button
+                                                                            key={f.id}
+                                                                            onClick={() => replaceIngredientFood(idx, f)}
+                                                                            className="w-full text-left px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs text-slate-700 dark:text-slate-300 block truncate"
+                                                                        >
+                                                                            {f.name}
+                                                                        </button>
+                                                                    ))}
+                                                                    {foodResults.length === 0 && (
+                                                                        <div className="px-2 py-1.5 text-xs text-slate-500">Sin resultados</div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <span
+                                                            className="text-sm text-slate-700 dark:text-slate-300 font-medium truncate block cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                                                            onClick={() => {
+                                                                setEditingIngredientIdx(idx);
+                                                                setFoodSearch('');
+                                                            }}
+                                                            title="Haz clic para cambiar este alimento"
+                                                        >
+                                                            {ing.food_name}
+                                                        </span>
+                                                    )}
+                                                    <div className="flex gap-2 text-[10px] text-slate-400 mt-0.5">
+                                                        <span className="text-orange-500">{Math.round(m.kcal)} kcal</span>
+                                                        <span className="text-amber-500">{m.carbs.toFixed(1)}g HC</span>
+                                                        <span className="text-blue-500">{m.protein.toFixed(1)}g P</span>
+                                                        <span className="text-rose-500">{m.fat.toFixed(1)}g G</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-1">
                                                     <input
-                                                        type="text"
-                                                        value={foodSearch}
-                                                        onChange={e => setFoodSearch(e.target.value)}
-                                                        placeholder="Buscar nuevo alimento..."
-                                                        className="w-full pl-6 pr-6 py-1 text-xs border border-primary-300 rounded-md dark:bg-slate-700 dark:border-primary-600 dark:text-white outline-none focus:ring-1 focus:ring-primary-500"
-                                                        autoFocus
+                                                        type="number"
+                                                        value={ing.quantity_grams}
+                                                        onChange={e => updateQty(idx, e.target.value)}
+                                                        className="w-14 text-center text-sm border border-slate-200 rounded-lg py-1 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                                        min="0"
                                                     />
-                                                    <button onClick={() => { setEditingIngredientIdx(null); setFoodSearch(''); }} className="absolute right-2 text-slate-400 hover:text-slate-600">
-                                                        <X size={12} />
+                                                    <span className="text-xs text-slate-400">g</span>
+                                                    <button onClick={() => removeIngredient(idx)} className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+                                                        <Trash2 size={14} />
                                                     </button>
                                                 </div>
-                                                {foodSearch.trim() && (
-                                                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                                                        {foodResults.map(f => (
-                                                            <button
-                                                                key={f.id}
-                                                                onClick={() => replaceIngredientFood(idx, f)}
-                                                                className="w-full text-left px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs text-slate-700 dark:text-slate-300 block truncate"
-                                                            >
-                                                                {f.name}
-                                                            </button>
-                                                        ))}
-                                                        {foodResults.length === 0 && (
-                                                            <div className="px-2 py-1.5 text-xs text-slate-500">Sin resultados</div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <span
-                                                className="text-sm text-slate-700 dark:text-slate-300 font-medium truncate block cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
-                                                onClick={() => {
-                                                    setEditingIngredientIdx(idx);
-                                                    setFoodSearch('');
-                                                }}
-                                                title="Haz clic para cambiar este alimento"
-                                            >
-                                                {ing.food_name}
-                                            </span>
-                                        )}
-                                        <div className="flex gap-2 text-[10px] text-slate-400 mt-0.5">
-                                            <span className="text-orange-500">{Math.round(m.kcal)} kcal</span>
-                                            <span className="text-amber-500">{m.carbs.toFixed(1)}g HC</span>
-                                            <span className="text-blue-500">{m.protein.toFixed(1)}g P</span>
-                                            <span className="text-rose-500">{m.fat.toFixed(1)}g G</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <input
-                                            type="number"
-                                            value={ing.quantity_grams}
-                                            onChange={e => updateQty(idx, e.target.value)}
-                                            className="w-14 text-center text-sm border border-slate-200 rounded-lg py-1 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                                            min="0"
-                                        />
-                                        <span className="text-xs text-slate-400">g</span>
-                                        <button onClick={() => removeIngredient(idx)} className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                            </SortableIngredient>
+                                        );
+                                    })}
+                                </SortableContext>
+                            </DndContext>
+                        )}
 
                         {/* Add ingredient form inside Column */}
                         {showFoodSearch ? (
