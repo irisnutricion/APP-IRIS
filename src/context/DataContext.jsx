@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { addDays, differenceInDays, parseISO, format } from 'date-fns';
 import { supabase } from '../supabaseClient';
+import { useAuth } from './AuthContext';
 
 const DataContext = createContext();
 
@@ -8,6 +9,7 @@ const DataContext = createContext();
 export const useData = () => useContext(DataContext);
 
 export const DataProvider = ({ children }) => {
+    const { nutritionistId } = useAuth();
     const [loading, setLoading] = useState(true);
     const [patients, setPatients] = useState([]);
 
@@ -927,7 +929,7 @@ export const DataProvider = ({ children }) => {
 
     // FOODS
     const addFood = async (food) => {
-        const { data, error } = await supabase.from('foods').insert([food]).select().single();
+        const { data, error } = await supabase.from('foods').insert([{ ...food, nutritionist_id: nutritionistId }]).select().single();
         if (!error) setFoods(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
         return data;
     };
@@ -942,7 +944,7 @@ export const DataProvider = ({ children }) => {
 
     // RECIPES
     const addRecipe = async (recipe, ingredients = [], categoryIds = []) => {
-        const { data, error } = await supabase.from('recipes').insert([{ name: recipe.name, description: recipe.description, tags: recipe.tags || [] }]).select().single();
+        const { data, error } = await supabase.from('recipes').insert([{ name: recipe.name, description: recipe.description, tags: recipe.tags || [], nutritionist_id: nutritionistId }]).select().single();
         if (error) return null;
         // Link categories
         if (categoryIds.length > 0) {
@@ -1015,7 +1017,7 @@ export const DataProvider = ({ children }) => {
     // Indication Templates
     const addIndicationTemplate = async (template) => {
         try {
-            const { data, error } = await supabase.from('indication_templates').insert([template]).select().single();
+            const { data, error } = await supabase.from('indication_templates').insert([{ ...template, nutritionist_id: nutritionistId }]).select().single();
             if (error) throw error;
             setIndicationTemplates(prev => [...prev, data]);
             return data;

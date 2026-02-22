@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Plus, Search, ChefHat, Pencil, Trash2, X, ArrowLeft } from 'lucide-react';
+import { Plus, Search, ChefHat, Pencil, Trash2, X, ArrowLeft, Copy } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 import { ALL_TAGS } from '../Foods/FoodModal';
 import RecipeEditor from './RecipeEditor';
 
@@ -42,7 +43,8 @@ export function calcRecipeTags(recipe) {
 }
 
 export default function Recipes() {
-    const { recipes = [], recipeCategories = [], foods = [], addRecipe, updateRecipe, deleteRecipe } = useData();
+    const { recipes = [], recipeCategories = [], foods = [], addRecipe, updateRecipe, deleteRecipe, nutritionists = [] } = useData();
+    const { isAdmin, nutritionistId } = useAuth();
     const [search, setSearch] = useState('');
     const [activeCategoryFilter, setActiveCategoryFilter] = useState(null);
     const [activeTagFilters, setActiveTagFilters] = useState([]);
@@ -65,7 +67,7 @@ export default function Recipes() {
     }, [recipes, search, activeCategoryFilter, activeTagFilters]);
 
     const handleSave = async (recipeData, ingredients, categoryIds) => {
-        if (editingRecipe) {
+        if (editingRecipe && editingRecipe.id) {
             await updateRecipe(editingRecipe.id, recipeData, ingredients, categoryIds);
         } else {
             await addRecipe(recipeData, ingredients, categoryIds);
@@ -88,6 +90,23 @@ export default function Recipes() {
     const handleNew = () => {
         setEditingRecipe(null);
         setIsEditorOpen(true);
+    };
+
+    const handleDuplicate = (recipe) => {
+        // Pass a copy without the id so the editor treats it as a new item
+        setEditingRecipe({ ...recipe, id: null, name: `${recipe.name} (Copia)` });
+        setIsEditorOpen(true);
+    };
+
+    const canModify = (recipe) => {
+        if (isAdmin) return true;
+        return recipe.nutritionist_id === nutritionistId;
+    };
+
+    const getCreatorName = (nutriId) => {
+        if (!nutriId) return 'Iris Gómez'; // Fallback for old ones just in case
+        const nutri = nutritionists.find(n => n.id === nutriId);
+        return nutri?.profiles?.full_name || nutriId;
     };
 
     // If editor is open, show it
@@ -192,17 +211,35 @@ export default function Recipes() {
                             <div key={recipe.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 hover:shadow-lg transition-all group">
                                 <div className="flex items-start justify-between mb-3">
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-slate-800 dark:text-white">{recipe.name}</h3>
+                                        <h3 className="font-bold text-slate-800 dark:text-white line-clamp-1" title={recipe.name}>{recipe.name}</h3>
+                                        <p className="text-xs text-slate-400 mt-0.5">Creador: {getCreatorName(recipe.nutritionist_id)}</p>
                                         {recipe.description && (
-                                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-3">{recipe.description}</p>
+                                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{recipe.description}</p>
                                         )}
                                     </div>
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
-                                        <button onClick={() => handleEdit(recipe)} className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg dark:hover:bg-primary-900/20">
-                                            <Pencil size={14} />
+                                        <button
+                                            onClick={() => handleDuplicate(recipe)}
+                                            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg dark:hover:bg-emerald-900/20"
+                                            title="Usar como plantilla (Duplicar)"
+                                        >
+                                            <Copy size={16} />
                                         </button>
-                                        <button onClick={() => handleDelete(recipe)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg dark:hover:bg-red-900/20">
-                                            <Trash2 size={14} />
+                                        <button
+                                            onClick={() => handleEdit(recipe)}
+                                            className={`p-1.5 text-slate-400 rounded-lg ${!canModify(recipe) ? 'opacity-30 cursor-not-allowed' : 'hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20'}`}
+                                            disabled={!canModify(recipe)}
+                                            title={!canModify(recipe) ? "No tienes permiso para editar" : "Editar"}
+                                        >
+                                            <Pencil size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(recipe)}
+                                            className={`p-1.5 text-slate-400 rounded-lg ${!canModify(recipe) ? 'opacity-30 cursor-not-allowed' : 'hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'}`}
+                                            disabled={!canModify(recipe)}
+                                            title={!canModify(recipe) ? "No tienes permiso para eliminar" : "Eliminar"}
+                                        >
+                                            <Trash2 size={16} />
                                         </button>
                                     </div>
                                 </div>

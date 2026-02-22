@@ -19,6 +19,7 @@ import Payments from './components/Payments/Payments';
 import Team from './components/Team/Team';
 import Foods from './components/Foods/Foods';
 import Recipes from './components/Recipes/Recipes';
+import Recommendations from './components/Recommendations/Recommendations';
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
                 <Route path="patients/:id/edit" element={<PatientForm />} />
                 <Route path="tracking" element={<TrackingCalendar />} />
                 <Route path="tasks" element={<Tasks />} />
+                <Route path="recommendations" element={<Recommendations />} />
 
                 {/* Admin-only routes */}
                 <Route element={<ProtectedRoute requireAdmin />}>

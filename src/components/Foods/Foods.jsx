@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
-import { Plus, Search, Pencil, Trash2, Apple } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Apple, Copy } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 import FoodModal, { ALL_TAGS } from './FoodModal';
 
 export default function Foods() {
-    const { foods = [], addFood, updateFood, deleteFood } = useData();
+    const { foods = [], addFood, updateFood, deleteFood, nutritionists = [] } = useData();
+    const { isAdmin, nutritionistId } = useAuth();
     const [search, setSearch] = useState('');
     const [activeTagFilters, setActiveTagFilters] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,7 +28,7 @@ export default function Foods() {
     }, [foods, search, activeTagFilters]);
 
     const handleSave = async (data) => {
-        if (editingFood) {
+        if (editingFood && editingFood.id) {
             await updateFood(editingFood.id, data);
         } else {
             await addFood(data);
@@ -47,6 +49,22 @@ export default function Foods() {
     const handleNew = () => {
         setEditingFood(null);
         setIsModalOpen(true);
+    };
+
+    const handleDuplicate = (food) => {
+        setEditingFood({ ...food, id: null, name: `${food.name} (Copia)` });
+        setIsModalOpen(true);
+    };
+
+    const canModify = (food) => {
+        if (isAdmin) return true;
+        return food.nutritionist_id === nutritionistId;
+    };
+
+    const getCreatorName = (nutriId) => {
+        if (!nutriId) return 'Iris Gómez';
+        const nutri = nutritionists.find(n => n.id === nutriId);
+        return nutri?.profiles?.full_name || nutriId;
     };
 
     return (
@@ -125,7 +143,10 @@ export default function Foods() {
                             <tbody>
                                 {filteredFoods.map(food => (
                                     <tr key={food.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                        <td className="py-3 px-4 font-medium text-slate-800 dark:text-slate-200">{food.name}</td>
+                                        <td className="py-3 px-4">
+                                            <div className="font-medium text-slate-800 dark:text-slate-200 line-clamp-1" title={food.name}>{food.name}</div>
+                                            <div className="text-[10px] text-slate-400 mt-0.5">Por: {getCreatorName(food.nutritionist_id)}</div>
+                                        </td>
                                         <td className="py-3 px-3 text-right text-sm font-semibold text-orange-600">{food.kcal_per_100g}</td>
                                         <td className="py-3 px-3 text-right text-sm text-amber-600">{food.carbs_per_100g}g</td>
                                         <td className="py-3 px-3 text-right text-sm text-blue-600">{food.protein_per_100g}g</td>
@@ -144,10 +165,27 @@ export default function Foods() {
                                         </td>
                                         <td className="py-3 px-4 text-right">
                                             <div className="flex items-center justify-end gap-1">
-                                                <button onClick={() => handleEdit(food)} className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors dark:hover:bg-primary-900/20">
+                                                <button
+                                                    onClick={() => handleDuplicate(food)}
+                                                    className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors dark:hover:bg-emerald-900/20"
+                                                    title="Usar como plantilla (Duplicar)"
+                                                >
+                                                    <Copy size={15} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleEdit(food)}
+                                                    className={`p-1.5 text-slate-400 rounded-lg transition-colors ${!canModify(food) ? 'opacity-30 cursor-not-allowed' : 'hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20'}`}
+                                                    disabled={!canModify(food)}
+                                                    title={!canModify(food) ? "No tienes permiso para editar" : "Editar"}
+                                                >
                                                     <Pencil size={15} />
                                                 </button>
-                                                <button onClick={() => handleDelete(food)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors dark:hover:bg-red-900/20">
+                                                <button
+                                                    onClick={() => handleDelete(food)}
+                                                    className={`p-1.5 text-slate-400 rounded-lg transition-colors ${!canModify(food) ? 'opacity-30 cursor-not-allowed' : 'hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'}`}
+                                                    disabled={!canModify(food)}
+                                                    title={!canModify(food) ? "No tienes permiso para borrar" : "Eliminar"}
+                                                >
                                                     <Trash2 size={15} />
                                                 </button>
                                             </div>
@@ -163,12 +201,30 @@ export default function Foods() {
                         {filteredFoods.map(food => (
                             <div key={food.id} className="p-4">
                                 <div className="flex items-start justify-between mb-2">
-                                    <h3 className="font-medium text-slate-800 dark:text-slate-200">{food.name}</h3>
-                                    <div className="flex gap-1">
-                                        <button onClick={() => handleEdit(food)} className="p-1.5 text-slate-400 hover:text-primary-600 rounded-lg">
+                                    <div>
+                                        <h3 className="font-medium text-slate-800 dark:text-slate-200">{food.name}</h3>
+                                        <p className="text-[10px] text-slate-400 mt-0.5">Por: {getCreatorName(food.nutritionist_id)}</p>
+                                    </div>
+                                    <div className="flex gap-1 shrink-0 ml-2">
+                                        <button
+                                            onClick={() => handleDuplicate(food)}
+                                            className="p-1.5 text-slate-400 hover:text-emerald-600 rounded-lg"
+                                            title="Usar como plantilla"
+                                        >
+                                            <Copy size={14} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleEdit(food)}
+                                            className={`p-1.5 text-slate-400 rounded-lg ${!canModify(food) ? 'opacity-30 cursor-not-allowed' : 'hover:text-primary-600'}`}
+                                            disabled={!canModify(food)}
+                                        >
                                             <Pencil size={14} />
                                         </button>
-                                        <button onClick={() => handleDelete(food)} className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg">
+                                        <button
+                                            onClick={() => handleDelete(food)}
+                                            className={`p-1.5 text-slate-400 rounded-lg ${!canModify(food) ? 'opacity-30 cursor-not-allowed' : 'hover:text-red-600'}`}
+                                            disabled={!canModify(food)}
+                                        >
                                             <Trash2 size={14} />
                                         </button>
                                     </div>

@@ -16,7 +16,7 @@ import {
     Wallet
 } from 'lucide-react';
 import { UsersRound } from 'lucide-react';
-import { Apple, ChefHat } from 'lucide-react';
+import { Apple, ChefHat, FileText } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../utils/cn';
 import { ThemeToggle } from './ThemeToggle.jsx';
@@ -51,6 +51,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { icon: Users, label: 'Clientes', path: '/patients', adminOnly: false },
         { icon: Activity, label: 'Seguimiento', path: '/tracking', adminOnly: false },
         { icon: ClipboardList, label: 'Tareas', path: '/tasks', adminOnly: false },
+        { icon: FileText, label: 'Plantillas', path: '/recommendations', adminOnly: false },
         { icon: Repeat, label: 'Renovaciones', path: '/renewals', adminOnly: true },
         { icon: Wallet, label: 'Pagos', path: '/payments', adminOnly: true },
         { icon: UsersRound, label: 'Equipo', path: '/team', adminOnly: true },
