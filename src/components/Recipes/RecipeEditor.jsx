@@ -9,8 +9,8 @@ function SortableIngredient({ id, children }) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
     const style = { transform: CSS.Transform.toString(transform), transition };
     return (
-        <div ref={setNodeRef} style={style} className="grid grid-cols-12 gap-2 items-center p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 text-sm group relative">
-            <div {...attributes} {...listeners} className="absolute -left-6 top-1/2 -translate-y-1/2 p-0.5 text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity">
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="grid grid-cols-12 gap-2 items-center p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 text-sm group relative cursor-grab active:cursor-grabbing hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <div className="absolute -left-6 top-1/2 -translate-y-1/2 p-0.5 text-slate-300 group-hover:text-primary-400 transition-colors">
                 <GripVertical size={14} />
             </div>
             {children}
