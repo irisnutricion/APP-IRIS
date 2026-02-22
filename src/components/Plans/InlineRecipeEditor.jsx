@@ -33,7 +33,7 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
         setIngredients(prev => [...prev, {
             food_id: food.id,
             food_name: food.name,
-            quantity_grams: 100,
+            quantity_grams: '',
             kcal_per_100g: food.kcal_per_100g || 0,
             carbs: food.carbs_per_100g || 0,
             protein: food.protein_per_100g || 0,
@@ -44,7 +44,7 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
     };
 
     const updateQty = (idx, qty) => {
-        setIngredients(prev => prev.map((ing, i) => i === idx ? { ...ing, quantity_grams: parseFloat(qty) || 0 } : ing));
+        setIngredients(prev => prev.map((ing, i) => i === idx ? { ...ing, quantity_grams: qty === '' ? '' : (parseFloat(qty) || 0) } : ing));
     };
 
     const replaceIngredientFood = (idx, newFood) => {

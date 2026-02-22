@@ -110,13 +110,13 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
     };
 
     const addIngredient = (food) => {
-        setIngredients(prev => [...prev, { food_id: food.id, food, quantity_grams: 100 }]);
+        setIngredients(prev => [...prev, { food_id: food.id, food, quantity_grams: '' }]);
         setFoodSearch('');
         setShowFoodSearch(false);
     };
 
     const updateIngredientQty = (foodId, qty) => {
-        setIngredients(prev => prev.map(i => i.food_id === foodId ? { ...i, quantity_grams: parseFloat(qty) || 0 } : i));
+        setIngredients(prev => prev.map(i => i.food_id === foodId ? { ...i, quantity_grams: qty === '' ? '' : (parseFloat(qty) || 0) } : i));
     };
 
     const replaceIngredientFood = (oldFoodId, newFood) => {

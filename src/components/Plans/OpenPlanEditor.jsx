@@ -84,6 +84,17 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
         setSections(prev => ({ ...prev, [mealName]: prev[mealName].filter((_, i) => i !== idx) }));
     };
 
+    const duplicateOption = (mealName, opt) => {
+        const newOpt = { ...opt };
+        if (opt.custom_recipe_data) {
+            newOpt.custom_recipe_data = JSON.parse(JSON.stringify(opt.custom_recipe_data));
+        }
+        setSections(prev => ({
+            ...prev,
+            [mealName]: [...(prev[mealName] || []), newOpt],
+        }));
+    };
+
     // Get display name
     const getOptName = (opt) => {
         if (opt?.custom_recipe_data?.name) return opt.custom_recipe_data.name;
@@ -287,7 +298,10 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                                                 <button onClick={(e) => { e.stopPropagation(); (opt.custom_recipe_data || opt.recipes) && toggleEditor(meal, idx); }} className="p-1 text-slate-300 hover:text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                     <Pencil size={14} />
                                                                 </button>
-                                                                <button onClick={(e) => { e.stopPropagation(); removeOption(meal, idx); }} className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <button onClick={(e) => { e.stopPropagation(); duplicateOption(meal, opt); }} className="p-1 text-slate-300 hover:text-green-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicar opción">
+                                                                    <Copy size={14} />
+                                                                </button>
+                                                                <button onClick={(e) => { e.stopPropagation(); removeOption(meal, idx); }} className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Eliminar opción">
                                                                     <Trash2 size={14} />
                                                                 </button>
                                                             </div>
