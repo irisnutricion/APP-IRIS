@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Plus, Search, Pencil, Trash2, Apple, Upload } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Apple } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import FoodModal, { ALL_TAGS } from './FoodModal';
-import CsvImportModal from '../CsvImportModal';
 
 export default function Foods() {
     const { foods = [], addFood, updateFood, deleteFood } = useData();
@@ -10,7 +9,6 @@ export default function Foods() {
     const [activeTagFilters, setActiveTagFilters] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingFood, setEditingFood] = useState(null);
-    const [isCsvOpen, setIsCsvOpen] = useState(false);
 
     const toggleTagFilter = (tagId) => {
         setActiveTagFilters(prev =>
@@ -66,9 +64,6 @@ export default function Foods() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button onClick={() => setIsCsvOpen(true)} className="btn bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/40">
-                            <Upload size={18} /> Importar CSV
-                        </button>
                         <button onClick={handleNew} className="btn btn-primary">
                             <Plus size={18} /> Añadir alimento
                         </button>
@@ -220,21 +215,6 @@ export default function Foods() {
                 onSave={handleSave}
                 initialData={editingFood}
             />
-
-            {isCsvOpen && (
-                <CsvImportModal
-                    type="foods"
-                    onImport={async (rows) => {
-                        let count = 0;
-                        for (const row of rows) {
-                            await addFood(row);
-                            count++;
-                        }
-                        return count;
-                    }}
-                    onClose={() => setIsCsvOpen(false)}
-                />
-            )}
         </div>
     );
 }

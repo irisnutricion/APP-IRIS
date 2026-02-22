@@ -1,9 +1,8 @@
 import { useState, useMemo } from 'react';
-import { Plus, Search, ChefHat, Pencil, Trash2, X, ArrowLeft, Upload } from 'lucide-react';
+import { Plus, Search, ChefHat, Pencil, Trash2, X, ArrowLeft } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { ALL_TAGS } from '../Foods/FoodModal';
 import RecipeEditor from './RecipeEditor';
-import CsvImportModal from '../CsvImportModal';
 
 // Utility: calculate total macros for a recipe from its ingredients
 export function calcRecipeMacros(recipe) {
@@ -49,7 +48,6 @@ export default function Recipes() {
     const [activeTagFilters, setActiveTagFilters] = useState([]);
     const [editingRecipe, setEditingRecipe] = useState(null);
     const [isEditorOpen, setIsEditorOpen] = useState(false);
-    const [isCsvOpen, setIsCsvOpen] = useState(false);
 
     const toggleTagFilter = (tagId) => {
         setActiveTagFilters(prev => prev.includes(tagId) ? prev.filter(t => t !== tagId) : [...prev, tagId]);
@@ -118,9 +116,6 @@ export default function Recipes() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <button onClick={() => setIsCsvOpen(true)} className="btn bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-900/40">
-                            <Upload size={18} /> Importar CSV
-                        </button>
                         <button onClick={handleNew} className="btn btn-primary">
                             <Plus size={18} /> Nueva receta
                         </button>
@@ -269,26 +264,6 @@ export default function Recipes() {
                         );
                     })}
                 </div>
-            )}
-
-            {isCsvOpen && (
-                <CsvImportModal
-                    type="recipes"
-                    foods={foods}
-                    onImport={async (rows) => {
-                        let count = 0;
-                        for (const row of rows) {
-                            await addRecipe(
-                                { name: row.name, description: row.description, tags: row.tags || [] },
-                                row.ingredients || [],
-                                []
-                            );
-                            count++;
-                        }
-                        return count;
-                    }}
-                    onClose={() => setIsCsvOpen(false)}
-                />
             )}
         </div>
     );

@@ -32,6 +32,7 @@ export const DataProvider = ({ children }) => {
     const [recipes, setRecipes] = useState([]);
     const [mealPlans, setMealPlans] = useState([]);
     const [mealPlanItems, setMealPlanItems] = useState([]);
+    const [indicationTemplates, setIndicationTemplates] = useState([]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -59,9 +60,10 @@ export const DataProvider = ({ children }) => {
                 supabase.from('nutritionists').select('*').order('label', { ascending: true }),
                 supabase.from('foods').select('*').order('name', { ascending: true }),
                 supabase.from('recipe_categories').select('*').order('label', { ascending: true }),
-                supabase.from('recipes').select('*, recipe_category_links(category_id), recipe_ingredients(*, foods(*))').order('name', { ascending: true }),
+                supabase.from('recipes').select('*, recipe_category_links(category_id), recipe_ingredients(*, foods(*)))').order('name', { ascending: true }),
                 supabase.from('meal_plans').select('*').order('created_at', { ascending: false }),
                 supabase.from('meal_plan_items').select('*, recipes(*, recipe_ingredients(*, foods(*)))').order('sort_order', { ascending: true }),
+                supabase.from('indication_templates').select('*')
             ]);
 
             const [
@@ -88,7 +90,8 @@ export const DataProvider = ({ children }) => {
                 recipeCategoriesResult,
                 recipesResult,
                 mealPlansResult,
-                mealPlanItemsResult
+                mealPlanItemsResult,
+                indicationTemplatesResult
             ] = results;
 
             // Log errors for debugging
@@ -151,6 +154,7 @@ export const DataProvider = ({ children }) => {
             if (recipesResult.status === 'fulfilled') setRecipes(recipesResult.value.data || []);
             if (mealPlansResult.status === 'fulfilled') setMealPlans(mealPlansResult.value.data || []);
             if (mealPlanItemsResult.status === 'fulfilled') setMealPlanItems(mealPlanItemsResult.value.data || []);
+            if (indicationTemplatesResult.status === 'fulfilled') setIndicationTemplates(indicationTemplatesResult.value.data || []);
 
             if (reviewsResult.status === 'fulfilled' && reviewsResult.value.data) {
                 const reviewsObj = reviewsResult.value.data.reduce((acc, r) => {
@@ -343,7 +347,7 @@ export const DataProvider = ({ children }) => {
                 console.log('No subscriptions remaining. Resetting patient to inactive.');
 
                 // Also delete any lingering extensions for this patient to prevent zombie status
-                // Since extensions are only linked to patient_id, we can only safely mass-delete them 
+                // Since extensions are only linked to patient_id, we can only safely mass-delete them
                 // when the patient has NO other subscriptions.
                 const { error: delExtError } = await supabase
                     .from('subscription_extensions')
@@ -402,7 +406,7 @@ export const DataProvider = ({ children }) => {
             setPatients(prev => prev.map(p => {
                 if (p.id !== patientId) return p;
 
-                // Re-construct the local 'subscription' object 
+                // Re-construct the local 'subscription' object
                 const newSubscription = {
                     type: patientUpdates.subscription_type,
                     startDate: patientUpdates.subscription_start,
@@ -439,7 +443,7 @@ export const DataProvider = ({ children }) => {
             // Legacy 'name' column is no longer updated to avoid data inconsistency.
             // We rely on first_name and last_name.
         }
-        // ... simplistic mapping, assuming keys match mostly. 
+        // ... simplistic mapping, assuming keys match mostly.
         // CAUTION: The UI passes "subscription" object, DB has flat columns.
         if (updates.subscription) {
             dbUpdates.subscription_type = updates.subscription.type;
@@ -996,10 +1000,52 @@ export const DataProvider = ({ children }) => {
         if (!error) setMealPlans(prev => prev.map(p => p.id === id ? data : p));
     };
     const deleteMealPlan = async (id) => {
-        const { error } = await supabase.from('meal_plans').delete().eq('id', id);
-        if (!error) {
+        try {
+            const { error } = await supabase.from('meal_plans').delete().eq('id', id);
+            if (error) throw error;
             setMealPlans(prev => prev.filter(p => p.id !== id));
             setMealPlanItems(prev => prev.filter(i => i.plan_id !== id));
+            return true;
+        } catch (error) {
+            console.error('Error deleting meal plan:', error);
+            return false;
+        }
+    };
+
+    // Indication Templates
+    const addIndicationTemplate = async (template) => {
+        try {
+            const { data, error } = await supabase.from('indication_templates').insert([template]).select().single();
+            if (error) throw error;
+            setIndicationTemplates(prev => [...prev, data]);
+            return data;
+        } catch (error) {
+            console.error('Error adding indication template:', error);
+            throw error;
+        }
+    };
+
+    const updateIndicationTemplate = async (id, updates) => {
+        try {
+            const { data, error } = await supabase.from('indication_templates').update(updates).eq('id', id).select().single();
+            if (error) throw error;
+            setIndicationTemplates(prev => prev.map(t => t.id === id ? data : t));
+            return data;
+        } catch (error) {
+            console.error('Error updating indication template:', error);
+            throw error;
+        }
+    };
+
+    const deleteIndicationTemplate = async (id) => {
+        try {
+            const { error } = await supabase.from('indication_templates').delete().eq('id', id);
+            if (error) throw error;
+            setIndicationTemplates(prev => prev.filter(t => t.id !== id));
+            return true;
+        } catch (error) {
+            console.error('Error deleting indication template:', error);
+            return false;
         }
     };
 
@@ -1254,7 +1300,7 @@ export const DataProvider = ({ children }) => {
             // 2. Adjust patient subscription end date
             const patient = patients.find(p => p.id === extension.patient_id);
             if (patient && patient.subscription_end) {
-                // Determine which date to adjust. 
+                // Determine which date to adjust.
                 // Creating a new end date based on current end date + difference
                 const currentEnd = parseISO(patient.subscription_end);
                 const newEnd = addDays(currentEnd, diff);
@@ -1507,7 +1553,12 @@ export const DataProvider = ({ children }) => {
             updateMealPlan,
             deleteMealPlan,
             saveMealPlanItems,
-            cloneMealPlan
+            cloneMealPlan,
+
+            indicationTemplates,
+            addIndicationTemplate,
+            updateIndicationTemplate,
+            deleteIndicationTemplate
         }}>
             {children}
         </DataContext.Provider>

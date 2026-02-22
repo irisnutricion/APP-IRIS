@@ -1,18 +1,22 @@
 import { useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { calcSnapshotMacros, recipeToSnapshot } from './ClosedPlanEditor';
 import InlineRecipeEditor from './InlineRecipeEditor';
+import { generatePlanPdf } from '../../utils/planPdfGenerator';
 
 export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpdatePlan, onSaveAsTemplate }) {
-    const { recipes = [], addRecipe } = useData();
+    const { recipes = [], addRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null } = useData();
     const [planName, setPlanName] = useState(plan.name);
+    const [planIndications, setPlanIndications] = useState(plan.indications || '');
     const [mealNames, setMealNames] = useState(plan.meal_names || ['Desayuno', 'Media mañana', 'Almuerzo', 'Merienda', 'Cena']);
     const [sections, setSections] = useState({});
     const [saving, setSaving] = useState(false);
     const [activeSearch, setActiveSearch] = useState(null);
     const [recipeSearch, setRecipeSearch] = useState('');
-    const [editingOption, setEditingOption] = useState(null); // { mealName, idx }
+    const [expandedOptions, setExpandedOptions] = useState(new Set()); // Set of `${mealName}_${idx}`
+    const [viewMode, setViewMode] = useState('meals');
+    const [showTemplateMenu, setShowTemplateMenu] = useState(false);
 
     useEffect(() => {
         const s = {};
@@ -61,8 +65,18 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             ...prev,
             [mealName]: [...(prev[mealName] || []), { recipe_id: null, free_text: null, recipes: null, custom_recipe_data: { name: '', source_recipe_id: null, ingredients: [] } }],
         }));
-        setEditingOption({ mealName, idx: newIdx });
+        setExpandedOptions(prev => new Set(prev).add(`${mealName}_${newIdx}`));
         setActiveSearch(null);
+    };
+
+    const toggleEditor = (mealName, idx) => {
+        setExpandedOptions(prev => {
+            const next = new Set(prev);
+            const key = `${mealName}_${idx}`;
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
+            return next;
+        });
     };
 
     const removeOption = (mealName, idx) => {
@@ -95,16 +109,14 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     };
 
     // Inline editor handlers
-    const handleInlineAccept = (snapshot) => {
-        const { mealName, idx } = editingOption;
+    const handleInlineAccept = (mealName, idx, snapshot) => {
         setSections(prev => ({
             ...prev,
             [mealName]: prev[mealName].map((opt, i) => i === idx ? { ...opt, custom_recipe_data: snapshot } : opt),
         }));
-        setEditingOption(null);
     };
 
-    const handleInlineSaveAsRecipe = async (snapshot) => {
+    const handleInlineSaveAsRecipe = async (mealName, idx, snapshot) => {
         await addRecipe({
             name: snapshot.name,
             is_active: true,
@@ -113,14 +125,14 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             food_id: ing.food_id,
             quantity_grams: ing.quantity_grams,
         })));
-        handleInlineAccept(snapshot);
+        handleInlineAccept(mealName, idx, snapshot);
     };
 
     const handleSave = async () => {
         setSaving(true);
         try {
-            if (planName !== plan.name || JSON.stringify(mealNames) !== JSON.stringify(plan.meal_names)) {
-                await onUpdatePlan({ name: planName, meal_names: mealNames, meals_per_day: mealNames.length });
+            if (planName !== plan.name || JSON.stringify(mealNames) !== JSON.stringify(plan.meal_names) || planIndications !== (plan.indications || '')) {
+                await onUpdatePlan({ name: planName, meal_names: mealNames, meals_per_day: mealNames.length, indications: planIndications });
             }
             const newItems = [];
             mealNames.forEach(meal => {
@@ -140,8 +152,6 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
         }
     };
 
-    const editingSnapshot = editingOption ? (sections[editingOption.mealName]?.[editingOption.idx]?.custom_recipe_data || null) : null;
-
     return (
         <div className="space-y-4">
             {/* Header */}
@@ -153,8 +163,28 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                     <input type="text" value={planName} onChange={e => setPlanName(e.target.value)} className="text-xl font-bold text-slate-800 dark:text-white bg-transparent border-b-2 border-transparent hover:border-slate-300 focus:border-primary-500 outline-none px-1" />
                 </div>
                 <div className="flex items-center gap-2">
+                    <div className="flex border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden hidden sm:flex">
+                        {[
+                            { mode: 'meals', icon: List, label: 'Comidas' },
+                            { mode: 'indications', icon: FileText, label: 'Indicaciones' },
+                        ].map(({ mode, icon: Icon, label }) => (
+                            <button key={mode} onClick={() => setViewMode(mode)} className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1 ${viewMode === mode ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'}`}>
+                                <Icon size={14} /> {label}
+                            </button>
+                        ))}
+                    </div>
                     <button onClick={onSaveAsTemplate} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg dark:hover:bg-purple-900/20" title="Guardar como plantilla">
                         <Copy size={18} />
+                    </button>
+                    <button
+                        onClick={() => {
+                            const patient = patients.find(p => p.id === plan.patient_id);
+                            generatePlanPdf(plan, items, userProfile, patient);
+                        }}
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg dark:hover:bg-red-900/20"
+                        title="Exportar PDF"
+                    >
+                        <Download size={18} />
                     </button>
                     <button onClick={handleSave} disabled={saving} className="btn btn-primary text-sm py-2">
                         <Save size={16} /> {saving ? 'Guardando...' : 'Guardar'}
@@ -163,112 +193,177 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             </div>
 
             {/* Meal sections */}
-            <div className="space-y-4">
-                {mealNames.map(meal => {
-                    const opts = sections[meal] || [];
-                    const avgMacros = getMealAvgMacros(meal);
-                    return (
-                        <div key={meal} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                            <div className="p-4 bg-slate-50 dark:bg-slate-800 flex items-center justify-between">
-                                <h3 className="font-bold text-slate-700 dark:text-slate-200">{meal}</h3>
-                                <div className="flex items-center gap-4">
-                                    {avgMacros && (
-                                        <div className="flex gap-3 text-xs font-semibold">
-                                            <span className="text-orange-600">∅ {Math.round(avgMacros.kcal)} kcal</span>
-                                            <span className="text-amber-600">{avgMacros.carbs.toFixed(1)}g HC</span>
-                                            <span className="text-blue-600">{avgMacros.protein.toFixed(1)}g P</span>
-                                            <span className="text-rose-600">{avgMacros.fat.toFixed(1)}g G</span>
-                                        </div>
-                                    )}
-                                    <span className="text-xs text-slate-400">{opts.length} opciones</span>
-                                </div>
-                            </div>
-
-                            <div className="p-4">
-                                {opts.length === 0 && activeSearch !== meal && (
-                                    <p className="text-sm text-slate-400 text-center py-4">Sin opciones. Añade recetas o texto libre.</p>
-                                )}
-
-                                <div className="space-y-2">
-                                    {opts.map((opt, idx) => {
-                                        const macros = getOptMacros(opt);
-                                        return (
-                                            <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg group cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" onClick={() => (opt.custom_recipe_data || opt.recipes) && setEditingOption({ mealName: meal, idx })}>
-                                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                    <span className="text-xs font-bold text-slate-300 dark:text-slate-600 w-6">{idx + 1}</span>
-                                                    <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{getOptName(opt)}</span>
+            {viewMode === 'meals' && (
+                <div className="space-y-6">
+                    <div className="space-y-4">
+                        {mealNames.map(meal => {
+                            const opts = sections[meal] || [];
+                            const avgMacros = getMealAvgMacros(meal);
+                            return (
+                                <div key={meal} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                                    <div className="p-4 bg-slate-50 dark:bg-slate-800 flex items-center justify-between">
+                                        <h3 className="font-bold text-slate-700 dark:text-slate-200">{meal}</h3>
+                                        <div className="flex items-center gap-4">
+                                            {avgMacros && (
+                                                <div className="flex gap-3 text-xs font-semibold">
+                                                    <span className="text-orange-600">∅ {Math.round(avgMacros.kcal)} kcal</span>
+                                                    <span className="text-amber-600">{avgMacros.carbs.toFixed(1)}g HC</span>
+                                                    <span className="text-blue-600">{avgMacros.protein.toFixed(1)}g P</span>
+                                                    <span className="text-rose-600">{avgMacros.fat.toFixed(1)}g G</span>
                                                 </div>
-                                                <div className="flex items-center gap-3">
-                                                    {macros && (
-                                                        <div className="hidden md:flex gap-2 text-xs font-medium">
-                                                            <span className="text-orange-500">{Math.round(macros.kcal)}</span>
-                                                            <span className="text-amber-500">{macros.carbs.toFixed(1)}g</span>
-                                                            <span className="text-blue-500">{macros.protein.toFixed(1)}g</span>
-                                                            <span className="text-rose-500">{macros.fat.toFixed(1)}g</span>
+                                            )}
+                                            <span className="text-xs text-slate-400">{opts.length} opciones</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4">
+                                        {opts.length === 0 && activeSearch !== meal && (
+                                            <p className="text-sm text-slate-400 text-center py-4">Sin opciones. Añade recetas o texto libre.</p>
+                                        )}
+
+                                        <div className="space-y-2">
+                                            {opts.map((opt, idx) => {
+                                                const macros = getOptMacros(opt);
+                                                const isExpanded = expandedOptions.has(`${meal}_${idx}`);
+                                                return (
+                                                    <div key={idx} className="bg-slate-50 dark:bg-slate-800/50 rounded-lg group transition-colors">
+                                                        <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => (opt.custom_recipe_data || opt.recipes) && toggleEditor(meal, idx)}>
+                                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                                <span className="text-xs font-bold text-slate-300 dark:text-slate-600 w-6">{idx + 1}</span>
+                                                                <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{getOptName(opt)}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-3">
+                                                                {macros && (
+                                                                    <div className="hidden md:flex gap-2 text-xs font-medium">
+                                                                        <span className="text-orange-500">{Math.round(macros.kcal)}</span>
+                                                                        <span className="text-amber-500">{macros.carbs.toFixed(1)}g</span>
+                                                                        <span className="text-blue-500">{macros.protein.toFixed(1)}g</span>
+                                                                        <span className="text-rose-500">{macros.fat.toFixed(1)}g</span>
+                                                                    </div>
+                                                                )}
+                                                                <button onClick={(e) => { e.stopPropagation(); (opt.custom_recipe_data || opt.recipes) && toggleEditor(meal, idx); }} className="p-1 text-slate-300 hover:text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <Pencil size={14} />
+                                                                </button>
+                                                                <button onClick={(e) => { e.stopPropagation(); removeOption(meal, idx); }} className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                    )}
-                                                    <button onClick={(e) => { e.stopPropagation(); (opt.custom_recipe_data || opt.recipes) && setEditingOption({ mealName: meal, idx }); }} className="p-1 text-slate-300 hover:text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <Pencil size={14} />
+                                                        {isExpanded && (opt.custom_recipe_data || opt.recipes) && (
+                                                            <div className="px-3 pb-3">
+                                                                <InlineRecipeEditor
+                                                                    snapshot={opt.custom_recipe_data || recipeToSnapshot(opt.recipes) || null}
+                                                                    onAccept={(snapshot) => handleInlineAccept(meal, idx, snapshot)}
+                                                                    onSaveAsRecipe={(snapshot) => handleInlineSaveAsRecipe(meal, idx, snapshot)}
+                                                                    onClose={() => toggleEditor(meal, idx)}
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Add option */}
+                                        {activeSearch === meal ? (
+                                            <div className="mt-3 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                                                <div className="p-2">
+                                                    <div className="relative">
+                                                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                                                        <input type="text" value={recipeSearch} onChange={e => setRecipeSearch(e.target.value)} placeholder="Buscar receta..." className="w-full pl-7 pr-8 py-1.5 text-sm border border-slate-200 rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white" autoFocus />
+                                                        <button onClick={() => { setActiveSearch(null); setRecipeSearch(''); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                                            <X size={14} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div className="max-h-40 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700">
+                                                    {recipeResults.map(r => (
+                                                        <button key={r.id} onClick={() => addOption(meal, r)} className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-300">
+                                                            {r.name}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <div className="border-t border-slate-200 dark:border-slate-700 p-2">
+                                                    <input type="text" placeholder="O escribe texto libre..." className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white" onKeyDown={e => { if (e.key === 'Enter') { addTextOption(meal, e.target.value); e.target.value = ''; } }} />
+                                                </div>
+                                                <div className="border-t border-slate-200 dark:border-slate-700 p-1 flex">
+                                                    <button onClick={() => createInlineOption(meal)} className="flex-1 text-center py-1 text-xs text-primary-500 hover:text-primary-700 font-medium">
+                                                        + Crear receta nueva
                                                     </button>
-                                                    <button onClick={(e) => { e.stopPropagation(); removeOption(meal, idx); }} className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <Trash2 size={14} />
+                                                    <button onClick={() => { setActiveSearch(null); setRecipeSearch(''); }} className="flex-1 text-center py-1 text-xs text-slate-400 hover:text-slate-600">
+                                                        Cancelar
                                                     </button>
                                                 </div>
                                             </div>
-                                        );
-                                    })}
+                                        ) : (
+                                            <button onClick={() => { setActiveSearch(meal); setRecipeSearch(''); }} className="mt-3 w-full py-2 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-400 hover:border-primary-300 hover:text-primary-500 transition-all flex items-center justify-center gap-1">
+                                                <Plus size={14} /> Añadir opción
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
-                                {/* Add option */}
-                                {activeSearch === meal ? (
-                                    <div className="mt-3 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
-                                        <div className="p-2">
-                                            <div className="relative">
-                                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                                                <input type="text" value={recipeSearch} onChange={e => setRecipeSearch(e.target.value)} placeholder="Buscar receta..." className="w-full pl-7 pr-8 py-1.5 text-sm border border-slate-200 rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white" autoFocus />
-                                                <button onClick={() => { setActiveSearch(null); setRecipeSearch(''); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                                                    <X size={14} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <div className="max-h-40 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700">
-                                            {recipeResults.map(r => (
-                                                <button key={r.id} onClick={() => addOption(meal, r)} className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-300">
-                                                    {r.name}
+            {/* Indications View */}
+            {viewMode === 'indications' && (
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <FileText className="text-primary-500" />
+                            Indicaciones del Plan
+                        </h3>
+                        <div className="flex items-center gap-2 relative">
+                            {indicationTemplates.length > 0 && (
+                                <div className="relative">
+                                    <button onClick={() => setShowTemplateMenu(!showTemplateMenu)} className="btn btn-outline py-1.5 px-3 text-sm flex items-center gap-2">
+                                        Cargar plantilla <ChevronDown size={14} />
+                                    </button>
+                                    {showTemplateMenu && (
+                                        <div className="absolute right-0 top-full mt-1 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-20 py-1 overflow-hidden max-h-60 overflow-y-auto">
+                                            {indicationTemplates.map(t => (
+                                                <button
+                                                    key={t.id}
+                                                    onClick={() => {
+                                                        if (!planIndications || window.confirm('¿Sobrescribir las indicaciones actuales con la plantilla?')) {
+                                                            setPlanIndications(t.content);
+                                                        }
+                                                        setShowTemplateMenu(false);
+                                                    }}
+                                                    className="w-full text-left px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-300"
+                                                >
+                                                    {t.name}
                                                 </button>
                                             ))}
                                         </div>
-                                        <div className="border-t border-slate-200 dark:border-slate-700 p-2">
-                                            <input type="text" placeholder="O escribe texto libre..." className="w-full px-2 py-1.5 text-sm border border-slate-200 rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white" onKeyDown={e => { if (e.key === 'Enter') { addTextOption(meal, e.target.value); e.target.value = ''; } }} />
-                                        </div>
-                                        <div className="border-t border-slate-200 dark:border-slate-700 p-1 flex">
-                                            <button onClick={() => createInlineOption(meal)} className="flex-1 text-center py-1 text-xs text-primary-500 hover:text-primary-700 font-medium">
-                                                + Crear receta nueva
-                                            </button>
-                                            <button onClick={() => { setActiveSearch(null); setRecipeSearch(''); }} className="flex-1 text-center py-1 text-xs text-slate-400 hover:text-slate-600">
-                                                Cancelar
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <button onClick={() => { setActiveSearch(meal); setRecipeSearch(''); }} className="mt-3 w-full py-2 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-400 hover:border-primary-300 hover:text-primary-500 transition-all flex items-center justify-center gap-1">
-                                        <Plus size={14} /> Añadir opción
-                                    </button>
-                                )}
-                            </div>
+                                    )}
+                                </div>
+                            )}
+                            <button
+                                onClick={async () => {
+                                    if (!planIndications.trim()) return alert('Las indicaciones están vacías.');
+                                    const name = prompt('Nombre para esta plantilla de indicaciones:');
+                                    if (name) {
+                                        await addIndicationTemplate({ name, content: planIndications });
+                                        alert('Plantilla guardada correctamente.');
+                                    }
+                                }}
+                                className="btn btn-outline py-1.5 px-3 text-sm flex items-center gap-2"
+                            >
+                                <Save size={14} /> Guardar como plantilla
+                            </button>
                         </div>
-                    );
-                })}
-            </div>
-
-            {/* Inline Recipe Editor Modal */}
-            {editingOption && (
-                <InlineRecipeEditor
-                    snapshot={editingSnapshot}
-                    onAccept={handleInlineAccept}
-                    onSaveAsRecipe={handleInlineSaveAsRecipe}
-                    onClose={() => setEditingOption(null)}
-                />
+                    </div>
+                    <textarea
+                        value={planIndications}
+                        onChange={e => setPlanIndications(e.target.value)}
+                        placeholder="Escribe aquí las pautas, preparación, reemplazos o cualquier indicación adicional para este plan..."
+                        className="w-full h-96 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none resize-y text-sm text-slate-700 dark:text-slate-300"
+                    />
+                </div>
             )}
         </div>
     );

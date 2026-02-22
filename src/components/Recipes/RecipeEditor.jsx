@@ -14,6 +14,7 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [ingredients, setIngredients] = useState([]);
     const [foodSearch, setFoodSearch] = useState('');
+    const [editingIngredientId, setEditingIngredientId] = useState(null);
     const [showFoodSearch, setShowFoodSearch] = useState(false);
     const [saving, setSaving] = useState(false);
 
@@ -114,12 +115,22 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
         setShowFoodSearch(false);
     };
 
-    const removeIngredient = (foodId) => {
-        setIngredients(prev => prev.filter(i => i.food_id !== foodId));
-    };
-
     const updateIngredientQty = (foodId, qty) => {
         setIngredients(prev => prev.map(i => i.food_id === foodId ? { ...i, quantity_grams: parseFloat(qty) || 0 } : i));
+    };
+
+    const replaceIngredientFood = (oldFoodId, newFood) => {
+        setIngredients(prev => prev.map(i => i.food_id === oldFoodId ? {
+            ...i,
+            food_id: newFood.id,
+            food: newFood,
+        } : i));
+        setEditingIngredientId(null);
+        setFoodSearch('');
+    };
+
+    const removeIngredient = (foodId) => {
+        setIngredients(prev => prev.filter(i => i.food_id !== foodId));
     };
 
     const handleSubmit = async (e) => {
@@ -293,8 +304,54 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
                                 const food = ing.food;
                                 const factor = (ing.quantity_grams || 0) / 100;
                                 return (
-                                    <div key={ing.food_id} className="grid grid-cols-12 gap-2 items-center p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 text-sm">
-                                        <div className="col-span-4 font-medium text-slate-700 dark:text-slate-300 truncate">{food?.name}</div>
+                                    <div key={ing.food_id} className="grid grid-cols-12 gap-2 items-center p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 text-sm group">
+                                        <div className="col-span-4 font-medium text-slate-700 dark:text-slate-300 truncate">
+                                            {editingIngredientId === ing.food_id ? (
+                                                <div className="relative">
+                                                    <div className="flex items-center">
+                                                        <Search className="absolute left-2 text-slate-400" size={12} />
+                                                        <input
+                                                            type="text"
+                                                            value={foodSearch}
+                                                            onChange={e => setFoodSearch(e.target.value)}
+                                                            placeholder="Buscar nuevo alimento..."
+                                                            className="w-full pl-6 pr-6 py-1 text-xs border border-primary-300 rounded-md dark:bg-slate-700 dark:border-primary-600 dark:text-white outline-none focus:ring-1 focus:ring-primary-500"
+                                                            autoFocus
+                                                        />
+                                                        <button onClick={() => { setEditingIngredientId(null); setFoodSearch(''); }} className="absolute right-2 text-slate-400 hover:text-slate-600">
+                                                            <X size={12} />
+                                                        </button>
+                                                    </div>
+                                                    {foodSearch.trim() && (
+                                                        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                                                            {availableFoods.map(f => (
+                                                                <button
+                                                                    key={f.id}
+                                                                    onClick={() => replaceIngredientFood(ing.food_id, f)}
+                                                                    className="w-full text-left px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs text-slate-700 dark:text-slate-300 block truncate"
+                                                                >
+                                                                    {f.name}
+                                                                </button>
+                                                            ))}
+                                                            {availableFoods.length === 0 && (
+                                                                <div className="px-2 py-1.5 text-xs text-slate-500">Sin resultados</div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span
+                                                    className="cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 block truncate transition-colors"
+                                                    onClick={() => {
+                                                        setEditingIngredientId(ing.food_id);
+                                                        setFoodSearch('');
+                                                    }}
+                                                    title="Haz clic para cambiar este alimento"
+                                                >
+                                                    {food?.name}
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className="col-span-2 flex items-center justify-center gap-1">
                                             <input
                                                 type="number"
