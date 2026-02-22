@@ -60,7 +60,7 @@ export default function Recommendations() {
     const getCreatorName = (nutriId) => {
         if (!nutriId) return 'Desconocido';
         const nutri = nutritionists.find(n => n.id === nutriId);
-        return nutri?.profiles?.full_name || nutriId;
+        return nutri?.profiles?.full_name || nutri?.label || nutriId;
     };
 
     return (

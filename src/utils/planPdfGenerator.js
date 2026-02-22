@@ -33,6 +33,33 @@ function getOptIngredients(opt) {
     return [];
 }
 
+function aggregateIngredients(items) {
+    const list = {};
+    items.forEach(opt => {
+        let ingArr = [];
+        if (opt?.custom_recipe_data?.ingredients) {
+            ingArr = opt.custom_recipe_data.ingredients.map(ing => ({
+                name: ing.food_name || 'Alimento',
+                qty: parseFloat(ing.quantity_grams) || 0
+            }));
+        } else if (opt?.recipes?.recipe_ingredients) {
+            ingArr = opt.recipes.recipe_ingredients.map(ri => ({
+                name: ri.foods?.name || ri.food?.name || 'Alimento',
+                qty: parseFloat(ri.quantity_grams) || 0
+            }));
+        }
+
+        ingArr.forEach(ing => {
+            if (!list[ing.name]) list[ing.name] = 0;
+            list[ing.name] += ing.qty;
+        });
+    });
+
+    return Object.entries(list)
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([name, qty]) => ({ name, qty }));
+}
+
 export const generatePlanPdf = (plan, items, nutritionist, patient) => {
     // A4 sheet: 210 x 297 mm
     const doc = new jsPDF('p', 'mm', 'a4');
@@ -285,6 +312,53 @@ export const generatePlanPdf = (plan, items, nutritionist, patient) => {
             });
             yPos += 6;
         });
+    }
+
+    // --- SHOPPING LIST FOR CLOSED PLANS ---
+    if (isClosedPlan) {
+        const shoppingList = aggregateIngredients(items);
+        if (shoppingList.length > 0) {
+            // Need a page break for the shopping list
+            doc.addPage();
+            currentPage++;
+            yPos = 30;
+            drawHeader();
+
+            doc.setFillColor(...brandLight);
+            doc.rect(margins.left, yPos, 210 - margins.left - margins.right, 8, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...primaryColor);
+            doc.text("Lista de la Compra Semanal", margins.left + 3, yPos + 5.5);
+            yPos += 12;
+
+            doc.setTextColor(...textColor);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+
+            const col1X = margins.left + 5;
+            const col2X = margins.left + 95;
+            let currentX = col1X;
+
+            shoppingList.forEach((item) => {
+                if (currentX === col1X) {
+                    checkPageBreak(yPos, 6);
+                }
+
+                const qtyStr = item.qty > 0 ? `${Math.round(item.qty)}g - ` : '';
+                const line = `• ${qtyStr}${item.name}`;
+                // Truncate to fit half page
+                const truncated = line.length > 45 ? line.substring(0, 42) + '...' : line;
+
+                doc.text(truncated, currentX, yPos);
+
+                if (currentX === col1X) {
+                    currentX = col2X;
+                } else {
+                    currentX = col1X;
+                    yPos += 6;
+                }
+            });
+        }
     }
 
     // Call drawFooter on all pages

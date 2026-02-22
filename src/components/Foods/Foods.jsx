@@ -61,10 +61,11 @@ export default function Foods() {
         return food.nutritionist_id === nutritionistId;
     };
 
+    // Helper to get creator name
     const getCreatorName = (nutriId) => {
-        if (!nutriId) return 'Iris Gómez';
+        if (!nutriId) return 'Desconocido';
         const nutri = nutritionists.find(n => n.id === nutriId);
-        return nutri?.profiles?.full_name || nutriId;
+        return nutri?.profiles?.full_name || nutri?.label || nutriId;
     };
 
     return (
