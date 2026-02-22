@@ -91,9 +91,9 @@ export default function Recommendations() {
             </div>
 
             {filteredTemplates.length === 0 ? (
-                <div className="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300">
-                    <FileText size={48} className="mx-auto text-slate-300 mb-4" />
-                    <p className="text-slate-500 font-medium">No se encontraron plantillas.</p>
+                <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
+                    <FileText size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-4" />
+                    <p className="text-slate-500 dark:text-slate-400 font-medium">No se encontraron plantillas.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -135,20 +135,20 @@ export default function Recommendations() {
             {/* Editor Modal */}
             {isEditorOpen && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-                        <div className="flex justify-between items-center p-6 border-b">
-                            <h2 className="text-xl font-bold flex items-center gap-2">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+                        <div className="flex justify-between items-center p-6 border-b dark:border-slate-800">
+                            <h2 className="text-xl font-bold flex items-center gap-2 text-slate-800 dark:text-white">
                                 <FileText className="text-primary-600" />
                                 {editingTemplate ? 'Editar Plantilla' : 'Nueva Plantilla'}
                             </h2>
-                            <button onClick={() => setIsEditorOpen(false)} className="text-slate-400 hover:text-slate-600">
+                            <button onClick={() => setIsEditorOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                                 <X size={24} />
                             </button>
                         </div>
                         <div className="p-6 overflow-y-auto">
                             <form id="template-form" onSubmit={handleSave} className="space-y-4">
-                                <div className="form-control">
-                                    <label className="label">Afección / Título <span className="text-red-500">*</span></label>
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Afección / Título <span className="text-red-500">*</span></label>
                                     <input
                                         type="text"
                                         className="input"
@@ -158,8 +158,8 @@ export default function Recommendations() {
                                         placeholder="Ej: Dieta Blanda, Colon Irritable..."
                                     />
                                 </div>
-                                <div className="form-control">
-                                    <label className="label">Recomendaciones <span className="text-red-500">*</span></label>
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Recomendaciones <span className="text-red-500">*</span></label>
                                     <textarea
                                         className="input min-h-[250px] resize-y"
                                         required
@@ -170,7 +170,7 @@ export default function Recommendations() {
                                 </div>
                             </form>
                         </div>
-                        <div className="p-6 border-t bg-slate-50 flex justify-end gap-3">
+                        <div className="p-6 border-t dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-end gap-3">
                             <button type="button" onClick={() => setIsEditorOpen(false)} className="btn btn-ghost">
                                 Cancelar
                             </button>

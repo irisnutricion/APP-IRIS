@@ -59,7 +59,7 @@ export const DataProvider = ({ children }) => {
                 supabase.from('subscription_types').select('*').order('months', { ascending: true }),
                 supabase.from('payment_rates').select('*').order('amount', { ascending: true }),
                 supabase.from('subscription_extensions').select('*').order('created_at', { ascending: false }),
-                supabase.from('nutritionists').select('*').order('label', { ascending: true }),
+                supabase.from('nutritionists').select('*, profiles(full_name)').order('id', { ascending: true }),
                 supabase.from('foods').select('*').order('name', { ascending: true }),
                 supabase.from('recipe_categories').select('*').order('label', { ascending: true }),
                 supabase.from('recipes').select('*, recipe_category_links(category_id), recipe_ingredients(*, foods(*)))').order('name', { ascending: true }),

@@ -134,24 +134,24 @@ const Renewals = () => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-7 gap-px bg-gray-200 border border-gray-200 rounded-lg overflow-hidden">
+                <div className="grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 dark:bg-slate-700 dark:border-slate-700 rounded-lg overflow-hidden">
                     {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(d => (
-                        <div key={d} className="bg-gray-50 p-2 text-center text-xs font-semibold text-muted uppercase tracking-wider">
+                        <div key={d} className="bg-slate-50 dark:bg-slate-800 p-2 text-center text-xs font-semibold text-muted uppercase tracking-wider">
                             {d}
                         </div>
                     ))}
 
                     {/* Pad start */}
                     {Array(calendarDays[0].getDay()).fill(null).map((_, i) => (
-                        <div key={`pad-${i}`} className="bg-white min-h-[100px]"></div>
+                        <div key={`pad-${i}`} className="bg-white dark:bg-slate-900 min-h-[100px]"></div>
                     ))}
 
                     {calendarDays.map(day => {
                         const dayRenewals = activeSubs.filter(p => isSameDay(parseISO(p.subscription.endDate), day));
                         const isToday = isSameDay(day, new Date());
                         return (
-                            <div key={day.toString()} className={`bg-white min-h-[100px] p-2 hover:bg-gray-50 transition-colors ${isToday ? 'bg-green-50' : ''}`}>
-                                <div className={`text-right text-xs font-bold mb-1 ${isToday ? 'text-primary' : 'text-gray-400'}`}>
+                            <div key={day.toString()} className={`bg-white dark:bg-slate-900 min-h-[100px] p-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ${isToday ? 'bg-green-50 dark:bg-green-900/20' : ''}`}>
+                                <div className={`text-right text-xs font-bold mb-1 ${isToday ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
                                     {format(day, 'd')}
                                 </div>
                                 <div className="space-y-1">
