@@ -1,9 +1,22 @@
 import { useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download, PieChart } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download, PieChart, GripVertical } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { calcSnapshotMacros, recipeToSnapshot } from './ClosedPlanEditor';
 import InlineRecipeEditor from './InlineRecipeEditor';
 import { generatePlanPdf } from '../../utils/planPdfGenerator';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+function SortableOption({ id, children }) {
+    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
+    const style = { transform: CSS.Transform.toString(transform), transition };
+    return (
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-grab active:cursor-grabbing group transition-colors">
+            {children}
+        </div>
+    );
+}
 
 export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpdatePlan, onSaveAsTemplate, initialViewMode = 'meals' }) {
     const { recipes = [], addRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null } = useData();
@@ -18,6 +31,26 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     const [viewMode, setViewMode] = useState(initialViewMode);
     const [showTemplateMenu, setShowTemplateMenu] = useState(false);
     const [activeMealTab, setActiveMealTab] = useState('all'); // 'all' or specific meal name
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    );
+
+    const handleDragEnd = (event, mealName) => {
+        const { active, over } = event;
+        if (over && active.id !== over.id) {
+            setSections((prev) => {
+                const list = prev[mealName] || [];
+                const oldIndex = list.findIndex(opt => opt.local_id === active.id);
+                const newIndex = list.findIndex(opt => opt.local_id === over.id);
+                if (oldIndex !== -1 && newIndex !== -1) {
+                    return { ...prev, [mealName]: arrayMove(list, oldIndex, newIndex) };
+                }
+                return prev;
+            });
+        }
+    };
 
     useEffect(() => {
         const s = {};
@@ -410,24 +443,33 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                         )}
                                     </div>
                                     <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                                        {opts.map((opt, idx) => {
-                                            const macros = getOptMacros(opt);
-                                            return (
-                                                <div key={idx} className="p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                                                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                                                        {idx + 1}. {getOptName(opt)}
-                                                    </span>
-                                                    {macros && (
-                                                        <div className="flex gap-2 text-[10px] text-slate-500">
-                                                            <span>{Math.round(macros.kcal)} kcal</span>
-                                                            <span>| {macros.carbs.toFixed(1)}g HC</span>
-                                                            <span>| {macros.protein.toFixed(1)}g P</span>
-                                                            <span>| {macros.fat.toFixed(1)}g G</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
+                                        <DndContext id={`dnd-${meal}`} sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, meal)}>
+                                            <SortableContext items={opts.map(o => o.local_id)} strategy={verticalListSortingStrategy}>
+                                                {opts.map((opt, idx) => {
+                                                    const macros = getOptMacros(opt);
+                                                    return (
+                                                        <SortableOption key={opt.local_id} id={opt.local_id}>
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="text-slate-300 group-hover:text-primary-400 transition-colors">
+                                                                    <GripVertical size={16} />
+                                                                </div>
+                                                                <span className="text-sm font-medium text-slate-600 dark:text-slate-400 select-none">
+                                                                    {idx + 1}. {getOptName(opt)}
+                                                                </span>
+                                                            </div>
+                                                            {macros && (
+                                                                <div className="flex gap-2 text-[10px] text-slate-500">
+                                                                    <span>{Math.round(macros.kcal)} kcal</span>
+                                                                    <span>| {macros.carbs.toFixed(1)}g HC</span>
+                                                                    <span>| {macros.protein.toFixed(1)}g P</span>
+                                                                    <span>| {macros.fat.toFixed(1)}g G</span>
+                                                                </div>
+                                                            )}
+                                                        </SortableOption>
+                                                    );
+                                                })}
+                                            </SortableContext>
+                                        </DndContext>
                                     </div>
                                 </div>
                             );
