@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download, PieChart } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { calcSnapshotMacros, recipeToSnapshot } from './ClosedPlanEditor';
 import InlineRecipeEditor from './InlineRecipeEditor';
@@ -14,7 +14,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     const [saving, setSaving] = useState(false);
     const [activeSearch, setActiveSearch] = useState(null);
     const [recipeSearch, setRecipeSearch] = useState('');
-    const [expandedOptions, setExpandedOptions] = useState(new Set()); // Set of `${mealName}_${idx}`
+    const [collapsedOptions, setCollapsedOptions] = useState(new Set()); // Set of `${mealName}_${idx}`
     const [viewMode, setViewMode] = useState(initialViewMode);
     const [showTemplateMenu, setShowTemplateMenu] = useState(false);
     const [activeMealTab, setActiveMealTab] = useState('all'); // 'all' or specific meal name
@@ -66,12 +66,12 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             ...prev,
             [mealName]: [...(prev[mealName] || []), { recipe_id: null, free_text: null, recipes: null, custom_recipe_data: { name: '', source_recipe_id: null, ingredients: [] } }],
         }));
-        setExpandedOptions(prev => new Set(prev).add(`${mealName}_${newIdx}`));
+        // Note: New items aren't added to collapsedOptions, so they render automatically expanded.
         setActiveSearch(null);
     };
 
     const toggleEditor = (mealName, idx) => {
-        setExpandedOptions(prev => {
+        setCollapsedOptions(prev => {
             const next = new Set(prev);
             const key = `${mealName}_${idx}`;
             if (next.has(key)) next.delete(key);
@@ -171,6 +171,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                     <div className="flex border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden hidden sm:flex">
                         {[
                             { mode: 'meals', icon: List, label: 'Comidas' },
+                            { mode: 'summary', icon: PieChart, label: 'Resumen' },
                             { mode: 'indications', icon: FileText, label: 'Indicaciones' },
                         ].map(({ mode, icon: Icon, label }) => (
                             <button key={mode} onClick={() => setViewMode(mode)} className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1 ${viewMode === mode ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'}`}>
@@ -249,7 +250,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                         <div className="space-y-2">
                                             {opts.map((opt, idx) => {
                                                 const macros = getOptMacros(opt);
-                                                const isExpanded = expandedOptions.has(`${meal}_${idx}`);
+                                                const isExpanded = !collapsedOptions.has(`${meal}_${idx}`);
                                                 return (
                                                     <div key={idx} className="bg-slate-50 dark:bg-slate-800/50 rounded-lg group transition-colors">
                                                         <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => (opt.custom_recipe_data || opt.recipes) && toggleEditor(meal, idx)}>
@@ -325,6 +326,58 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                                 <Plus size={14} /> Añadir opción
                                             </button>
                                         )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Summary View */}
+            {viewMode === 'summary' && (
+                <div className="space-y-6">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <PieChart className="text-primary-500" />
+                            Resumen de Opciones y Macros
+                        </h3>
+                        {mealNames.map(meal => {
+                            const opts = sections[meal] || [];
+                            const avgMacros = getMealAvgMacros(meal);
+                            if (opts.length === 0) return null;
+                            return (
+                                <div key={meal} className="border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden mt-4">
+                                    <div className="bg-slate-50/50 dark:bg-slate-800/30 p-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                                        <span className="font-bold text-slate-700 dark:text-slate-300">{meal}</span>
+                                        {avgMacros && (
+                                            <div className="flex gap-3 text-xs font-bold">
+                                                <span className="text-orange-600">Media: {Math.round(avgMacros.kcal)} kcal</span>
+                                                <span className="text-amber-600">{avgMacros.carbs.toFixed(1)}g HC</span>
+                                                <span className="text-blue-600">{avgMacros.protein.toFixed(1)}g P</span>
+                                                <span className="text-rose-600">{avgMacros.fat.toFixed(1)}g G</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                                        {opts.map((opt, idx) => {
+                                            const macros = getOptMacros(opt);
+                                            return (
+                                                <div key={idx} className="p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                                        {idx + 1}. {getOptName(opt)}
+                                                    </span>
+                                                    {macros && (
+                                                        <div className="flex gap-2 text-[10px] text-slate-500">
+                                                            <span>{Math.round(macros.kcal)} kcal</span>
+                                                            <span>| {macros.carbs.toFixed(1)}g HC</span>
+                                                            <span>| {macros.protein.toFixed(1)}g P</span>
+                                                            <span>| {macros.fat.toFixed(1)}g G</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             );
