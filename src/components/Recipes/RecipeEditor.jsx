@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useId } from 'react';
 import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, GripVertical } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -31,6 +31,7 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
     const [ingredients, setIngredients] = useState([]);
     const [foodSearch, setFoodSearch] = useState('');
     const [editingIngredientId, setEditingIngredientId] = useState(null);
+    const dndId = useId();
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -41,8 +42,8 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
         const { active, over } = event;
         if (over && active.id !== over.id) {
             setIngredients((items) => {
-                const oldIndex = items.findIndex(i => i.food_id === active.id);
-                const newIndex = items.findIndex(i => i.food_id === over.id);
+                const oldIndex = items.findIndex(i => i.unique_id === active.id);
+                const newIndex = items.findIndex(i => i.unique_id === over.id);
                 return arrayMove(items, oldIndex, newIndex);
             });
         }
@@ -64,6 +65,7 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
                 food_id: ri.food_id,
                 food: ri.foods || ri.food,
                 quantity_grams: ri.quantity_grams || 100,
+                unique_id: crypto.randomUUID()
             })));
         }
     }, [recipe]);
@@ -142,8 +144,15 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
         }));
     };
 
-    const addIngredient = (food) => {
-        setIngredients(prev => [...prev, { food_id: food.id, food, quantity_grams: '' }]);
+    const handleAddIngredient = (food) => {
+        if (!ingredients.find(i => i.food_id === food.id)) {
+            setIngredients([...ingredients, {
+                food_id: food.id,
+                food: food,
+                quantity_grams: '',
+                unique_id: crypto.randomUUID()
+            }]);
+        }
         setFoodSearch('');
         setShowFoodSearch(false);
     };
@@ -333,13 +342,13 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
                                 <div className="col-span-1 text-right text-rose-500">Grasas</div>
                                 <div className="col-span-2"></div>
                             </div>
-                            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                                <SortableContext items={ingredients.map(i => i.food_id)} strategy={verticalListSortingStrategy}>
+                            <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                <SortableContext items={ingredients.map(i => i.unique_id)} strategy={verticalListSortingStrategy}>
                                     {ingredients.map(ing => {
                                         const food = ing.food;
                                         const factor = (ing.quantity_grams || 0) / 100;
                                         return (
-                                            <SortableIngredient key={ing.food_id} id={ing.food_id}>
+                                            <SortableIngredient key={ing.unique_id} id={ing.unique_id}>
                                                 <div className="col-span-4 font-medium text-slate-700 dark:text-slate-300 truncate">
                                                     {editingIngredientId === ing.food_id ? (
                                                         <div className="relative">

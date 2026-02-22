@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useId } from 'react';
 import { Search, X, Trash2, GripVertical } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -32,10 +32,14 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
     const initial = snapshot || { name: '', description: '', source_recipe_id: null, ingredients: [] };
     const [name, setName] = useState(snapshot?.name || '');
     const [description, setDescription] = useState(snapshot?.description || '');
-    const [ingredients, setIngredients] = useState(snapshot?.ingredients || []);
+    const [ingredients, setIngredients] = useState(() => {
+        const initialIngs = snapshot?.ingredients || [];
+        return initialIngs.map(ing => ({ ...ing, unique_id: ing.unique_id || crypto.randomUUID() }));
+    });
     const [foodSearch, setFoodSearch] = useState('');
     const [showFoodSearch, setShowFoodSearch] = useState(false);
     const [editingIngredientIdx, setEditingIngredientIdx] = useState(null);
+    const dndId = useId();
 
     const foodResults = useMemo(() => {
         if (!foodSearch.trim()) return foods.slice(0, 12);
@@ -47,6 +51,7 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
         // Don't add if already in list
         if (ingredients.some(i => i.food_id === food.id)) return;
         setIngredients(prev => [...prev, {
+            unique_id: crypto.randomUUID(),
             food_id: food.id,
             food_name: food.name,
             quantity_grams: '',
@@ -90,8 +95,8 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
         const { active, over } = event;
         if (over && active.id !== over.id) {
             setIngredients((items) => {
-                const oldIndex = items.findIndex(i => i.food_id === active.id);
-                const newIndex = items.findIndex(i => i.food_id === over.id);
+                const oldIndex = items.findIndex(i => i.unique_id === active.id);
+                const newIndex = items.findIndex(i => i.unique_id === over.id);
                 return arrayMove(items, oldIndex, newIndex);
             });
         }
@@ -167,12 +172,12 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
                         )}
 
                         {ingredients.length > 0 && (
-                            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                                <SortableContext items={ingredients.map(i => i.food_id)} strategy={verticalListSortingStrategy}>
+                            <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                <SortableContext items={ingredients.map(i => i.unique_id)} strategy={verticalListSortingStrategy}>
                                     {ingredients.map((ing, idx) => {
                                         const m = calcIngMacros(ing);
                                         return (
-                                            <SortableIngredient key={ing.food_id} id={ing.food_id}>
+                                            <SortableIngredient key={ing.unique_id} id={ing.unique_id}>
                                                 <div className="flex-1 min-w-0 flex flex-col justify-center">
                                                     {editingIngredientIdx === idx ? (
                                                         <div className="relative">
