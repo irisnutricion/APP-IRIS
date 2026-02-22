@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { Users, Clock, AlertTriangle, Plus, ChevronDown, MoreVertical, Search, Filter, TrendingUp, TrendingDown, CheckSquare, Square } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { addDays, isBefore, parseISO, isSameDay, format } from 'date-fns';
+import { addDays, isBefore, parseISO, isSameDay, format, startOfWeek } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { useAuth } from '../context/AuthContext';
 
 const MetricItem = ({ title, value, change, isPositive }) => (
@@ -45,31 +46,34 @@ const Dashboard = () => {
             return isBefore(parseISO(p.subscription_end), today) && p.subscription_status === 'active';
         }).length;
 
-        // Today's Reviews
-        const reviewsToday = patients.filter(p => {
+        // This Week's Reviews
+        const reviewsThisWeek = patients.filter(p => {
             if (p.subscription_status !== 'active' || !p.subscription_start || !p.review_day) return false;
-
-            // Logic: A patient has a review if today matches their review_day (1=Mon, 7=Sun)
-            // date-fns getDay: 0=Sun, 1=Mon...6=Sat. 
-            // Our App: 1=Mon...7=Sun.
-            const todayDayOfWeek = today.getDay() === 0 ? 7 : today.getDay();
-            return p.review_day === todayDayOfWeek;
+            return true;
         }).map(p => {
-            // Check if review exists for today
-            const reviewId = `review_${p.id}_${format(today, 'yyyy-MM-dd')}`;
+            // Calculate the specific date of this week's review (Monday = 1, Sunday = 7)
+            const currentDayOfWeek = today.getDay() === 0 ? 7 : today.getDay();
+            const diff = p.review_day - currentDayOfWeek;
+            const reviewDate = addDays(today, diff);
+
+            // Check if review exists for that specific date
+            const reviewId = `review_${p.id}_${format(reviewDate, 'yyyy-MM-dd')}`;
             const isCompleted = reviews[reviewId]?.completed || false;
+
             return {
                 patientId: p.id,
                 patientName: p.name,
+                reviewDate: reviewDate,
+                dayOfWeek: p.review_day,
                 completed: isCompleted
             };
-        });
+        }).sort((a, b) => a.dayOfWeek - b.dayOfWeek);
 
         return {
             activePatients: active,
             pendingRenewals: pending,
             expiredPlans: expired,
-            todaysReviews: reviewsToday
+            todaysReviews: reviewsThisWeek
         };
     }, [patients, reviews]);
 
@@ -132,8 +136,8 @@ const Dashboard = () => {
                                 <CheckSquare size={20} />
                             </div>
                             <div>
-                                <h3 className="card-title font-bold text-slate-800 dark:text-slate-100">Revisiones de Hoy</h3>
-                                <p className="text-xs text-slate-500">Pacientes que requieren seguimiento este {new Date().toLocaleDateString('es-ES', { weekday: 'long' })}</p>
+                                <h3 className="card-title font-bold text-slate-800 dark:text-slate-100">Revisiones de esta Semana</h3>
+                                <p className="text-xs text-slate-500">Pacientes que requieren seguimiento a lo largo de esta semana</p>
                             </div>
                         </div>
                         <Link to="/calendar" className="btn btn-ghost btn-sm text-primary-600 font-medium">Ver Calendario</Link>
@@ -149,7 +153,7 @@ const Dashboard = () => {
                                         </div>
                                         <div>
                                             <h4 className="font-bold text-slate-800 dark:text-slate-100">{review.patientName}</h4>
-                                            <p className="text-xs text-slate-500">Revisión Semanal</p>
+                                            <p className="text-xs text-slate-500 capitalize">{format(review.reviewDate, 'EEEE, d MMM', { locale: es })}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
@@ -174,8 +178,8 @@ const Dashboard = () => {
                         ) : (
                             <div className="text-center py-8 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
                                 <CheckSquare size={32} className="mx-auto text-slate-300 mb-2" />
-                                <p className="text-slate-500 font-medium">¡No hay revisiones programadas para hoy!</p>
-                                <p className="text-xs text-slate-400 mt-1">Disfruta de tu día libre de seguimientos.</p>
+                                <p className="text-slate-500 font-medium">¡No hay revisiones programadas para esta semana!</p>
+                                <p className="text-xs text-slate-400 mt-1">Disfruta de tu semana libre de seguimientos.</p>
                             </div>
                         )}
                     </div>

@@ -14,7 +14,7 @@ const Renewals = () => {
     const activeSubs = patients.filter(p =>
         p.subscription &&
         p.subscription.endDate &&
-        p.subscription_status !== 'finalizado' &&
+        p.subscription_status !== 'finished' &&
         p.subscription_status !== 'cancelled'
     );
 
@@ -40,7 +40,7 @@ const Renewals = () => {
     });
 
     const unpaidRenewals = patients.filter(p => {
-        if (p.subscription_status === 'finalizado' || p.subscription_status === 'cancelled') return false;
+        if (p.subscription_status === 'finished' || p.subscription_status === 'cancelled') return false;
         const terms = calculateSubscriptionTerms(p, payments);
         return terms.some(t => t.status === 'active' && !t.isPaid);
     });
