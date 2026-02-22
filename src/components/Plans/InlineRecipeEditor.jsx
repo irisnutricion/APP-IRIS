@@ -1,5 +1,5 @@
 import { useState, useMemo, useId } from 'react';
-import { Search, X, Trash2, GripVertical, Plus } from 'lucide-react';
+import { Search, X, Trash2, GripVertical, Plus, BookmarkPlus } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
