@@ -25,6 +25,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
         items.forEach(item => {
             if (!s[item.meal_name]) s[item.meal_name] = [];
             s[item.meal_name].push({
+                local_id: crypto.randomUUID(),
                 recipe_id: item.recipe_id,
                 free_text: item.free_text,
                 recipes: item.recipes,
@@ -44,7 +45,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
         const snapshot = recipeToSnapshot(recipe);
         setSections(prev => ({
             ...prev,
-            [mealName]: [...(prev[mealName] || []), { recipe_id: recipe.id, free_text: null, recipes: recipe, custom_recipe_data: snapshot }],
+            [mealName]: [...(prev[mealName] || []), { local_id: crypto.randomUUID(), recipe_id: recipe.id, free_text: null, recipes: recipe, custom_recipe_data: snapshot }],
         }));
         setActiveSearch(null);
         setRecipeSearch('');
@@ -54,7 +55,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
         if (!text.trim()) return;
         setSections(prev => ({
             ...prev,
-            [mealName]: [...(prev[mealName] || []), { recipe_id: null, free_text: text.trim(), recipes: null, custom_recipe_data: null }],
+            [mealName]: [...(prev[mealName] || []), { local_id: crypto.randomUUID(), recipe_id: null, free_text: text.trim(), recipes: null, custom_recipe_data: null }],
         }));
         setActiveSearch(null);
         setRecipeSearch('');
@@ -64,7 +65,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
         const newIdx = (sections[mealName] || []).length;
         setSections(prev => ({
             ...prev,
-            [mealName]: [...(prev[mealName] || []), { recipe_id: null, free_text: null, recipes: null, custom_recipe_data: { name: '', source_recipe_id: null, ingredients: [] } }],
+            [mealName]: [...(prev[mealName] || []), { local_id: crypto.randomUUID(), recipe_id: null, free_text: null, recipes: null, custom_recipe_data: { name: '', source_recipe_id: null, ingredients: [] } }],
         }));
         // Note: New items aren't added to collapsedOptions, so they render automatically expanded.
         setActiveSearch(null);
@@ -84,15 +85,20 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
         setSections(prev => ({ ...prev, [mealName]: prev[mealName].filter((_, i) => i !== idx) }));
     };
 
-    const duplicateOption = (mealName, opt) => {
-        const newOpt = { ...opt };
+    const duplicateOption = (mealName, opt, idx) => {
+        const newOpt = { ...opt, local_id: crypto.randomUUID() };
         if (opt.custom_recipe_data) {
             newOpt.custom_recipe_data = JSON.parse(JSON.stringify(opt.custom_recipe_data));
         }
-        setSections(prev => ({
-            ...prev,
-            [mealName]: [...(prev[mealName] || []), newOpt],
-        }));
+        setSections(prev => {
+            const list = prev[mealName] || [];
+            const newList = [...list];
+            newList.splice(idx + 1, 0, newOpt);
+            return {
+                ...prev,
+                [mealName]: newList,
+            };
+        });
     };
 
     // Get display name
@@ -280,7 +286,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                                 const macros = getOptMacros(opt);
                                                 const isExpanded = !collapsedOptions.has(`${meal}_${idx}`);
                                                 return (
-                                                    <div key={idx} className="bg-slate-50 dark:bg-slate-800/50 rounded-lg group transition-colors">
+                                                    <div key={opt.local_id || idx} className="bg-slate-50 dark:bg-slate-800/50 rounded-lg group transition-colors">
                                                         <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => (opt.custom_recipe_data || opt.recipes) && toggleEditor(meal, idx)}>
                                                             <div className="flex items-center gap-3 flex-1 min-w-0">
                                                                 <span className="text-xs font-bold text-slate-300 dark:text-slate-600 w-6">{idx + 1}</span>
@@ -298,7 +304,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                                                 <button onClick={(e) => { e.stopPropagation(); (opt.custom_recipe_data || opt.recipes) && toggleEditor(meal, idx); }} className="p-1 text-slate-300 hover:text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                     <Pencil size={14} />
                                                                 </button>
-                                                                <button onClick={(e) => { e.stopPropagation(); duplicateOption(meal, opt); }} className="p-1 text-slate-300 hover:text-green-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicar opción">
+                                                                <button onClick={(e) => { e.stopPropagation(); duplicateOption(meal, opt, idx); }} className="p-1 text-slate-300 hover:text-green-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicar opción">
                                                                     <Copy size={14} />
                                                                 </button>
                                                                 <button onClick={(e) => { e.stopPropagation(); removeOption(meal, idx); }} className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Eliminar opción">
