@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download, PieChart, GripVertical } from 'lucide-react';
 import { useData } from '../../context/DataContext';
-import { calcSnapshotMacros, recipeToSnapshot } from './ClosedPlanEditor';
+import { calcSnapshotMacros, recipeToSnapshot, checkRecipeIsSaved } from './ClosedPlanEditor';
 import InlineRecipeEditor from './InlineRecipeEditor';
 import { generatePlanPdf } from '../../utils/planPdfGenerator';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -318,12 +318,17 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                             {opts.map((opt, idx) => {
                                                 const macros = getOptMacros(opt);
                                                 const isExpanded = !collapsedOptions.has(`${meal}_${idx}`);
+                                                const isSaved = checkRecipeIsSaved(opt, recipes);
                                                 return (
                                                     <div key={opt.local_id || idx} className="bg-slate-50 dark:bg-slate-800/50 rounded-lg group transition-colors">
                                                         <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => (opt.custom_recipe_data || opt.recipes) && toggleEditor(meal, idx)}>
                                                             <div className="flex items-center gap-3 flex-1 min-w-0">
                                                                 <span className="text-xs font-bold text-slate-300 dark:text-slate-600 w-6">{idx + 1}</span>
-                                                                <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{getOptName(opt)}</span>
+                                                                <div className="flex items-center gap-1.5 truncate">
+                                                                    {isSaved === true && <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Guardada en base de datos" />}
+                                                                    {isSaved === false && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" title="Personalizada / No guardada" />}
+                                                                    <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{getOptName(opt)}</span>
+                                                                </div>
                                                             </div>
                                                             <div className="flex items-center gap-3">
                                                                 {macros && (
@@ -447,15 +452,19 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                             <SortableContext items={opts.map(o => o.local_id)} strategy={verticalListSortingStrategy}>
                                                 {opts.map((opt, idx) => {
                                                     const macros = getOptMacros(opt);
+                                                    const isSaved = checkRecipeIsSaved(opt, recipes);
                                                     return (
                                                         <SortableOption key={opt.local_id} id={opt.local_id}>
                                                             <div className="flex items-center gap-3">
                                                                 <div className="text-slate-300 group-hover:text-primary-400 transition-colors">
                                                                     <GripVertical size={16} />
                                                                 </div>
-                                                                <span className="text-sm font-medium text-slate-600 dark:text-slate-400 select-none">
-                                                                    {idx + 1}. {getOptName(opt)}
-                                                                </span>
+                                                                <div className="flex items-center gap-1.5 select-none text-sm font-medium text-slate-600 dark:text-slate-400">
+                                                                    <span className="mr-1">{idx + 1}.</span>
+                                                                    {isSaved === true && <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Guardada en base de datos" />}
+                                                                    {isSaved === false && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" title="Personalizada / No guardada" />}
+                                                                    <span>{getOptName(opt)}</span>
+                                                                </div>
                                                             </div>
                                                             {macros && (
                                                                 <div className="flex gap-2 text-[10px] text-slate-500">

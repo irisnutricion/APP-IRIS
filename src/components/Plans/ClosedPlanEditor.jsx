@@ -43,7 +43,28 @@ function recipeToSnapshot(recipe) {
     };
 }
 
-export { calcSnapshotMacros, recipeToSnapshot };
+function checkRecipeIsSaved(cellOrOpt, allRecipes) {
+    if (!cellOrOpt.custom_recipe_data && cellOrOpt.recipes) return true;
+    if (!cellOrOpt.custom_recipe_data && !cellOrOpt.recipes) return null; // free text
+
+    const snapName = (cellOrOpt.custom_recipe_data.name || '').trim().toLowerCase();
+    const snapFoods = new Set((cellOrOpt.custom_recipe_data.ingredients || []).map(i => i.food_id));
+
+    const activeRecipes = allRecipes.filter(r => r.is_active);
+    for (const r of activeRecipes) {
+        if ((r.name || '').trim().toLowerCase() !== snapName) continue;
+        const rFoods = new Set((r.recipe_ingredients || []).map(ri => ri.food_id));
+        if (snapFoods.size !== rFoods.size) continue;
+        let diff = false;
+        for (const fid of snapFoods) {
+            if (!rFoods.has(fid)) { diff = true; break; }
+        }
+        if (!diff) return true;
+    }
+    return false;
+}
+
+export { calcSnapshotMacros, recipeToSnapshot, checkRecipeIsSaved };
 
 export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onUpdatePlan, onSaveAsTemplate, initialViewMode = 'grid' }) {
     const { recipes = [], addRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null } = useData();
@@ -273,7 +294,15 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                 ) : (
                                                     <div className="flex flex-col gap-2">
                                                         <div className="relative p-1.5 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs min-h-[48px] flex items-center cursor-pointer" onClick={() => toggleEditor(key)}>
-                                                            <span className="text-slate-700 dark:text-slate-300 line-clamp-2 pr-8">{getCellName(cell)}</span>
+                                                            <div className="flex items-center gap-1.5 line-clamp-2 pr-8">
+                                                                {(() => {
+                                                                    const isSaved = checkRecipeIsSaved(cell, recipes);
+                                                                    if (isSaved === true) return <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Guardada en base de datos" />;
+                                                                    if (isSaved === false) return <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" title="Personalizada / No guardada" />;
+                                                                    return null;
+                                                                })()}
+                                                                <span className="text-slate-700 dark:text-slate-300">{getCellName(cell)}</span>
+                                                            </div>
                                                             <div className="absolute top-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover/cell:opacity-100 transition-opacity">
                                                                 <button onClick={(e) => { e.stopPropagation(); toggleEditor(key); }} className="p-0.5 text-slate-300 hover:text-primary-500">
                                                                     <Pencil size={11} />
@@ -373,13 +402,18 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                         const cell = grid[key];
                                         const cellMacros = getCellMacros(cell);
                                         const ingredients = cell?.custom_recipe_data?.ingredients || [];
+                                        const isSaved = cell ? checkRecipeIsSaved(cell, recipes) : null;
                                         return (
                                             <div key={meal} className="bg-white dark:bg-slate-900 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                                                 <div className="p-3 cursor-pointer" onClick={() => cell && toggleEditor(key)}>
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-3">
                                                             <span className="text-xs font-semibold text-slate-400 w-24 dark:text-slate-500">{meal}</span>
-                                                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{getCellName(cell)}</span>
+                                                            <div className="flex items-center gap-1.5">
+                                                                {isSaved === true && <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Guardada en base de datos" />}
+                                                                {isSaved === false && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" title="Personalizada / No guardada" />}
+                                                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{getCellName(cell)}</span>
+                                                            </div>
                                                         </div>
                                                         {cellMacros && (
                                                             <div className="flex gap-3 text-xs">
@@ -438,11 +472,16 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                         {mealNames.map(meal => {
                                             const key = `${dayIdx + 1}_${meal}`;
                                             const cell = grid[key];
+                                            const isSaved = cell ? checkRecipeIsSaved(cell, recipes) : null;
                                             return (
                                                 <div key={meal} className="flex flex-col gap-1">
                                                     <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200" onClick={() => cell && toggleEditor(key)}>
                                                         <span className="font-medium text-slate-400 w-20">{meal}:</span>
-                                                        <span className="text-slate-600 dark:text-slate-300">{getCellName(cell)}</span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            {isSaved === true && <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Guardada en base de datos" />}
+                                                            {isSaved === false && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" title="Personalizada / No guardada" />}
+                                                            <span className="text-slate-600 dark:text-slate-300">{getCellName(cell)}</span>
+                                                        </div>
                                                     </div>
                                                     {expandedCells.has(key) && cell && (
                                                         <div className="ml-20">
