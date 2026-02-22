@@ -404,8 +404,8 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                         const ingredients = cell?.custom_recipe_data?.ingredients || [];
                                         const isSaved = cell ? checkRecipeIsSaved(cell, recipes) : null;
                                         return (
-                                            <div key={meal} className="bg-white dark:bg-slate-900 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                                                <div className="p-3 cursor-pointer" onClick={() => cell && toggleEditor(key)}>
+                                            <div key={meal} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden group transition-all hover:border-slate-300 dark:hover:border-slate-600 mb-3">
+                                                <div className="p-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50" onClick={() => cell && toggleEditor(key)}>
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-3">
                                                             <span className="text-xs font-semibold text-slate-400 w-24 dark:text-slate-500">{meal}</span>
@@ -474,7 +474,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                             const cell = grid[key];
                                             const isSaved = cell ? checkRecipeIsSaved(cell, recipes) : null;
                                             return (
-                                                <div key={meal} className="flex flex-col gap-1">
+                                                <div key={meal} className="flex flex-col gap-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-2 mb-2 transition-all hover:border-slate-300 dark:hover:border-slate-600">
                                                     <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 cursor-pointer hover:text-slate-700 dark:hover:text-slate-200" onClick={() => cell && toggleEditor(key)}>
                                                         <span className="font-medium text-slate-400 w-20">{meal}:</span>
                                                         <div className="flex items-center gap-1.5">

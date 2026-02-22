@@ -314,14 +314,14 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                             <p className="text-sm text-slate-400 text-center py-4">Sin opciones. Añade recetas o texto libre.</p>
                                         )}
 
-                                        <div className="space-y-2">
+                                        <div className="space-y-3">
                                             {opts.map((opt, idx) => {
                                                 const macros = getOptMacros(opt);
                                                 const isExpanded = !collapsedOptions.has(`${meal}_${idx}`);
                                                 const isSaved = checkRecipeIsSaved(opt, recipes);
                                                 return (
-                                                    <div key={opt.local_id || idx} className="bg-slate-50 dark:bg-slate-800/50 rounded-lg group transition-colors">
-                                                        <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onClick={() => (opt.custom_recipe_data || opt.recipes) && toggleEditor(meal, idx)}>
+                                                    <div key={opt.local_id || idx} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden group transition-all hover:border-slate-300 dark:hover:border-slate-600">
+                                                        <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50" onClick={() => (opt.custom_recipe_data || opt.recipes) && toggleEditor(meal, idx)}>
                                                             <div className="flex items-center gap-3 flex-1 min-w-0">
                                                                 <span className="text-xs font-bold text-slate-300 dark:text-slate-600 w-6">{idx + 1}</span>
                                                                 <div className="flex items-center gap-1.5 truncate">
