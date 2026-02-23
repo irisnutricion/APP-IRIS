@@ -3,7 +3,7 @@ import { useData } from '../../context/DataContext';
 import { supabase } from '../../supabaseClient';
 import {
     Plus, Trash2, Edit2, Check, X, Settings as SettingsIcon, CreditCard, User, Database,
-    Download, Upload, ArrowDown, ArrowUp, Tag, Wallet, ChevronDown, ChevronRight, Layers, Heart, Users, KeyRound
+    Download, Upload, ArrowDown, ArrowUp, Tag, Wallet, ChevronDown, ChevronRight, Layers, Heart, Users, KeyRound, FileText
 } from 'lucide-react';
 
 const Settings = () => {
@@ -20,6 +20,7 @@ const Settings = () => {
         clinicalOptions, addClinicalOption, updateClinicalOption, deleteClinicalOption,
         clinicalCategories, addClinicalCategory, updateClinicalCategory, deleteClinicalCategory,
         nutritionists, addNutritionist, updateNutritionist, deleteNutritionist,
+        recipePhrases, addRecipePhrase, updateRecipePhrase, deleteRecipePhrase,
         refreshData
     } = useData();
 
@@ -71,6 +72,10 @@ const Settings = () => {
     const [nutriSaving, setNutriSaving] = useState(false);
     const [nutriError, setNutriError] = useState(null);
 
+    // Recipe Phrases
+    const [isEditingPhrase, setIsEditingPhrase] = useState(null);
+    const [phraseForm, setPhraseForm] = useState({ name: '', content: '' });
+
     const colorOptions = [
         { label: 'Gris', value: 'bg-slate-100 text-slate-700' },
         { label: 'Rojo', value: 'bg-red-100 text-red-700' },
@@ -89,6 +94,7 @@ const Settings = () => {
         { id: 'marketing', label: 'Captación', icon: User, description: 'Fuentes de captación de clientes' },
         { id: 'tareas', label: 'Tareas', icon: Tag, description: 'Etiquetas y tipos de tarea' },
         { id: 'clinical', label: 'Datos Clínicos', icon: Heart, description: 'Opciones de patologías y alimentos' },
+        { id: 'recetas', label: 'Textos de Recetas', icon: FileText, description: 'Frases prediseñadas para descripciones de recetas' },
         { id: 'datos', label: 'Datos', icon: Database, description: 'Copias de seguridad' },
     ];
 
@@ -269,6 +275,23 @@ const Settings = () => {
     const handleDeleteClinicalCategory = (id) => {
         if (confirm('¿Seguro que deseas eliminar esta categoría? Se ocultarán las opciones asociadas.')) {
             deleteClinicalCategory(id);
+        }
+    };
+
+    const handleSavePhrase = () => {
+        if (!phraseForm.name || !phraseForm.content) return;
+        if (isEditingPhrase === 'new') {
+            addRecipePhrase(phraseForm);
+        } else {
+            updateRecipePhrase(isEditingPhrase, phraseForm);
+        }
+        setIsEditingPhrase(null);
+        setPhraseForm({ name: '', content: '' });
+    };
+
+    const handleDeletePhrase = (id) => {
+        if (confirm('¿Seguro que deseas eliminar esta frase prediseñada?')) {
+            deleteRecipePhrase(id);
         }
     };
 
@@ -1137,6 +1160,124 @@ const Settings = () => {
         );
     };
 
+    const renderRecetasSection = () => (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                        <FileText size={18} /> Frases y Textos Prediseñados
+                    </h4>
+                    <p className="text-sm text-gray-500 mt-1">
+                        Crea fragmentos de texto reutilizables para insertarlos rápidamente en las descripciones de tus recetas.
+                    </p>
+                </div>
+                <button
+                    onClick={() => { setIsEditingPhrase('new'); setPhraseForm({ name: '', content: '' }); }}
+                    className="btn btn-outline"
+                    disabled={isEditingPhrase !== null}
+                >
+                    <Plus size={18} /> Crear Frase
+                </button>
+            </div>
+
+            <div className="space-y-4">
+                {recipePhrases?.map(phrase => (
+                    <div key={phrase.id} className="p-4 rounded-xl border border-gray-100 bg-white dark:bg-slate-800 dark:border-slate-700 hover:shadow-md transition-shadow">
+                        {isEditingPhrase === phrase.id ? (
+                            <div className="space-y-3">
+                                <input
+                                    className="form-input text-sm font-bold w-full"
+                                    value={phraseForm.name}
+                                    onChange={e => setPhraseForm({ ...phraseForm, name: e.target.value })}
+                                    placeholder="Nombre corto (Ej. Pan integral)"
+                                    autoFocus
+                                />
+                                <textarea
+                                    className="form-input text-sm w-full min-h-[80px]"
+                                    value={phraseForm.content}
+                                    onChange={e => setPhraseForm({ ...phraseForm, content: e.target.value })}
+                                    placeholder="Contenido de la advertencia o consejo..."
+                                />
+                                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                                    <button onClick={() => setIsEditingPhrase(null)} className="btn btn-sm btn-ghost text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+                                        <X size={16} /> Cancelar
+                                    </button>
+                                    <button onClick={handleSavePhrase} className="btn btn-sm btn-primary">
+                                        <Check size={16} /> Guardar
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="flex justify-between items-start mb-2">
+                                    <h5 className="font-bold text-slate-700 dark:text-slate-200">{phrase.name}</h5>
+                                    <div className="flex gap-1">
+                                        <button
+                                            onClick={() => { setIsEditingPhrase(phrase.id); setPhraseForm({ name: phrase.name, content: phrase.content }); }}
+                                            className="p-1.5 text-slate-400 hover:text-primary-600 rounded bg-slate-50 dark:bg-slate-700/50 hover:bg-primary-50 dark:hover:bg-primary-900/40 transition-colors"
+                                            title="Editar"
+                                        >
+                                            <Edit2 size={16} />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeletePhrase(phrase.id)}
+                                            className="p-1.5 text-slate-400 hover:text-red-500 rounded bg-slate-50 dark:bg-slate-700/50 hover:bg-red-50 dark:hover:bg-red-900/40 transition-colors"
+                                            title="Borrar"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                                <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-3 whitespace-pre-wrap">
+                                    {phrase.content}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                ))}
+
+                {recipePhrases?.length === 0 && isEditingPhrase !== 'new' && (
+                    <div className="text-center py-8 text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+                        <FileText className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                        <p>No tienes frases guardadas todavía.</p>
+                        <p className="text-xs mt-1 text-slate-400">Las descripciones frecuentes que utilices en tus recetas aparecerán aquí.</p>
+                    </div>
+                )}
+            </div>
+
+            {isEditingPhrase === 'new' && (
+                <div className="p-4 rounded-xl border border-primary-500 bg-primary-50/50 ring-2 ring-primary-100 animate-fade-in mt-6">
+                    <h4 className="font-bold text-primary-700 mb-3 text-sm flex items-center gap-2"><Plus size={16} /> Nueva Frase Prediseñada</h4>
+                    <div className="space-y-3">
+                        <div>
+                            <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Nombre (Identificador Corto)</label>
+                            <input
+                                className="form-input mt-1 w-full"
+                                value={phraseForm.name}
+                                onChange={e => setPhraseForm({ ...phraseForm, name: e.target.value })}
+                                placeholder="Ej. Recomendación de Yogurt"
+                                autoFocus
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Texto de la Frase</label>
+                            <textarea
+                                className="form-input mt-1 w-full min-h-[100px]"
+                                value={phraseForm.content}
+                                onChange={e => setPhraseForm({ ...phraseForm, content: e.target.value })}
+                                placeholder="El texto entero que se pegará en la preparación de la receta..."
+                            />
+                        </div>
+                        <div className="flex gap-2 justify-end pt-2">
+                            <button onClick={() => setIsEditingPhrase(null)} className="btn btn-sm btn-ghost text-slate-500">Cancelar</button>
+                            <button onClick={handleSavePhrase} disabled={!phraseForm.name || !phraseForm.content} className="btn btn-sm btn-primary">Crear Frase</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+
     const renderEquipoSection = () => (
         <div className="space-y-8">
             <div>
@@ -1264,6 +1405,7 @@ const Settings = () => {
             case 'tareas': return renderTareasSection();
 
             case 'clinical': return renderClinicalSection();
+            case 'recetas': return renderRecetasSection();
             case 'datos': return renderDatosSection();
             default: return null;
         }

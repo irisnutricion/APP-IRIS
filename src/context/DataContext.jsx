@@ -35,6 +35,7 @@ export const DataProvider = ({ children }) => {
     const [mealPlans, setMealPlans] = useState([]);
     const [mealPlanItems, setMealPlanItems] = useState([]);
     const [indicationTemplates, setIndicationTemplates] = useState([]);
+    const [recipePhrases, setRecipePhrases] = useState([]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -65,7 +66,8 @@ export const DataProvider = ({ children }) => {
                 supabase.from('recipes').select('*, recipe_category_links(category_id), recipe_ingredients(*, foods(*)))').order('name', { ascending: true }),
                 supabase.from('meal_plans').select('*').order('created_at', { ascending: false }),
                 supabase.from('meal_plan_items').select('*, recipes(*, recipe_ingredients(*, foods(*)))').order('sort_order', { ascending: true }),
-                supabase.from('indication_templates').select('*')
+                supabase.from('indication_templates').select('*'),
+                supabase.from('recipe_phrases').select('*').order('name', { ascending: true })
             ]);
 
             const [
@@ -93,7 +95,8 @@ export const DataProvider = ({ children }) => {
                 recipesResult,
                 mealPlansResult,
                 mealPlanItemsResult,
-                indicationTemplatesResult
+                indicationTemplatesResult,
+                recipePhrasesResult
             ] = results;
 
             // Log errors for debugging
@@ -157,6 +160,7 @@ export const DataProvider = ({ children }) => {
             if (mealPlansResult.status === 'fulfilled') setMealPlans(mealPlansResult.value.data || []);
             if (mealPlanItemsResult.status === 'fulfilled') setMealPlanItems(mealPlanItemsResult.value.data || []);
             if (indicationTemplatesResult.status === 'fulfilled') setIndicationTemplates(indicationTemplatesResult.value.data || []);
+            if (recipePhrasesResult.status === 'fulfilled') setRecipePhrases(recipePhrasesResult.value.data || []);
 
             if (reviewsResult.status === 'fulfilled' && reviewsResult.value.data) {
                 const reviewsObj = reviewsResult.value.data.reduce((acc, r) => {
@@ -1438,6 +1442,51 @@ export const DataProvider = ({ children }) => {
         }
     };
 
+    const addRecipePhrase = async (phrase) => {
+        try {
+            const { data, error } = await supabase
+                .from('recipe_phrases')
+                .insert([{ ...phrase, nutritionist_id: nutritionistId }])
+                .select()
+                .single();
+            if (error) throw error;
+            setRecipePhrases(prev => [...prev, data]);
+            return data;
+        } catch (error) {
+            console.error('Error adding recipe phrase:', error);
+            return null;
+        }
+    };
+
+    const updateRecipePhrase = async (id, updates) => {
+        try {
+            const { data, error } = await supabase
+                .from('recipe_phrases')
+                .update(updates)
+                .eq('id', id)
+                .select()
+                .single();
+            if (error) throw error;
+            setRecipePhrases(prev => prev.map(p => p.id === id ? data : p));
+            return data;
+        } catch (error) {
+            console.error('Error updating recipe phrase:', error);
+            return null;
+        }
+    };
+
+    const deleteRecipePhrase = async (id) => {
+        try {
+            const { error } = await supabase.from('recipe_phrases').delete().eq('id', id);
+            if (error) throw error;
+            setRecipePhrases(prev => prev.filter(p => p.id !== id));
+            return true;
+        } catch (error) {
+            console.error('Error deleting recipe phrase:', error);
+            return false;
+        }
+    };
+
     const normalizedTasks = useMemo(() =>
         tasks.map(t => ({ ...t, tag: t.tag_id, type: t.type_id })),
         [tasks]);
@@ -1560,7 +1609,12 @@ export const DataProvider = ({ children }) => {
             indicationTemplates,
             addIndicationTemplate,
             updateIndicationTemplate,
-            deleteIndicationTemplate
+            deleteIndicationTemplate,
+
+            recipePhrases,
+            addRecipePhrase,
+            updateRecipePhrase,
+            deleteRecipePhrase,
         }}>
             {children}
         </DataContext.Provider>

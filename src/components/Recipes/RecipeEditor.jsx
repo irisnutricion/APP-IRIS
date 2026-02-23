@@ -20,7 +20,7 @@ function SortableIngredient({ id, children }) {
 import { ALL_TAGS } from '../Foods/FoodModal';
 
 export default function RecipeEditor({ recipe, onSave, onCancel }) {
-    const { foods = [], recipeCategories = [] } = useData();
+    const { foods = [], recipeCategories = [], recipePhrases = [] } = useData();
 
     const [form, setForm] = useState({
         name: '',
@@ -222,7 +222,30 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción</label>
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Descripción</label>
+                            {recipePhrases?.length > 0 && (
+                                <select
+                                    className="form-select text-xs py-0.5 px-2 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 w-40"
+                                    value=""
+                                    onChange={(e) => {
+                                        if (!e.target.value) return;
+                                        const phrase = recipePhrases.find(p => p.id === e.target.value);
+                                        if (phrase) {
+                                            setForm(prev => ({
+                                                ...prev,
+                                                description: prev.description ? `${prev.description}\n\n${phrase.content}` : phrase.content
+                                            }));
+                                        }
+                                    }}
+                                >
+                                    <option value="">Insertar frase...</option>
+                                    {recipePhrases.map(phrase => (
+                                        <option key={phrase.id} value={phrase.id}>{phrase.name}</option>
+                                    ))}
+                                </select>
+                            )}
+                        </div>
                         <textarea
                             value={form.description}
                             onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}

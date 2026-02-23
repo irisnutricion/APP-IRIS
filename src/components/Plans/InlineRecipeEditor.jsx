@@ -305,7 +305,27 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
 
                 {/* Right Col: Description */}
                 <div className="w-full md:w-1/3 p-3 flex flex-col">
-                    <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase">Descripción / Preparación</h4>
+                    <div className="flex justify-between items-center mb-2">
+                        <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Descripción / Preparación</h4>
+                        {recipePhrases?.length > 0 && (
+                            <select
+                                className="form-select text-xs py-0.5 px-2 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 w-32"
+                                value=""
+                                onChange={(e) => {
+                                    if (!e.target.value) return;
+                                    const phrase = recipePhrases.find(p => p.id === e.target.value);
+                                    if (phrase) {
+                                        setDescription(prev => prev ? `${prev}\n\n${phrase.content}` : phrase.content);
+                                    }
+                                }}
+                            >
+                                <option value="">Insertar frase...</option>
+                                {recipePhrases.map(phrase => (
+                                    <option key={phrase.id} value={phrase.id}>{phrase.name}</option>
+                                ))}
+                            </select>
+                        )}
+                    </div>
                     <textarea
                         value={description}
                         onChange={e => setDescription(e.target.value)}
