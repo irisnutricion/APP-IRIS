@@ -27,7 +27,7 @@ function SortableIngredient({ id, children }) {
  *   onClose() — cierra sin cambios
  */
 export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe, onClose }) {
-    const { foods = [] } = useData();
+    const { foods = [], recipePhrases = [] } = useData();
 
     const initial = snapshot || { name: '', description: '', source_recipe_id: null, ingredients: [] };
     const [name, setName] = useState(snapshot?.name || '');
