@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, UtensilsCrossed, Archive, Trash2, Copy, FileText, Pencil } from 'lucide-react';
+import { Plus, UtensilsCrossed, Archive, Trash2, Copy, FileText, Pencil, CopyPlus, X } from 'lucide-react';
 import { useData } from '../../../context/DataContext';
 import ClosedPlanEditor from '../../Plans/ClosedPlanEditor';
 import OpenPlanEditor from '../../Plans/OpenPlanEditor';
@@ -7,7 +7,8 @@ import OpenPlanEditor from '../../Plans/OpenPlanEditor';
 export default function PlansTab({ patient }) {
     const { mealPlans = [], mealPlanItems = [], addMealPlan, updateMealPlan, deleteMealPlan, saveMealPlanItems, cloneMealPlan } = useData();
     const [editingPlan, setEditingPlan] = useState(null);
-    const [showNewPlanMenu, setShowNewPlanMenu] = useState(false);
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [createData, setCreateData] = useState({ type: 'closed', templateId: '' });
 
     const patientPlans = useMemo(() => {
         return mealPlans.filter(p => p.patient_id === patient.id && !p.is_template);
@@ -27,13 +28,20 @@ export default function PlansTab({ patient }) {
             meal_names: ['Desayuno', 'Media mañana', 'Almuerzo', 'Merienda', 'Cena'],
         });
         if (plan) setEditingPlan(plan);
-        setShowNewPlanMenu(false);
+        setShowCreateModal(false);
     };
 
     const handleFromTemplate = async (templateId) => {
         const newPlan = await cloneMealPlan(templateId, { patient_id: patient.id });
         if (newPlan) setEditingPlan(newPlan);
-        setShowNewPlanMenu(false);
+        setShowCreateModal(false);
+    };
+
+    const handleDuplicatePlan = async (plan) => {
+        if (!window.confirm(`¿Quieres duplicar el plan "${plan.name}" en este paciente?`)) return;
+        const name = `${plan.name} (copia)`;
+        const newPlan = await cloneMealPlan(plan.id, { is_template: false, patient_id: patient.id, name });
+        if (newPlan) setEditingPlan(newPlan);
     };
 
     const handleSaveAsTemplate = async (planId) => {
@@ -96,33 +104,52 @@ export default function PlansTab({ patient }) {
                     <h2 className="text-lg font-bold text-slate-800 dark:text-white">Planes nutricionales</h2>
                     <span className="text-sm text-slate-400">({patientPlans.length})</span>
                 </div>
-                <div className="relative">
-                    <button onClick={() => setShowNewPlanMenu(!showNewPlanMenu)} className="btn btn-primary text-sm py-2">
+                <div>
+                    <button onClick={() => setShowCreateModal(true)} className="btn btn-primary text-sm py-2">
                         <Plus size={16} /> Crear plan
                     </button>
-                    {showNewPlanMenu && (
-                        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-20 overflow-hidden">
-                            <button onClick={() => handleNewPlan('closed')} className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-300 border-b border-slate-100 dark:border-slate-700">
-                                <div className="font-medium">Plan cerrado</div>
-                                <div className="text-xs text-slate-400 mt-0.5">Menú semanal fijo</div>
-                            </button>
-                            <button onClick={() => handleNewPlan('open')} className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-300 border-b border-slate-100 dark:border-slate-700">
-                                <div className="font-medium">Plan abierto</div>
-                                <div className="text-xs text-slate-400 mt-0.5">Opciones por tipo de comida</div>
-                            </button>
-                            {templates.length > 0 && (
-                                <>
-                                    <div className="px-4 py-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 dark:bg-slate-800">
-                                        Desde plantilla
+                    {showCreateModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+                                <div className="p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                                    <h3 className="font-bold text-slate-900 dark:text-white">Crear nuevo plan</h3>
+                                    <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-slate-600">
+                                        <X size={20} />
+                                    </button>
+                                </div>
+                                <div className="p-5 space-y-4">
+                                    <div>
+                                        <label className="form-label text-sm font-medium mb-1.5 block">Tipo de plan</label>
+                                        <select className="form-select w-full" value={createData.type} onChange={e => setCreateData({ ...createData, type: e.target.value })}>
+                                            <option value="closed">Plan Cerrado (Menú semanal fijo)</option>
+                                            <option value="open">Plan Abierto (Opciones por comida)</option>
+                                            <option value="template">Desde Plantilla Existente</option>
+                                        </select>
                                     </div>
-                                    {templates.map(t => (
-                                        <button key={t.id} onClick={() => handleFromTemplate(t.id)} className="w-full text-left px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-300">
-                                            <div className="font-medium">{t.name}</div>
-                                            {t.template_note && <div className="text-xs text-slate-400 mt-0.5">{t.template_note}</div>}
-                                        </button>
-                                    ))}
-                                </>
-                            )}
+                                    {createData.type === 'template' && (
+                                        <div>
+                                            <label className="form-label text-sm font-medium mb-1.5 block">Seleccionar Plantilla</label>
+                                            <select className="form-select w-full" value={createData.templateId} onChange={e => setCreateData({ ...createData, templateId: e.target.value })}>
+                                                <option value="">-- Elija una plantilla --</option>
+                                                {templates.map(t => (
+                                                    <option key={t.id} value={t.id}>{t.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
+                                    <button onClick={() => setShowCreateModal(false)} className="btn btn-outline text-sm py-2">Cancelar</button>
+                                    <button onClick={() => {
+                                        if (createData.type === 'template') {
+                                            if (!createData.templateId) return alert('Selecciona una plantilla');
+                                            handleFromTemplate(createData.templateId);
+                                        } else {
+                                            handleNewPlan(createData.type);
+                                        }
+                                    }} className="btn btn-primary text-sm py-2">Crear Plan</button>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -167,7 +194,10 @@ export default function PlansTab({ patient }) {
                                         <button onClick={() => setEditingPlan({ ...plan, viewMode: 'indications' })} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg dark:hover:bg-blue-900/20" title="Ver Recomendaciones/Indicaciones">
                                             <FileText size={14} />
                                         </button>
-                                        <button onClick={() => handleSaveAsTemplate(plan.id)} className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg dark:hover:bg-purple-900/20" title="Guardar como plantilla">
+                                        <button onClick={() => handleDuplicatePlan(plan)} className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg dark:hover:bg-teal-900/20" title="Duplicar para este paciente">
+                                            <CopyPlus size={14} />
+                                        </button>
+                                        <button onClick={() => handleSaveAsTemplate(plan.id)} className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg dark:hover:bg-purple-900/20" title="Guardar como plantilla global">
                                             <Copy size={14} />
                                         </button>
                                         <button onClick={() => handleArchive(plan)} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg dark:hover:bg-amber-900/20" title={plan.status === 'active' ? 'Archivar' : 'Activar'}>
