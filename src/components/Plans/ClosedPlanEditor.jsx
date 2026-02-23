@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, List, Grid3X3, Table2, Pencil, FileText, ChevronDown, Download } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, List, Grid3X3, Table2, Pencil, FileText, ChevronDown, Download, PieChart } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { calcRecipeMacros } from '../Recipes/Recipes';
 import InlineRecipeEditor from './InlineRecipeEditor';
@@ -242,6 +242,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                             { mode: 'grid', icon: Grid3X3, label: 'Grid' },
                             { mode: 'detail', icon: Table2, label: 'Detalle' },
                             { mode: 'list', icon: List, label: 'Lista' },
+                            { mode: 'summary', icon: PieChart, label: 'Resumen' },
                             { mode: 'indications', icon: FileText, label: 'Indicaciones' },
                         ].map(({ mode, icon: Icon, label }) => (
                             <button key={mode} onClick={() => setViewMode(mode)} className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1 ${viewMode === mode ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'}`}>
@@ -524,6 +525,81 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                 </div>
                             );
                         })}
+                    </div>
+                </div>
+            )}
+
+            {/* Summary View */}
+            {viewMode === 'summary' && (
+                <div className="space-y-6">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 gap-4">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                <PieChart className="text-primary-500" />
+                                Resumen Semanal
+                            </h3>
+                            {(() => {
+                                let totalKcal = 0, totalCarbs = 0, totalProtein = 0, totalFat = 0;
+                                for (let i = 1; i <= 7; i++) {
+                                    const m = getDayMacros(i);
+                                    totalKcal += m.kcal;
+                                    totalCarbs += m.carbs;
+                                    totalProtein += m.protein;
+                                    totalFat += m.fat;
+                                }
+                                return (
+                                    <div className="flex flex-col gap-2">
+                                        <div className="flex items-center justify-between md:justify-end gap-4">
+                                            <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase">Media Diaria</span>
+                                            <div className="flex gap-3 text-sm font-bold bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700 min-w-[280px] justify-between">
+                                                <span className="text-orange-600">{Math.round(totalKcal / 7)} kcal</span>
+                                                <span className="text-amber-600">{(totalCarbs / 7).toFixed(1)}g HC</span>
+                                                <span className="text-blue-600">{(totalProtein / 7).toFixed(1)}g P</span>
+                                                <span className="text-rose-600">{(totalFat / 7).toFixed(1)}g G</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between md:justify-end gap-4">
+                                            <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase">Total Semanal</span>
+                                            <div className="flex gap-3 text-xs font-bold bg-slate-50/50 dark:bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700 min-w-[280px] justify-between opacity-80">
+                                                <span className="text-orange-500">{Math.round(totalKcal)} kcal</span>
+                                                <span className="text-amber-500">{totalCarbs.toFixed(1)}g HC</span>
+                                                <span className="text-blue-500">{totalProtein.toFixed(1)}g P</span>
+                                                <span className="text-rose-500">{totalFat.toFixed(1)}g G</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-4">
+                            {DAYS.map((day, idx) => {
+                                const macros = getDayMacros(idx + 1);
+                                return (
+                                    <div key={day} className="bg-slate-50 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800 p-4 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800/80">
+                                        <h4 className="font-bold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2 mb-3">{day}</h4>
+                                        <div className="flex flex-col gap-2 text-sm font-medium">
+                                            <div className="flex justify-between items-center text-orange-600">
+                                                <span>Calorías</span>
+                                                <span>{Math.round(macros.kcal)} kcal</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-amber-600">
+                                                <span>Carbohidratos</span>
+                                                <span>{macros.carbs.toFixed(1)}g</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-blue-600">
+                                                <span>Proteínas</span>
+                                                <span>{macros.protein.toFixed(1)}g</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-rose-600">
+                                                <span>Grasas</span>
+                                                <span>{macros.fat.toFixed(1)}g</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             )}
