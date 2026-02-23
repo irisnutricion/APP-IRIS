@@ -64,12 +64,12 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
         setShowFoodSearch(false);
     };
 
-    const updateQty = (idx, qty) => {
-        setIngredients(prev => prev.map((ing, i) => i === idx ? { ...ing, quantity_grams: qty === '' ? '' : (parseFloat(qty) || 0) } : ing));
+    const updateQty = (id, qty) => {
+        setIngredients(prev => prev.map(ing => ing.unique_id === id ? { ...ing, quantity_grams: qty } : ing));
     };
 
-    const replaceIngredientFood = (idx, newFood) => {
-        setIngredients(prev => prev.map((ing, i) => i === idx ? {
+    const replaceIngredientFood = (id, newFood) => {
+        setIngredients(prev => prev.map(ing => ing.unique_id === id ? {
             ...ing,
             food_id: newFood.id,
             food_name: newFood.name,
@@ -82,12 +82,16 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
         setFoodSearch('');
     };
 
-    const removeIngredient = (idx) => {
-        setIngredients(prev => prev.filter((_, i) => i !== idx));
+    const removeIngredient = (id) => {
+        setIngredients(prev => prev.filter(ing => ing.unique_id !== id));
     };
 
     const sensors = useSensors(
-        useSensor(PointerSensor),
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 5,
+            },
+        }),
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
     );
 
@@ -104,7 +108,7 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
 
     // Calculate macros per ingredient
     const calcIngMacros = (ing) => {
-        const factor = (ing.quantity_grams || 0) / 100;
+        const factor = (parseFloat(ing.quantity_grams) || 0) / 100;
         return {
             kcal: (ing.kcal_per_100g || 0) * factor,
             carbs: (ing.carbs || 0) * factor,
@@ -200,7 +204,8 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
                                                                     {foodResults.map(f => (
                                                                         <button
                                                                             key={f.id}
-                                                                            onClick={() => replaceIngredientFood(idx, f)}
+                                                                            type="button"
+                                                                            onClick={() => replaceIngredientFood(ing.unique_id, f)}
                                                                             className="w-full text-left px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs text-slate-700 dark:text-slate-300 block truncate"
                                                                         >
                                                                             {f.name}
@@ -235,12 +240,13 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
                                                     <input
                                                         type="number"
                                                         value={ing.quantity_grams}
-                                                        onChange={e => updateQty(idx, e.target.value)}
+                                                        onChange={e => updateQty(ing.unique_id, e.target.value)}
                                                         className="w-14 text-center text-sm border border-slate-200 rounded-lg py-1 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                                                         min="0"
+                                                        step="0.1"
                                                     />
                                                     <span className="text-xs text-slate-400">g</span>
-                                                    <button onClick={() => removeIngredient(idx)} className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+                                                    <button type="button" onClick={() => removeIngredient(ing.unique_id)} className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
                                                         <Trash2 size={14} />
                                                     </button>
                                                 </div>
