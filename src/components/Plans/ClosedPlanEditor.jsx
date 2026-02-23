@@ -236,7 +236,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                     </button>
                     <input type="text" value={planName} onChange={e => setPlanName(e.target.value)} className="text-xl font-bold text-slate-800 dark:text-white bg-transparent border-b-2 border-transparent hover:border-slate-300 focus:border-primary-500 outline-none px-1" />
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     <div className="flex border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
                         {[
                             { mode: 'grid', icon: Grid3X3, label: 'Grid' },
