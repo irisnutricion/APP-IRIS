@@ -102,7 +102,7 @@ export default function Recommendations() {
                         return (
                             <div key={template.id} className="card flex flex-col hover:border-primary-300 transition-colors">
                                 <div className="card-header border-b pb-3 mb-3">
-                                    <h3 className="font-bold text-lg text-slate-800 line-clamp-1" title={template.name}>{template.name}</h3>
+                                    <h3 className="font-bold text-lg text-slate-800" title={template.name}>{template.name}</h3>
                                     <p className="text-xs text-slate-500 mt-1">Creado por: {getCreatorName(template.nutritionist_id)}</p>
                                 </div>
                                 <div className="flex-1 text-sm text-slate-600 whitespace-pre-wrap line-clamp-4">
