@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download, PieChart, GripVertical } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { calcSnapshotMacros, recipeToSnapshot, checkRecipeIsSaved } from './ClosedPlanEditor';
@@ -22,7 +22,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     const { recipes = [], addRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null } = useData();
     const [planName, setPlanName] = useState(plan.name);
     const [planIndications, setPlanIndications] = useState(plan.indications || '');
-    const [mealNames, setMealNames] = useState(plan.meal_names || ['Desayuno', 'Media mañana', 'Almuerzo', 'Merienda', 'Cena']);
+    const [mealNames, setMealNames] = useState(plan.meal_names || ['Desayuno', 'Almuerzo', 'Comida', 'Merienda', 'Cena']);
     const [sections, setSections] = useState({});
     const [saving, setSaving] = useState(false);
     const [activeSearch, setActiveSearch] = useState(null);
@@ -31,6 +31,12 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     const [viewMode, setViewMode] = useState(initialViewMode);
     const [showTemplateMenu, setShowTemplateMenu] = useState(false);
     const [activeMealTab, setActiveMealTab] = useState('all'); // 'all' or specific meal name
+
+    // Auto-save debounce refs
+    const debounceTimer = useRef(null);
+    const isInitialLoad = useRef(true);
+    const sectionsRef = useRef(sections);
+    sectionsRef.current = sections;
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -66,6 +72,8 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             });
         });
         setSections(s);
+        // Mark initial load as done after first render
+        setTimeout(() => { isInitialLoad.current = false; }, 500);
     }, [items, mealNames]);
 
     const recipeResults = useMemo(() => {
@@ -223,6 +231,16 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     };
 
     const handleSave = () => performSave(sections);
+
+    // Auto-save with debounce
+    useEffect(() => {
+        if (isInitialLoad.current) return;
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+        debounceTimer.current = setTimeout(() => {
+            performSave(sectionsRef.current);
+        }, 1500);
+        return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
+    }, [sections, planName, mealNames, planIndications]);
 
     return (
         <div className="space-y-4">

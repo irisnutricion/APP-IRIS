@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
-import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, List, Grid3X3, Table2, Pencil, FileText, ChevronDown, Download, PieChart } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, List, Grid3X3, Table2, Pencil, FileText, ChevronDown, Download, PieChart, ClipboardCopy } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { calcRecipeMacros } from '../Recipes/Recipes';
 import InlineRecipeEditor from './InlineRecipeEditor';
@@ -70,7 +70,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     const { recipes = [], addRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null } = useData();
     const [planName, setPlanName] = useState(plan.name);
     const [planIndications, setPlanIndications] = useState(plan.indications || '');
-    const [mealNames, setMealNames] = useState(plan.meal_names || ['Desayuno', 'Media mañana', 'Almuerzo', 'Merienda', 'Cena']);
+    const [mealNames, setMealNames] = useState(plan.meal_names || ['Desayuno', 'Almuerzo', 'Comida', 'Merienda', 'Cena']);
     const [grid, setGrid] = useState({});
     const [viewMode, setViewMode] = useState(initialViewMode);
     const [saving, setSaving] = useState(false);
@@ -79,6 +79,13 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     const [expandedCells, setExpandedCells] = useState(new Set()); // key of cells being inline-edited
     const [showTemplateMenu, setShowTemplateMenu] = useState(false);
     const [activeDetailDay, setActiveDetailDay] = useState(1); // Default to Day 1
+    const [copyMenuCell, setCopyMenuCell] = useState(null); // key of cell showing copy-to menu
+
+    // Auto-save debounce refs
+    const debounceTimer = useRef(null);
+    const isInitialLoad = useRef(true);
+    const gridRef = useRef(grid);
+    gridRef.current = grid;
 
     // Initialize grid from items
     useEffect(() => {
@@ -93,6 +100,8 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             };
         });
         setGrid(g);
+        // Mark initial load as done after first render
+        setTimeout(() => { isInitialLoad.current = false; }, 500);
     }, [items]);
 
     const recipeResults = useMemo(() => {
@@ -108,6 +117,25 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
         setGrid(prev => ({ ...prev, [key]: { recipe_id: recipe.id, free_text: null, recipes: recipe, custom_recipe_data: snapshot } }));
         setActiveCell(null);
         setRecipeSearch('');
+    };
+
+    // Copy a cell's recipe to another meal in the same day
+    const copyCellToMeal = (dayIdx, fromMeal, toMeal) => {
+        const fromKey = `${dayIdx}_${fromMeal}`;
+        const cell = grid[fromKey];
+        if (!cell) return;
+        const toKey = `${dayIdx}_${toMeal}`;
+        const clonedData = cell.custom_recipe_data ? JSON.parse(JSON.stringify(cell.custom_recipe_data)) : null;
+        setGrid(prev => ({
+            ...prev,
+            [toKey]: {
+                recipe_id: cell.recipe_id,
+                free_text: cell.free_text,
+                recipes: cell.recipes,
+                custom_recipe_data: clonedData,
+            }
+        }));
+        setCopyMenuCell(null);
     };
 
     const setCellText = (dayIdx, mealName, text) => {
@@ -226,6 +254,16 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
 
     const handleSave = () => performSave(grid);
 
+    // Auto-save with debounce
+    useEffect(() => {
+        if (isInitialLoad.current) return;
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+        debounceTimer.current = setTimeout(() => {
+            performSave(gridRef.current);
+        }, 1500);
+        return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
+    }, [grid, planName, mealNames, planIndications]);
+
     return (
         <div className="space-y-4">
             {/* Header */}
@@ -306,6 +344,9 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                 <span className="text-slate-700 dark:text-slate-300">{getCellName(cell)}</span>
                                                             </div>
                                                             <div className="absolute top-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover/cell:opacity-100 transition-opacity">
+                                                                <button onClick={(e) => { e.stopPropagation(); setCopyMenuCell(copyMenuCell === key ? null : key); }} className="p-0.5 text-slate-300 hover:text-emerald-500" title="Copiar a otra comida">
+                                                                    <ClipboardCopy size={11} />
+                                                                </button>
                                                                 <button onClick={(e) => { e.stopPropagation(); toggleEditor(key); }} className="p-0.5 text-slate-300 hover:text-primary-500">
                                                                     <Pencil size={11} />
                                                                 </button>
@@ -313,6 +354,20 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                     <X size={11} />
                                                                 </button>
                                                             </div>
+                                                            {copyMenuCell === key && (
+                                                                <div className="absolute z-30 top-full right-0 mt-1 w-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-1">
+                                                                    <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase">Copiar a...</div>
+                                                                    {mealNames.filter(m => m !== meal).map(targetMeal => (
+                                                                        <button
+                                                                            key={targetMeal}
+                                                                            onClick={(e) => { e.stopPropagation(); copyCellToMeal(dayIdx + 1, meal, targetMeal); }}
+                                                                            className="w-full text-left px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                                                                        >
+                                                                            {targetMeal}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                         {expandedCells.has(key) && (
                                                             <div className="w-[500px] z-20">

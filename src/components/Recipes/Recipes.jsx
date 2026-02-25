@@ -212,11 +212,8 @@ export default function Recipes() {
                             <div key={recipe.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 hover:shadow-lg transition-all group">
                                 <div className="flex items-start justify-between mb-3">
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-slate-800 dark:text-white line-clamp-1" title={recipe.name}>{recipe.name}</h3>
+                                        <h3 className="font-bold text-slate-800 dark:text-white" title={recipe.name}>{recipe.name}</h3>
                                         <p className="text-xs text-slate-400 mt-0.5">Creador: {getCreatorName(recipe.nutritionist_id)}</p>
-                                        {recipe.description && (
-                                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{recipe.description}</p>
-                                        )}
                                     </div>
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
                                         <button

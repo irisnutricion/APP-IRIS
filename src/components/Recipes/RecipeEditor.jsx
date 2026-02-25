@@ -21,6 +21,8 @@ import { ALL_TAGS } from '../Foods/FoodModal';
 
 export default function RecipeEditor({ recipe, onSave, onCancel }) {
     const { foods = [], recipeCategories = [], recipePhrases = [] } = useData();
+    const [phraseSearch, setPhraseSearch] = useState('');
+    const [showPhraseSearch, setShowPhraseSearch] = useState(false);
 
     const [form, setForm] = useState({
         name: '',
@@ -70,15 +72,28 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
         }
     }, [recipe]);
 
-    // Food search results
+    // Food search results (no longer filters out already-added foods to allow duplicates)
     const foodResults = useMemo(() => {
         if (!foodSearch.trim()) return [];
         const q = foodSearch.toLowerCase();
         return foods
             .filter(f => f.is_active && f.name.toLowerCase().includes(q))
-            .filter(f => !ingredients.some(i => i.food_id === f.id))
             .slice(0, 8);
-    }, [foodSearch, foods, ingredients]);
+    }, [foodSearch, foods]);
+
+    // Available foods for inline replacement search
+    const availableFoods = useMemo(() => {
+        if (!foodSearch.trim()) return [];
+        const q = foodSearch.toLowerCase();
+        return foods.filter(f => f.is_active && f.name.toLowerCase().includes(q)).slice(0, 8);
+    }, [foodSearch, foods]);
+
+    // Phrase search results
+    const phraseResults = useMemo(() => {
+        if (!phraseSearch.trim()) return recipePhrases || [];
+        const q = phraseSearch.toLowerCase();
+        return (recipePhrases || []).filter(p => p.name.toLowerCase().includes(q));
+    }, [phraseSearch, recipePhrases]);
 
     // Calculate total macros
     const totalMacros = useMemo(() => {
@@ -145,24 +160,22 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
     };
 
     const handleAddIngredient = (food) => {
-        if (!ingredients.find(i => i.food_id === food.id)) {
-            setIngredients([...ingredients, {
-                food_id: food.id,
-                food: food,
-                quantity_grams: '',
-                unique_id: crypto.randomUUID()
-            }]);
-        }
+        setIngredients(prev => [...prev, {
+            food_id: food.id,
+            food: food,
+            quantity_grams: '',
+            unique_id: crypto.randomUUID()
+        }]);
         setFoodSearch('');
         setShowFoodSearch(false);
     };
 
-    const updateIngredientQty = (foodId, qty) => {
-        setIngredients(prev => prev.map(i => i.food_id === foodId ? { ...i, quantity_grams: qty === '' ? '' : (parseFloat(qty) || 0) } : i));
+    const updateIngredientQty = (uniqueId, qty) => {
+        setIngredients(prev => prev.map(i => i.unique_id === uniqueId ? { ...i, quantity_grams: qty === '' ? '' : (parseFloat(qty) || 0) } : i));
     };
 
-    const replaceIngredientFood = (oldFoodId, newFood) => {
-        setIngredients(prev => prev.map(i => i.food_id === oldFoodId ? {
+    const replaceIngredientFood = (uniqueId, newFood) => {
+        setIngredients(prev => prev.map(i => i.unique_id === uniqueId ? {
             ...i,
             food_id: newFood.id,
             food: newFood,
@@ -171,8 +184,8 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
         setFoodSearch('');
     };
 
-    const removeIngredient = (foodId) => {
-        setIngredients(prev => prev.filter(i => i.food_id !== foodId));
+    const removeIngredient = (uniqueId) => {
+        setIngredients(prev => prev.filter(i => i.unique_id !== uniqueId));
     };
 
     const handleSubmit = async (e) => {
@@ -225,25 +238,37 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
                         <div className="flex justify-between items-center mb-1">
                             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Descripción</label>
                             {recipePhrases?.length > 0 && (
-                                <select
-                                    className="form-select text-xs py-0.5 px-2 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 w-40"
-                                    value=""
-                                    onChange={(e) => {
-                                        if (!e.target.value) return;
-                                        const phrase = recipePhrases.find(p => p.id === e.target.value);
-                                        if (phrase) {
-                                            setForm(prev => ({
-                                                ...prev,
-                                                description: prev.description ? `${prev.description}\n\n${phrase.content}` : phrase.content
-                                            }));
-                                        }
-                                    }}
-                                >
-                                    <option value="">Insertar frase...</option>
-                                    {recipePhrases.map(phrase => (
-                                        <option key={phrase.id} value={phrase.id}>{phrase.name}</option>
-                                    ))}
-                                </select>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={phraseSearch}
+                                        onChange={e => { setPhraseSearch(e.target.value); setShowPhraseSearch(true); }}
+                                        onFocus={() => setShowPhraseSearch(true)}
+                                        placeholder="Buscar frase por título..."
+                                        className="text-xs py-1 px-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg w-48 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 dark:text-white"
+                                    />
+                                    {showPhraseSearch && phraseResults.length > 0 && (
+                                        <div className="absolute right-0 z-20 mt-1 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                                            {phraseResults.map(phrase => (
+                                                <button
+                                                    key={phrase.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setForm(prev => ({
+                                                            ...prev,
+                                                            description: prev.description ? `${prev.description}\n\n${phrase.content}` : phrase.content
+                                                        }));
+                                                        setPhraseSearch('');
+                                                        setShowPhraseSearch(false);
+                                                    }}
+                                                    className="w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs text-slate-700 dark:text-slate-300 truncate"
+                                                >
+                                                    {phrase.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </div>
                         <textarea
@@ -334,7 +359,7 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
                                         <button
                                             key={food.id}
                                             type="button"
-                                            onClick={() => addIngredient(food)}
+                                            onClick={() => handleAddIngredient(food)}
                                             className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-between text-sm"
                                         >
                                             <span className="text-slate-800 dark:text-slate-200">{food.name}</span>
@@ -373,7 +398,7 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
                                         return (
                                             <SortableIngredient key={ing.unique_id} id={ing.unique_id}>
                                                 <div className="col-span-4 font-medium text-slate-700 dark:text-slate-300 truncate">
-                                                    {editingIngredientId === ing.food_id ? (
+                                                    {editingIngredientId === ing.unique_id ? (
                                                         <div className="relative">
                                                             <div className="flex items-center">
                                                                 <Search className="absolute left-2 text-slate-400" size={12} />
@@ -394,7 +419,7 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
                                                                     {availableFoods.map(f => (
                                                                         <button
                                                                             key={f.id}
-                                                                            onClick={() => replaceIngredientFood(ing.food_id, f)}
+                                                                            onClick={() => replaceIngredientFood(ing.unique_id, f)}
                                                                             className="w-full text-left px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs text-slate-700 dark:text-slate-300 block truncate"
                                                                         >
                                                                             {f.name}
@@ -410,7 +435,7 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
                                                         <span
                                                             className="cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 block truncate transition-colors"
                                                             onClick={() => {
-                                                                setEditingIngredientId(ing.food_id);
+                                                                setEditingIngredientId(ing.unique_id);
                                                                 setFoodSearch('');
                                                             }}
                                                             title="Haz clic para cambiar este alimento"
@@ -423,7 +448,7 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
                                                     <input
                                                         type="number"
                                                         value={ing.quantity_grams}
-                                                        onChange={e => updateIngredientQty(ing.food_id, e.target.value)}
+                                                        onChange={e => updateIngredientQty(ing.unique_id, e.target.value)}
                                                         min="0"
                                                         step="5"
                                                         className="w-16 px-1.5 py-1 border border-slate-300 rounded text-center text-xs dark:bg-slate-700 dark:border-slate-600 dark:text-white"
@@ -443,7 +468,7 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
                                                     {((food?.fat_per_100g || 0) * factor).toFixed(1)}
                                                 </div>
                                                 <div className="col-span-2 text-right">
-                                                    <button type="button" onClick={() => removeIngredient(ing.food_id)} className="p-1 text-slate-400 hover:text-red-500 rounded">
+                                                    <button type="button" onClick={() => removeIngredient(ing.unique_id)} className="p-1 text-slate-400 hover:text-red-500 rounded">
                                                         <Trash2 size={14} />
                                                     </button>
                                                 </div>

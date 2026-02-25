@@ -25,7 +25,7 @@ export default function PlansTab({ patient }) {
             type,
             status: 'active',
             meals_per_day: 5,
-            meal_names: ['Desayuno', 'Media mañana', 'Almuerzo', 'Merienda', 'Cena'],
+            meal_names: ['Desayuno', 'Almuerzo', 'Comida', 'Merienda', 'Cena'],
         });
         if (plan) setEditingPlan(plan);
         setShowCreateModal(false);

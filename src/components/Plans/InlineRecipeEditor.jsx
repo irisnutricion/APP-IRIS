@@ -28,6 +28,8 @@ function SortableIngredient({ id, children }) {
  */
 export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe, onClose }) {
     const { foods = [], recipePhrases = [] } = useData();
+    const [phraseSearch, setPhraseSearch] = useState('');
+    const [showPhraseSearch, setShowPhraseSearch] = useState(false);
 
     const initial = snapshot || { name: '', description: '', source_recipe_id: null, ingredients: [] };
     const [name, setName] = useState(snapshot?.name || '');
@@ -48,8 +50,6 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
     }, [foodSearch, foods]);
 
     const addIngredient = (food) => {
-        // Don't add if already in list
-        if (ingredients.some(i => i.food_id === food.id)) return;
         setIngredients(prev => [...prev, {
             unique_id: crypto.randomUUID(),
             food_id: food.id,
@@ -63,6 +63,13 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
         setFoodSearch('');
         setShowFoodSearch(false);
     };
+
+    // Phrase search results
+    const phraseResults = useMemo(() => {
+        if (!phraseSearch.trim()) return recipePhrases || [];
+        const q = phraseSearch.toLowerCase();
+        return (recipePhrases || []).filter(p => p.name.toLowerCase().includes(q));
+    }, [phraseSearch, recipePhrases]);
 
     const updateQty = (id, qty) => {
         setIngredients(prev => prev.map(ing => ing.unique_id === id ? { ...ing, quantity_grams: qty } : ing));
@@ -308,22 +315,34 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
                     <div className="flex justify-between items-center mb-2">
                         <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Descripción / Preparación</h4>
                         {recipePhrases?.length > 0 && (
-                            <select
-                                className="form-select text-xs py-0.5 px-2 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 w-32"
-                                value=""
-                                onChange={(e) => {
-                                    if (!e.target.value) return;
-                                    const phrase = recipePhrases.find(p => p.id === e.target.value);
-                                    if (phrase) {
-                                        setDescription(prev => prev ? `${prev}\n\n${phrase.content}` : phrase.content);
-                                    }
-                                }}
-                            >
-                                <option value="">Insertar frase...</option>
-                                {recipePhrases.map(phrase => (
-                                    <option key={phrase.id} value={phrase.id}>{phrase.name}</option>
-                                ))}
-                            </select>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    value={phraseSearch}
+                                    onChange={e => { setPhraseSearch(e.target.value); setShowPhraseSearch(true); }}
+                                    onFocus={() => setShowPhraseSearch(true)}
+                                    placeholder="Buscar frase..."
+                                    className="text-xs py-0.5 px-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg w-36 focus:ring-1 focus:ring-primary-500 dark:text-white"
+                                />
+                                {showPhraseSearch && phraseResults.length > 0 && (
+                                    <div className="absolute right-0 z-20 mt-1 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                                        {phraseResults.map(phrase => (
+                                            <button
+                                                key={phrase.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setDescription(prev => prev ? `${prev}\n\n${phrase.content}` : phrase.content);
+                                                    setPhraseSearch('');
+                                                    setShowPhraseSearch(false);
+                                                }}
+                                                className="w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs text-slate-700 dark:text-slate-300 truncate"
+                                            >
+                                                {phrase.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         )}
                     </div>
                     <textarea
