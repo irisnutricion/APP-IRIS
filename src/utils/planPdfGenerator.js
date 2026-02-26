@@ -60,9 +60,30 @@ function aggregateIngredients(items) {
         .map(([name, qty]) => ({ name, qty }));
 }
 
-export const generatePlanPdf = (plan, items, nutritionist, patient) => {
+export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
+    // Helper to load image as base64
+    const loadImageAsBase64 = async (url) => {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) return null;
+            const blob = await response.blob();
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const dataUrl = reader.result;
+                    const base64 = dataUrl.split(',')[1];
+                    resolve(base64);
+                };
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            return null;
+        }
+    };
+
     // A4 sheet: 210 x 297 mm
     const doc = new jsPDF('p', 'mm', 'a4');
+    const coverPages = new Set();
 
     const brandColor = [40, 72, 58]; // #28483a (Primary 700)
     const brandLight = [227, 246, 237]; // #e3f6ed (Primary 100)
@@ -103,8 +124,24 @@ export const generatePlanPdf = (plan, items, nutritionist, patient) => {
         doc.text(`Página ${pageCount}`, 210 - margins.right, footerY, { align: 'right' });
     };
 
-    // ----- PAGE 1: INDICATIONS ----- //
+    // ----- PAGE 1: MAIN COVER ----- //
+    const portadaImg = await loadImageAsBase64('/covers/Portada.png');
+    if (portadaImg) {
+        doc.addImage(portadaImg, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
+        coverPages.add(doc.internal.getNumberOfPages());
+        doc.addPage();
+    }
+
+    // ----- PAGE 2: INDICATIONS ----- //
     if (plan.indications && plan.indications.trim().length > 0) {
+        // First try to load recommendations cover
+        const recCoverImg = await loadImageAsBase64('/covers/Portada recetario.png');
+        if (recCoverImg) {
+            doc.addImage(recCoverImg, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
+            coverPages.add(doc.internal.getNumberOfPages());
+            doc.addPage();
+        }
+
         drawHeader();
 
         doc.setTextColor(...textColor);
@@ -125,7 +162,7 @@ export const generatePlanPdf = (plan, items, nutritionist, patient) => {
         currentPage++;
     }
 
-    // ----- PAGE 2: MEAL PLAN (LIST VIEW) ----- //
+    // ----- PLAN OPTIONS SUMMARY ----- //
     drawHeader();
 
     doc.setTextColor(...textColor);
@@ -251,11 +288,30 @@ export const generatePlanPdf = (plan, items, nutritionist, patient) => {
         checkPageBreak(yPos, 20);
 
         // --- DETAILED OPEN PLAN ---
-        mealNames.forEach(meal => {
+        for (const meal of mealNames) {
             const mealItems = items.filter(i => i.meal_name === meal);
-            if (mealItems.length === 0) return;
+            if (mealItems.length === 0) continue;
 
-            checkPageBreak(yPos, 20);
+            const expectedName = meal.toLowerCase().includes('desayun') ? 'Desayuno' :
+                meal.toLowerCase().includes('almuerz') ? 'Almuerzo' :
+                    meal.toLowerCase().includes('comid') ? 'Almuerzo' : // Fallback Comida to Almuerzo cover if missing Comida
+                        meal.toLowerCase().includes('meriend') ? 'Merienda' :
+                            meal.toLowerCase().includes('cen') ? 'Cena' : meal;
+
+            const coverImg = await loadImageAsBase64(`/covers/${expectedName}.png`);
+            if (coverImg) {
+                // If not on a fresh page (or after Portada), add page for cover
+                if (yPos > 30) doc.addPage();
+                doc.addImage(coverImg, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
+                coverPages.add(doc.internal.getNumberOfPages());
+
+                // Add page for the content
+                doc.addPage();
+                drawHeader();
+                yPos = 30;
+            } else {
+                checkPageBreak(yPos, 20);
+            }
 
             doc.setFillColor(brandColor[0], brandColor[1], brandColor[2]);
             // Optional: Use lighter primary color for meal header
@@ -311,7 +367,7 @@ export const generatePlanPdf = (plan, items, nutritionist, patient) => {
                 yPos += 2;
             });
             yPos += 6;
-        });
+        }
     }
 
     // --- SHOPPING LIST FOR CLOSED PLANS ---
@@ -361,11 +417,13 @@ export const generatePlanPdf = (plan, items, nutritionist, patient) => {
         }
     }
 
-    // Call drawFooter on all pages
+    // Call drawFooter on all pages EXCEPT covers
     const totalPages = doc.internal.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        drawFooter();
+        if (!coverPages.has(i)) {
+            doc.setPage(i);
+            drawFooter();
+        }
     }
 
     // Save PDF

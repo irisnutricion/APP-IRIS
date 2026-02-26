@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, List, Grid3X3, Table2, Pencil, FileText, ChevronDown, Download, PieChart, ClipboardCopy } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, List, Grid3X3, Table2, Pencil, FileText, ChevronDown, Download, PieChart, ClipboardCopy, Loader2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { calcRecipeMacros } from '../Recipes/Recipes';
 import InlineRecipeEditor from './InlineRecipeEditor';
@@ -71,9 +71,9 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     const [planName, setPlanName] = useState(plan.name);
     const [planIndications, setPlanIndications] = useState(plan.indications || '');
     const [mealNames, setMealNames] = useState(plan.meal_names || ['Desayuno', 'Almuerzo', 'Comida', 'Merienda', 'Cena']);
-    const [grid, setGrid] = useState({});
-    const [viewMode, setViewMode] = useState(initialViewMode);
     const [saving, setSaving] = useState(false);
+    const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+    const [viewMode, setViewMode] = useState(initialViewMode);
     const [recipeSearch, setRecipeSearch] = useState('');
     const [activeCell, setActiveCell] = useState(null);
     const [expandedCells, setExpandedCells] = useState(new Set()); // key of cells being inline-edited
@@ -292,14 +292,22 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                         <Copy size={18} />
                     </button>
                     <button
-                        onClick={() => {
+                        onClick={async () => {
                             const patient = patients.find(p => p.id === plan.patient_id);
-                            generatePlanPdf(plan, items, userProfile, patient);
+                            setIsGeneratingPdf(true);
+                            try {
+                                await generatePlanPdf(plan, items, userProfile, patient);
+                            } catch (err) {
+                                console.error('Error generating PDF:', err);
+                            } finally {
+                                setIsGeneratingPdf(false);
+                            }
                         }}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg dark:hover:bg-red-900/20"
+                        disabled={isGeneratingPdf}
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg dark:hover:bg-red-900/20 disabled:opacity-50"
                         title="Exportar PDF"
                     >
-                        <Download size={18} />
+                        {isGeneratingPdf ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
                     </button>
                     <button onClick={handleSave} disabled={saving} className="btn btn-primary text-sm py-2">
                         <Save size={16} /> {saving ? 'Guardando...' : 'Guardar'}

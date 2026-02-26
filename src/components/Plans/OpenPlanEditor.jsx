@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download, PieChart, GripVertical } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download, PieChart, GripVertical, Loader2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { calcSnapshotMacros, recipeToSnapshot, checkRecipeIsSaved } from './ClosedPlanEditor';
 import InlineRecipeEditor from './InlineRecipeEditor';
@@ -25,6 +25,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     const [mealNames, setMealNames] = useState(plan.meal_names || ['Desayuno', 'Almuerzo', 'Comida', 'Merienda', 'Cena']);
     const [sections, setSections] = useState({});
     const [saving, setSaving] = useState(false);
+    const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const [activeSearch, setActiveSearch] = useState(null);
     const [recipeSearch, setRecipeSearch] = useState('');
     const [collapsedOptions, setCollapsedOptions] = useState(new Set()); // Set of `${mealName}_${idx}`
@@ -268,14 +269,22 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                         <Copy size={18} />
                     </button>
                     <button
-                        onClick={() => {
+                        onClick={async () => {
                             const patient = patients.find(p => p.id === plan.patient_id);
-                            generatePlanPdf(plan, items, userProfile, patient);
+                            setIsGeneratingPdf(true);
+                            try {
+                                await generatePlanPdf(plan, items, userProfile, patient);
+                            } catch (err) {
+                                console.error('Error generating PDF:', err);
+                            } finally {
+                                setIsGeneratingPdf(false);
+                            }
                         }}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg dark:hover:bg-red-900/20"
+                        disabled={isGeneratingPdf}
+                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg dark:hover:bg-red-900/20 disabled:opacity-50"
                         title="Exportar PDF"
                     >
-                        <Download size={18} />
+                        {isGeneratingPdf ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
                     </button>
                     <button onClick={handleSave} disabled={saving} className="btn btn-primary text-sm py-2">
                         <Save size={16} /> {saving ? 'Guardando...' : 'Guardar'}
