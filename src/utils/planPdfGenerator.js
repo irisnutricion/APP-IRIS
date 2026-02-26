@@ -337,7 +337,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
                 // Add page for the content
                 doc.addPage();
-                drawHeader(meal, leftLogo); // Updated call
+                drawHeader(meal); // Updated call
                 yPos = 35; // Adjusted YPos for taller header
             } else {
                 checkPageBreak(yPos, 20, meal); // Updated call
