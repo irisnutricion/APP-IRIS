@@ -99,32 +99,58 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
     // Config: Primary theme color
     const primaryColor = nutritionist?.pdf_color ? hexToRgb(nutritionist.pdf_color) : brandColor;
 
-    let currentPage = 1;
-    const drawHeader = () => {
-        doc.setFillColor(...primaryColor);
-        doc.rect(0, 0, 210, 15, 'F');
+    // ----- LOAD RESOURCES ----- //
+    const logoImg = await loadImageAsBase64('/covers/logo rosa.png');
 
+    let currentPage = 1;
+    const drawHeader = (sectionName = '') => {
+        // Draw primary color background
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, 0, 210, 20, 'F'); // Increased height slightly to fit logo/text better
+
+        // Draw Left Logo (if loaded)
+        if (logoImg) {
+            // Keep proportion roughly intact (assuming it's a typical logo shape, adjust dimensions as needed)
+            doc.addImage(logoImg, 'PNG', margins.left, 2, 16, 16, undefined, 'FAST');
+        }
+
+        // Draw Center Text (Section Name)
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        if (nutritionist?.clinic_name) {
-            doc.text(nutritionist.clinic_name, margins.left, 10);
-        } else if (nutritionist?.label) {
-            doc.text(`Nutricionista: ${nutritionist.label}`, margins.left, 10);
+        if (sectionName) {
+            const sectionWidth = doc.getTextWidth(sectionName);
+            doc.text(sectionName, (210 - sectionWidth) / 2, 13);
         }
 
+        // Draw Right Text (Patient Info)
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.text(`Plan: ${plan.name}`, 210 - margins.right, 10, { align: 'right' });
+        const planText = `Plan nutricional personalizado para`;
+        const patientName = `${patient?.first_name || ''} ${patient?.last_name || ''}`.trim();
+        doc.text(planText, 210 - margins.right, 9, { align: 'right' });
+        doc.setFont('helvetica', 'bold');
+        doc.text(patientName, 210 - margins.right, 14, { align: 'right' });
     };
 
     const drawFooter = () => {
         const pageCount = doc.internal.getNumberOfPages();
         doc.setPage(pageCount);
-        doc.setTextColor(...lightColor);
-        doc.setFontSize(8);
         const footerY = 297 - 10;
-        doc.text(`Paciente: ${patient?.first_name} ${patient?.last_name || ''}`, margins.left, footerY);
+
+        // Branding colors for footer text
+        doc.setTextColor(...primaryColor);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+
+        // Draw Contact Info Left & Center
+        const emailContact = "info@irisnutricion.com";
+        const igContact = "IG: iris_nutricion";
+        const tiktokContact = "TikTok: iris_nutricion";
+
+        doc.text(`${emailContact}  |  ${igContact}  |  ${tiktokContact}`, margins.left, footerY);
+
+        // Draw Page Number Right
         doc.text(`Página ${pageCount}`, 210 - margins.right, footerY, { align: 'right' });
     };
 
@@ -146,7 +172,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
             doc.addPage();
         }
 
-        drawHeader();
+        drawHeader('Indicaciones');
 
         doc.setTextColor(...textColor);
         doc.setFontSize(16);
@@ -167,7 +193,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
     }
 
     // ----- PLAN OPTIONS SUMMARY ----- //
-    drawHeader();
+    drawHeader('Resumen de Opciones');
 
     doc.setTextColor(...textColor);
     doc.setFontSize(10);
@@ -311,10 +337,10 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
                 // Add page for the content
                 doc.addPage();
-                drawHeader();
-                yPos = 30;
+                drawHeader(meal, leftLogo); // Updated call
+                yPos = 35; // Adjusted YPos for taller header
             } else {
-                checkPageBreak(yPos, 20);
+                checkPageBreak(yPos, 20, meal); // Updated call
             }
 
             doc.setFillColor(brandColor[0], brandColor[1], brandColor[2]);
@@ -381,8 +407,8 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
             // Need a page break for the shopping list
             doc.addPage();
             currentPage++;
-            yPos = 30;
-            drawHeader();
+            yPos = 35;
+            drawHeader('Lista de la Compra Semanal');
 
             doc.setFillColor(...brandLight);
             doc.rect(margins.left, yPos, 210 - margins.left - margins.right, 8, 'F');
@@ -434,11 +460,11 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
     const filename = `Plan_${plan.name.replace(/\s+/g, '_')}_${patient?.first_name || 'Paciente'}.pdf`;
     doc.save(filename);
 
-    function checkPageBreak(currentY, neededHeight) {
+    function checkPageBreak(currentY, neededHeight, sectionName = '') {
         if (currentY + neededHeight > 297 - margins.bottom) {
             doc.addPage();
-            drawHeader();
-            yPos = 30;
+            drawHeader(sectionName);
+            yPos = 35;
         }
     }
 };
