@@ -61,12 +61,15 @@ function aggregateIngredients(items) {
 }
 
 export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
-    // Helper to load image as base64
     const loadImageAsBase64 = async (url) => {
         try {
             const response = await fetch(url);
             if (!response.ok) return null;
             const blob = await response.blob();
+            if (!blob.type.startsWith('image/')) {
+                console.warn(`URL ${url} returns non-image type: ${blob.type}`);
+                return null;
+            }
             return new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onloadend = () => {
@@ -77,6 +80,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 reader.readAsDataURL(blob);
             });
         } catch (e) {
+            console.error(`Error loading image ${url}:`, e);
             return null;
         }
     };
