@@ -341,7 +341,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...primaryColor);
         doc.text("Resumen de Opciones", margins.left + 3, yPos + 5.5);
-        yPos += 12;
+        yPos += 16; // Increased from 12 to 16 for slightly more space
 
         mealNames.forEach(meal => {
             const mealItems = items.filter(i => i.meal_name === meal);
@@ -402,7 +402,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(255, 255, 255);
             doc.text(meal, margins.left + 3, yPos + 5.5);
-            yPos += 12;
+            yPos += 16; // Increased from 12 to 16 for slightly more space
 
             doc.setTextColor(...textColor);
             mealItems.forEach((opt, idx) => {
