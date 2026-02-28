@@ -1,4 +1,4 @@
-import { useState, useMemo, useId, useRef, useEffect } from 'react';
+import { useState, useMemo, useId, useRef, useEffect, useCallback } from 'react';
 import useUndo from '../../hooks/useUndo';
 import { Search, X, Trash2, GripVertical, Plus, BookmarkPlus, Save, CheckCircle2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
