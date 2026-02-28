@@ -37,8 +37,8 @@ export const DataProvider = ({ children }) => {
     const [indicationTemplates, setIndicationTemplates] = useState([]);
     const [recipePhrases, setRecipePhrases] = useState([]);
 
-    const fetchData = useCallback(async () => {
-        setLoading(true);
+    const fetchData = useCallback(async (background = false) => {
+        if (!background) setLoading(true);
         try {
             // Parallel fetching with allSettled to prevent one failure from blocking everything
             const results = await Promise.allSettled([
@@ -173,7 +173,7 @@ export const DataProvider = ({ children }) => {
         } catch (error) {
             console.error('Unexpected error in fetchData:', error);
         } finally {
-            setLoading(false);
+            if (!background) setLoading(false);
         }
     }, []);
 
@@ -958,7 +958,7 @@ export const DataProvider = ({ children }) => {
         if (ingredients.length > 0) {
             await supabase.from('recipe_ingredients').insert(ingredients.map(ing => ({ recipe_id: data.id, food_id: ing.food_id, quantity_grams: ing.quantity_grams })));
         }
-        await fetchData(); // Refetch to get joined data
+        await fetchData(true); // Refetch to get joined data silently
         return data;
     };
     const updateRecipe = async (id, recipe, ingredients = [], categoryIds = []) => {
@@ -973,7 +973,7 @@ export const DataProvider = ({ children }) => {
         if (ingredients.length > 0) {
             await supabase.from('recipe_ingredients').insert(ingredients.map(ing => ({ recipe_id: id, food_id: ing.food_id, quantity_grams: ing.quantity_grams })));
         }
-        await fetchData();
+        await fetchData(true); // Refetch in the background
     };
     const deleteRecipe = async (id) => {
         const { error } = await supabase.from('recipes').delete().eq('id', id);

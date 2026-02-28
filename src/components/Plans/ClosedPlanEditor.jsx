@@ -48,20 +48,33 @@ function checkRecipeIsSaved(cellOrOpt, allRecipes) {
     if (!cellOrOpt.custom_recipe_data && !cellOrOpt.recipes) return null; // free text
 
     const snapName = (cellOrOpt.custom_recipe_data.name || '').trim().toLowerCase();
-    const snapFoods = new Set((cellOrOpt.custom_recipe_data.ingredients || []).map(i => i.food_id));
+    const snapDescription = (cellOrOpt.custom_recipe_data.description || '').trim().toLowerCase();
+    const snapIngredients = cellOrOpt.custom_recipe_data.ingredients || [];
+
+    // Map food_id to its quantity for safe comparison
+    const snapMap = new Map();
+    snapIngredients.forEach(i => snapMap.set(i.food_id, parseFloat(i.quantity_grams || 0)));
 
     const activeRecipes = allRecipes.filter(r => r.is_active);
     for (const r of activeRecipes) {
         if ((r.name || '').trim().toLowerCase() !== snapName) continue;
-        const rFoods = new Set((r.recipe_ingredients || []).map(ri => ri.food_id));
-        if (snapFoods.size !== rFoods.size) continue;
+        if ((r.description || '').trim().toLowerCase() !== snapDescription) continue;
+
+        const rMap = new Map();
+        (r.recipe_ingredients || []).forEach(ri => rMap.set(ri.food_id, parseFloat(ri.quantity_grams || 0)));
+
+        if (snapMap.size !== rMap.size) continue;
+
         let diff = false;
-        for (const fid of snapFoods) {
-            if (!rFoods.has(fid)) { diff = true; break; }
+        for (const [fid, qty] of snapMap.entries()) {
+            if (!rMap.has(fid) || rMap.get(fid) !== qty) {
+                diff = true;
+                break;
+            }
         }
-        if (!diff) return true;
+        if (!diff) return true; // Found an exact match!
     }
-    return false;
+    return false; // Modified or custom
 }
 
 export { calcSnapshotMacros, recipeToSnapshot, checkRecipeIsSaved };
