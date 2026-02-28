@@ -962,18 +962,29 @@ export const DataProvider = ({ children }) => {
         return data;
     };
     const updateRecipe = async (id, recipe, ingredients = [], categoryIds = []) => {
-        await supabase.from('recipes').update({ name: recipe.name, description: recipe.description, tags: recipe.tags || [] }).eq('id', id);
-        // Replace categories
-        await supabase.from('recipe_category_links').delete().eq('recipe_id', id);
-        if (categoryIds.length > 0) {
-            await supabase.from('recipe_category_links').insert(categoryIds.map(cid => ({ recipe_id: id, category_id: cid })));
+        try {
+            const { error: recipeError } = await supabase.from('recipes').update({ name: recipe.name, description: recipe.description, tags: recipe.tags || [] }).eq('id', id);
+            if (recipeError) console.error('Error updating recipe table:', recipeError);
+
+            // Replace categories
+            const { error: catDelError } = await supabase.from('recipe_category_links').delete().eq('recipe_id', id);
+            if (catDelError) console.error('Error deleting categories:', catDelError);
+            if (categoryIds.length > 0) {
+                const { error: catAddError } = await supabase.from('recipe_category_links').insert(categoryIds.map(cid => ({ recipe_id: id, category_id: cid })));
+                if (catAddError) console.error('Error inserting categories:', catAddError);
+            }
+
+            // Replace ingredients
+            const { error: ingDelError } = await supabase.from('recipe_ingredients').delete().eq('recipe_id', id);
+            if (ingDelError) console.error('Error deleting ingredients:', ingDelError);
+            if (ingredients.length > 0) {
+                const { error: ingAddError } = await supabase.from('recipe_ingredients').insert(ingredients.map(ing => ({ recipe_id: id, food_id: ing.food_id, quantity_grams: ing.quantity_grams })));
+                if (ingAddError) console.error('Error inserting ingredients:', ingAddError);
+            }
+            await fetchData(true); // Refetch in the background
+        } catch (err) {
+            console.error('Unhandled error in updateRecipe:', err);
         }
-        // Replace ingredients
-        await supabase.from('recipe_ingredients').delete().eq('recipe_id', id);
-        if (ingredients.length > 0) {
-            await supabase.from('recipe_ingredients').insert(ingredients.map(ing => ({ recipe_id: id, food_id: ing.food_id, quantity_grams: ing.quantity_grams })));
-        }
-        await fetchData(true); // Refetch in the background
     };
     const deleteRecipe = async (id) => {
         const { error } = await supabase.from('recipes').delete().eq('id', id);
