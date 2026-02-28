@@ -67,7 +67,7 @@ function checkRecipeIsSaved(cellOrOpt, allRecipes) {
 export { calcSnapshotMacros, recipeToSnapshot, checkRecipeIsSaved };
 
 export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onUpdatePlan, onSaveAsTemplate, initialViewMode = 'grid' }) {
-    const { recipes = [], addRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null } = useData();
+    const { recipes = [], addRecipe, updateRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null } = useData();
     const [planName, setPlanName] = useState(plan.name);
     const [planIndications, setPlanIndications] = useState(plan.indications || '');
     const [mealNames, setMealNames] = useState(plan.meal_names || ['Desayuno', 'Almuerzo', 'Comida', 'Merienda', 'Cena']);
@@ -210,6 +210,19 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             quantity_grams: ing.quantity_grams,
         })));
         // Also accept the snapshot into the plan and save
+        await handleInlineAccept(cellKey, snapshot);
+    };
+
+    const handleInlineUpdateRecipe = async (cellKey, snapshot) => {
+        if (!snapshot.source_recipe_id) return;
+        await updateRecipe(snapshot.source_recipe_id, {
+            name: snapshot.name,
+            description: snapshot.description,
+            tags: [], // Not currently edited inline
+        }, snapshot.ingredients.map(ing => ({
+            food_id: ing.food_id,
+            quantity_grams: ing.quantity_grams,
+        })));
         await handleInlineAccept(cellKey, snapshot);
     };
 
@@ -531,6 +544,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                             snapshot={cell.custom_recipe_data || recipeToSnapshot(cell.recipes) || null}
                                                             onAccept={s => { handleInlineAccept(key, s); toggleEditor(key); }}
                                                             onSaveAsRecipe={s => handleInlineSaveAsRecipe(key, s)}
+                                                            onUpdateRecipe={s => handleInlineUpdateRecipe(key, s)}
                                                             onClose={() => toggleEditor(key)}
                                                         />
                                                     </div>
@@ -578,6 +592,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                 snapshot={cell.custom_recipe_data || recipeToSnapshot(cell.recipes) || null}
                                                                 onAccept={s => { handleInlineAccept(key, s); toggleEditor(key); }}
                                                                 onSaveAsRecipe={s => handleInlineSaveAsRecipe(key, s)}
+                                                                onUpdateRecipe={s => handleInlineUpdateRecipe(key, s)}
                                                                 onClose={() => toggleEditor(key)}
                                                             />
                                                         </div>

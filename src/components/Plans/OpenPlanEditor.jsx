@@ -19,7 +19,7 @@ function SortableOption({ id, children }) {
 }
 
 export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpdatePlan, onSaveAsTemplate, initialViewMode = 'meals' }) {
-    const { recipes = [], addRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null } = useData();
+    const { recipes = [], addRecipe, updateRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null } = useData();
     const [planName, setPlanName] = useState(plan.name);
     const [planIndications, setPlanIndications] = useState(plan.indications || '');
     const [mealNames, setMealNames] = useState(plan.meal_names || ['Desayuno', 'Almuerzo', 'Comida', 'Merienda', 'Cena']);
@@ -208,6 +208,19 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
         await handleInlineAccept(mealName, idx, snapshot);
     };
 
+    const handleInlineUpdateRecipe = async (mealName, idx, snapshot) => {
+        if (!snapshot.source_recipe_id) return;
+        await updateRecipe(snapshot.source_recipe_id, {
+            name: snapshot.name,
+            description: snapshot.description,
+            tags: [], // Not currently edited inline
+        }, snapshot.ingredients.map(ing => ({
+            food_id: ing.food_id,
+            quantity_grams: ing.quantity_grams,
+        })));
+        await handleInlineAccept(mealName, idx, snapshot);
+    };
+
     const performSave = async (currentSections) => {
         setSaving(true);
         try {
@@ -384,6 +397,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                                                     snapshot={opt.custom_recipe_data || recipeToSnapshot(opt.recipes) || null}
                                                                     onAccept={(snapshot) => handleInlineAccept(meal, idx, snapshot)}
                                                                     onSaveAsRecipe={(snapshot) => handleInlineSaveAsRecipe(meal, idx, snapshot)}
+                                                                    onUpdateRecipe={(snapshot) => handleInlineUpdateRecipe(meal, idx, snapshot)}
                                                                     onClose={() => toggleEditor(meal, idx)}
                                                                 />
                                                             </div>

@@ -26,7 +26,7 @@ function SortableIngredient({ id, children }) {
  *   onSaveAsRecipe(snapshot) — guarda como nueva receta en DB
  *   onClose() — cierra sin cambios
  */
-export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe, onClose }) {
+export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe, onUpdateRecipe, onClose }) {
     const { foods = [], recipePhrases = [] } = useData();
     const [phraseSearch, setPhraseSearch] = useState('');
     const [showPhraseSearch, setShowPhraseSearch] = useState(false);
@@ -145,6 +145,12 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
 
     const handleSaveAsRecipe = () => {
         onSaveAsRecipe(buildSnapshot());
+    };
+
+    const handleUpdateRecipe = () => {
+        if (onUpdateRecipe && initial.source_recipe_id) {
+            onUpdateRecipe(buildSnapshot());
+        }
     };
 
     return (
@@ -356,13 +362,25 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
 
             {/* Footer */}
             <div className="p-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 bg-white dark:bg-slate-900">
-                <button
-                    onClick={handleSaveAsRecipe}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-600 hover:bg-purple-50 rounded-lg transition-colors dark:text-purple-400 dark:hover:bg-purple-900/20"
-                    title="Guardar en la base de datos como nueva receta"
-                >
-                    <BookmarkPlus size={14} /> Guardar como receta maestra
-                </button>
+                <div className="flex gap-2">
+                    {initial.source_recipe_id && onUpdateRecipe ? (
+                        <button
+                            onClick={handleUpdateRecipe}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50 border border-emerald-200 rounded-lg transition-colors dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/40"
+                            title="Sobrescribir la receta original en la base de datos"
+                        >
+                            <Save size={14} /> Actualizar receta maestra
+                        </button>
+                    ) : null}
+
+                    <button
+                        onClick={handleSaveAsRecipe}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-600 hover:bg-purple-50 rounded-lg transition-colors dark:text-purple-400 dark:hover:bg-purple-900/20"
+                        title="Guardar en la base de datos como nueva receta independiente"
+                    >
+                        <BookmarkPlus size={14} /> Guardar como copia nueva
+                    </button>
+                </div>
                 <div className="flex gap-2">
                     <button onClick={onClose} className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 rounded-lg dark:hover:bg-slate-800 font-medium">
                         Cerrar panel
