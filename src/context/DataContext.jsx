@@ -1471,15 +1471,16 @@ export const DataProvider = ({ children }) => {
 
     const updateRecipePhrase = async (id, updates) => {
         try {
-            const { data, error } = await supabase
+            const { error } = await supabase
                 .from('recipe_phrases')
                 .update(updates)
-                .eq('id', id)
-                .select()
-                .single();
+                .eq('id', id);
             if (error) throw error;
-            setRecipePhrases(prev => prev.map(p => p.id === id ? data : p));
-            return data;
+
+            // Optimistically update local state since select() might fail due to RLS
+            const updatedPhrase = { id, ...updates };
+            setRecipePhrases(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+            return updatedPhrase;
         } catch (error) {
             console.error('Error updating recipe phrase:', error);
             return null;
