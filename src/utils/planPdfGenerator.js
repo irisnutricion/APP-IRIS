@@ -420,38 +420,89 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 doc.rect(margins.left, yPos - 4, maxWidth, titleBoxHeight, 'F');
 
                 doc.setTextColor(...primaryColor); // Dark green for title
-                doc.text(nameLines, margins.left + 3, yPos + 0.5);
 
-                yPos += titleBoxHeight + 1;
-
-                // Add ingredients
-                const ingredients = getOptIngredients(opt);
-                if (ingredients.length > 0) {
-                    doc.setFontSize(9);
-                    doc.setTextColor(...textColor);
-                    ingredients.forEach(ing => {
-                        checkPageBreak(yPos, 5);
-                        const ingLines = doc.splitTextToSize(ing, 210 - margins.left - margins.right - 5);
-                        doc.text(ingLines, margins.left + 5, yPos);
-                        yPos += (ingLines.length * 4);
-                    });
-                    yPos += 1;
-                }
-
-                // Add description if available
-                const desc = getOptDescription(opt);
-                if (desc) {
-                    doc.setFontSize(9);
-                    doc.setTextColor(...lightColor);
-                    const descLines = doc.splitTextToSize(desc, 210 - margins.left - margins.right - 5);
-                    doc.text(descLines, margins.left + 5, yPos);
-                    yPos += (descLines.length * 4) + 2;
-                    doc.setFontSize(10);
-                    doc.setTextColor(...textColor);
+                // Centered text logic
+                if (nameLines.length === 1) {
+                    const textWidth = doc.getTextWidth(nameLines[0]);
+                    doc.text(nameLines[0], margins.left + (maxWidth - textWidth) / 2, yPos + 0.5);
                 } else {
-                    yPos += 2;
+                    // If it wraps, just left align it with padding to keep it simple, or center each line
+                    nameLines.forEach((line, lIdx) => {
+                        const lineWidth = doc.getTextWidth(line);
+                        doc.text(line, margins.left + (maxWidth - lineWidth) / 2, yPos + 0.5 + (lIdx * 5));
+                    });
                 }
-                yPos += 2;
+
+                yPos += titleBoxHeight + 2; // Extra padding below title
+
+                const ingredients = getOptIngredients(opt);
+                const desc = getOptDescription(opt);
+
+                if (meal === 'Almuerzo') {
+                    // EXPERIMENTAL SPLIT LAYOUT FOR ALMUERZOS
+                    const colWidth = (maxWidth / 2) - 5;
+                    const leftX = margins.left + 2;
+                    const rightX = margins.left + (maxWidth / 2) + 5;
+
+                    let leftY = yPos;
+                    let rightY = yPos;
+
+                    // Left Column: Ingredients
+                    if (ingredients.length > 0) {
+                        doc.setFontSize(9);
+                        doc.setTextColor(...textColor);
+                        ingredients.forEach(ing => {
+                            const ingLines = doc.splitTextToSize(ing, colWidth);
+                            doc.text(ingLines, leftX, leftY);
+                            leftY += (ingLines.length * 4);
+                        });
+                    }
+
+                    // Right Column: Description (Instructions)
+                    if (desc) {
+                        doc.setFontSize(9);
+                        doc.setTextColor(...lightColor);
+                        const descLines = doc.splitTextToSize(desc, colWidth);
+                        doc.text(descLines, rightX, rightY);
+                        rightY += (descLines.length * 4) + 2;
+                        doc.setFontSize(10);
+                        doc.setTextColor(...textColor);
+                    }
+
+                    // Advance yPos to whichever column was longer
+                    yPos = Math.max(leftY, rightY) + 4;
+
+                } else {
+                    // STANDARD LAYOUT (Sequential)
+                    // Add ingredients
+                    if (ingredients.length > 0) {
+                        doc.setFontSize(9);
+                        doc.setTextColor(...textColor);
+                        ingredients.forEach(ing => {
+                            checkPageBreak(yPos, 5);
+                            const ingLines = doc.splitTextToSize(ing, 210 - margins.left - margins.right - 5);
+                            doc.text(ingLines, margins.left + 5, yPos);
+                            yPos += (ingLines.length * 4);
+                        });
+                        yPos += 1;
+                    }
+
+                    // Add description if available
+                    if (desc) {
+                        doc.setFontSize(9);
+                        doc.setTextColor(...lightColor);
+                        const descLines = doc.splitTextToSize(desc, 210 - margins.left - margins.right - 5);
+                        doc.text(descLines, margins.left + 5, yPos);
+                        yPos += (descLines.length * 4) + 2;
+                        doc.setFontSize(10);
+                        doc.setTextColor(...textColor);
+                    } else {
+                        yPos += 2;
+                    }
+                }
+
+                // Add extra padding between recipe options
+                yPos += 10;
             });
             yPos += 6;
         }
