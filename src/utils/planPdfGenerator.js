@@ -357,9 +357,9 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
             doc.setTextColor(...textColor);
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(9);
-            mealItems.forEach((opt, idx) => {
+            mealItems.forEach((opt) => {
                 const name = getOptName(opt);
-                const lines = doc.splitTextToSize(`• Opción ${idx + 1}: ${name}`, 210 - margins.left - margins.right - 5);
+                const lines = doc.splitTextToSize(`• ${name}`, 210 - margins.left - margins.right - 5);
                 checkPageBreak(yPos, lines.length * 4);
                 doc.text(lines, margins.left + 5, yPos);
                 yPos += (lines.length * 4);
@@ -381,6 +381,11 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                         meal.toLowerCase().includes('meriend') ? 'Merienda' :
                             meal.toLowerCase().includes('cen') ? 'Cena' : meal;
 
+            const displayMealName = expectedName === 'Desayuno' ? 'Desayunos' :
+                expectedName === 'Almuerzo' ? 'Almuerzos' :
+                    expectedName === 'Merienda' ? 'Meriendas' :
+                        expectedName === 'Cena' ? 'Cenas' : meal;
+
             const coverImg = await loadImageAsBase64(`/covers/${expectedName}.png`);
             if (coverImg) {
                 // If not on a fresh page (or after Portada), add page for cover
@@ -390,19 +395,13 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
                 // Add page for the content
                 doc.addPage();
-                drawHeader(meal); // Updated call
+                drawHeader(displayMealName); // Pluralized header
                 yPos = 35; // Adjusted YPos for taller header
             } else {
-                checkPageBreak(yPos, 20, meal); // Updated call
+                checkPageBreak(yPos, 20, displayMealName); // Pluralized header
             }
 
-            doc.setFillColor(brandColor[0], brandColor[1], brandColor[2]);
-            // Optional: Use lighter primary color for meal header
-            doc.rect(margins.left, yPos, 210 - margins.left - margins.right, 8, 'F');
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(255, 255, 255);
-            doc.text(meal, margins.left + 3, yPos + 5.5);
-            yPos += 16; // Increased from 12 to 16 for slightly more space
+            // Removed the redundant green meal header block (doc.rect with meal name)
 
             doc.setTextColor(...textColor);
             mealItems.forEach((opt, idx) => {
@@ -410,15 +409,20 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
                 const name = getOptName(opt);
                 doc.setFont('helvetica', 'bold');
-                doc.text(`Opción ${idx + 1}:`, margins.left, yPos);
+                doc.setFontSize(10);
 
-                doc.setFont('helvetica', 'normal');
-                const titleWidth = doc.getTextWidth(`Opción ${idx + 1}:  `);
-                const maxWidth = 210 - margins.left - margins.right - titleWidth;
-                const lines = doc.splitTextToSize(name, maxWidth);
+                // Draw background for option title
+                const maxWidth = 210 - margins.left - margins.right;
+                const nameLines = doc.splitTextToSize(name, maxWidth - 6);
+                const titleBoxHeight = (nameLines.length * 5) + 3;
 
-                doc.text(lines, margins.left + titleWidth, yPos);
-                yPos += (lines.length * 5);
+                doc.setFillColor(...brandLight);
+                doc.rect(margins.left, yPos - 4, maxWidth, titleBoxHeight, 'F');
+
+                doc.setTextColor(...primaryColor); // Dark green for title
+                doc.text(nameLines, margins.left + 3, yPos + 0.5);
+
+                yPos += titleBoxHeight + 1;
 
                 // Add ingredients
                 const ingredients = getOptIngredients(opt);
