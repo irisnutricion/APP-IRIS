@@ -101,6 +101,9 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
     // ----- LOAD RESOURCES ----- //
     const logoImg = await loadImageAsBase64('/covers/logo rosa.png');
+    const mailLogoImg = await loadImageAsBase64('/covers/logo gmail.png');
+    const igLogoImg = await loadImageAsBase64('/covers/logo instagram.png');
+    const tiktokLogoImg = await loadImageAsBase64('/covers/logo tiktok.png');
 
     let currentPage = 1;
     const drawHeader = (sectionName = '') => {
@@ -145,10 +148,44 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
         // Draw Contact Info Left & Center
         const emailContact = "info@irisnutricion.com";
-        const igContact = "IG: iris_nutricion";
-        const tiktokContact = "TikTok: iris_nutricion";
+        const igContact = "iris_nutricion";
+        const tiktokContact = "iris_nutricion";
 
-        doc.text(`${emailContact}  |  ${igContact}  |  ${tiktokContact}`, margins.left, footerY);
+        let currentX = margins.left;
+        const iconSize = 3;
+        const spacing = 4;
+
+        // Email
+        if (mailLogoImg) {
+            // Adjust y offset to roughly match text baseline
+            doc.addImage(mailLogoImg, 'PNG', currentX, footerY - 2.5, iconSize, iconSize, undefined, 'FAST');
+            currentX += iconSize + 1;
+        }
+        doc.text(emailContact, currentX, footerY);
+        currentX += doc.getTextWidth(emailContact) + spacing;
+
+        // IG Separator
+        doc.text("|", currentX, footerY);
+        currentX += doc.getTextWidth("|") + spacing;
+
+        // Instagram
+        if (igLogoImg) {
+            doc.addImage(igLogoImg, 'PNG', currentX, footerY - 2.5, iconSize, iconSize, undefined, 'FAST');
+            currentX += iconSize + 1;
+        }
+        doc.text(igContact, currentX, footerY);
+        currentX += doc.getTextWidth(igContact) + spacing;
+
+        // TikTok Separator
+        doc.text("|", currentX, footerY);
+        currentX += doc.getTextWidth("|") + spacing;
+
+        // TikTok
+        if (tiktokLogoImg) {
+            doc.addImage(tiktokLogoImg, 'PNG', currentX, footerY - 2.5, iconSize, iconSize, undefined, 'FAST');
+            currentX += iconSize + 1;
+        }
+        doc.text(tiktokContact, currentX, footerY);
 
         // Draw Page Number Right
         doc.text(`Página ${pageCount}`, 210 - margins.right, footerY, { align: 'right' });
