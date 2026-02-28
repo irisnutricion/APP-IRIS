@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, List, Grid3X3, Table2, Pencil, FileText, ChevronDown, Download, PieChart, ClipboardCopy, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, List, Grid3X3, Table2, Pencil, FileText, ChevronDown, Download, PieChart, ClipboardCopy, Loader2, CheckCircle2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { calcRecipeMacros } from '../Recipes/Recipes';
 import InlineRecipeEditor from './InlineRecipeEditor';
@@ -85,6 +85,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     const [planIndications, setPlanIndications] = useState(plan.indications || '');
     const [mealNames, setMealNames] = useState(plan.meal_names || ['Desayuno', 'Almuerzo', 'Comida', 'Merienda', 'Cena']);
     const [saving, setSaving] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const [viewMode, setViewMode] = useState(initialViewMode);
     const [recipeSearch, setRecipeSearch] = useState('');
@@ -279,7 +280,11 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
         }
     };
 
-    const handleSave = () => performSave(grid);
+    const handleSave = async () => {
+        await performSave(grid);
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 2000);
+    };
 
     // Auto-save with debounce
     useEffect(() => {
@@ -336,8 +341,14 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                     >
                         {isGeneratingPdf ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
                     </button>
-                    <button onClick={handleSave} disabled={saving} className="btn btn-primary text-sm py-2">
-                        <Save size={16} /> {saving ? 'Guardando...' : 'Guardar'}
+                    <button onClick={handleSave} disabled={saving || saveSuccess} className={`btn text-sm py-2 transition-colors ${saveSuccess ? 'bg-emerald-500 text-white hover:bg-emerald-600 border-emerald-500' : 'btn-primary'}`}>
+                        {saving ? (
+                            <><Loader2 className="animate-spin" size={16} /> Guardando...</>
+                        ) : saveSuccess ? (
+                            <><CheckCircle2 size={16} /> ¡Guardado!</>
+                        ) : (
+                            <><Save size={16} /> Guardar</>
+                        )}
                     </button>
                 </div>
             </div>

@@ -1,5 +1,5 @@
 import { useState, useMemo, useId } from 'react';
-import { Search, X, Trash2, GripVertical, Plus, BookmarkPlus, Save } from 'lucide-react';
+import { Search, X, Trash2, GripVertical, Plus, BookmarkPlus, Save, CheckCircle2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -42,6 +42,12 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
     const [showFoodSearch, setShowFoodSearch] = useState(false);
     const [editingIngredientIdx, setEditingIngredientIdx] = useState(null);
     const dndId = useId();
+    const [statusMsg, setStatusMsg] = useState('');
+
+    const showSuccessMessage = (msg) => {
+        setStatusMsg(msg);
+        setTimeout(() => setStatusMsg(''), 2500);
+    };
 
     const foodResults = useMemo(() => {
         if (!foodSearch.trim()) return foods.slice(0, 12);
@@ -145,11 +151,13 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
 
     const handleSaveAsRecipe = () => {
         onSaveAsRecipe(buildSnapshot());
+        showSuccessMessage('copied');
     };
 
     const handleUpdateRecipe = () => {
         if (onUpdateRecipe && initial.source_recipe_id) {
             onUpdateRecipe(buildSnapshot());
+            showSuccessMessage('updated');
         }
     };
 
@@ -362,23 +370,25 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
 
             {/* Footer */}
             <div className="p-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 bg-white dark:bg-slate-900">
-                <div className="flex gap-2">
+                <div className="flex gap-2 relative">
                     {initial.source_recipe_id && onUpdateRecipe ? (
                         <button
                             onClick={handleUpdateRecipe}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50 border border-emerald-200 rounded-lg transition-colors dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/40"
+                            disabled={statusMsg !== ''}
+                            className={`flex items-center justify-center min-w-[190px] gap-1.5 px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors ${statusMsg === 'updated' ? 'bg-emerald-500 border-emerald-500 text-white dark:bg-emerald-600 dark:border-emerald-600' : 'text-emerald-600 hover:bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/40'}`}
                             title="Sobrescribir la receta original en la base de datos"
                         >
-                            <Save size={14} /> Actualizar receta maestra
+                            {statusMsg === 'updated' ? <><CheckCircle2 size={14} /> ¡Actualizada!</> : <><Save size={14} /> Actualizar receta maestra</>}
                         </button>
                     ) : null}
 
                     <button
                         onClick={handleSaveAsRecipe}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-600 hover:bg-purple-50 rounded-lg transition-colors dark:text-purple-400 dark:hover:bg-purple-900/20"
+                        disabled={statusMsg !== ''}
+                        className={`flex items-center justify-center min-w-[200px] gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors rounded-lg border ${statusMsg === 'copied' ? 'bg-purple-500 border-purple-500 text-white dark:bg-purple-600 dark:border-purple-600' : 'text-purple-600 border-transparent hover:bg-purple-50 dark:text-purple-400 dark:hover:bg-purple-900/20'}`}
                         title="Guardar en la base de datos como nueva receta independiente"
                     >
-                        <BookmarkPlus size={14} /> Guardar como copia nueva
+                        {statusMsg === 'copied' ? <><CheckCircle2 size={14} /> ¡Guardado como copia!</> : <><BookmarkPlus size={14} /> Guardar como copia nueva</>}
                     </button>
                 </div>
                 <div className="flex gap-2">
