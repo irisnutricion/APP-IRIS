@@ -287,9 +287,20 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
         if (debounceTimer.current) clearTimeout(debounceTimer.current);
         debounceTimer.current = setTimeout(() => {
             performSave(gridRef.current);
+            debounceTimer.current = null;
         }, 1500);
         return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
     }, [grid, planName, mealNames, planIndications]);
+
+    // Force save on exit if there are unsaved changes pending
+    const handleClose = async () => {
+        if (debounceTimer.current) {
+            clearTimeout(debounceTimer.current);
+            await performSave(gridRef.current);
+            debounceTimer.current = null;
+        }
+        onBack();
+    };
 
     const handleKeyDown = (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
@@ -323,7 +334,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
-                    <button onClick={onBack} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl dark:hover:bg-slate-800">
+                    <button onClick={handleClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl dark:hover:bg-slate-800">
                         <ArrowLeft size={20} />
                     </button>
                     <input type="text" value={planName} onChange={e => setPlanName(e.target.value)} className="text-xl font-bold text-slate-800 dark:text-white bg-transparent border-b-2 border-transparent hover:border-slate-300 focus:border-primary-500 outline-none px-1" />
