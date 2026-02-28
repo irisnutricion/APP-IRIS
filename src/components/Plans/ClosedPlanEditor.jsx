@@ -203,20 +203,18 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
         });
     };
 
-    const handleInlineAccept = async (cellKey, snapshot) => {
-        const newGrid = {
-            ...grid,
+    const handleInlineAccept = (cellKey, snapshot) => {
+        setGrid(prev => ({
+            ...prev,
             [cellKey]: {
-                ...grid[cellKey],
+                ...prev[cellKey],
                 custom_recipe_data: snapshot,
             },
-        };
-        setGrid(newGrid);
-        await performSave(newGrid);
+        }));
     };
 
     const handleInlineSaveAsRecipe = async (cellKey, snapshot) => {
-        const newRecipe = await addRecipe({
+        await addRecipe({
             name: snapshot.name,
             is_active: true,
             tags: [],
@@ -224,8 +222,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             food_id: ing.food_id,
             quantity_grams: ing.quantity_grams,
         })));
-        // Also accept the snapshot into the plan and save
-        await handleInlineAccept(cellKey, snapshot);
+        handleInlineAccept(cellKey, snapshot);
     };
 
     const handleInlineUpdateRecipe = async (cellKey, snapshot) => {
@@ -233,12 +230,12 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
         await updateRecipe(snapshot.source_recipe_id, {
             name: snapshot.name,
             description: snapshot.description,
-            tags: [], // Not currently edited inline
+            tags: [],
         }, snapshot.ingredients.map(ing => ({
             food_id: ing.food_id,
             quantity_grams: ing.quantity_grams,
         })));
-        await handleInlineAccept(cellKey, snapshot);
+        handleInlineAccept(cellKey, snapshot);
     };
 
     // Create new recipe inline (no base recipe)

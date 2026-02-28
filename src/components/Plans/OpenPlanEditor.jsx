@@ -189,13 +189,11 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     }, [sections, mealNames]);
 
     // Inline editor handlers
-    const handleInlineAccept = async (mealName, idx, snapshot) => {
-        const newSections = {
-            ...sections,
-            [mealName]: sections[mealName].map((opt, i) => i === idx ? { ...opt, custom_recipe_data: snapshot } : opt),
-        };
-        setSections(newSections);
-        await performSave(newSections);
+    const handleInlineAccept = (mealName, idx, snapshot) => {
+        setSections(prev => ({
+            ...prev,
+            [mealName]: prev[mealName].map((opt, i) => i === idx ? { ...opt, custom_recipe_data: snapshot } : opt),
+        }));
     };
 
     const handleInlineSaveAsRecipe = async (mealName, idx, snapshot) => {
@@ -207,7 +205,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             food_id: ing.food_id,
             quantity_grams: ing.quantity_grams,
         })));
-        await handleInlineAccept(mealName, idx, snapshot);
+        handleInlineAccept(mealName, idx, snapshot);
     };
 
     const handleInlineUpdateRecipe = async (mealName, idx, snapshot) => {
@@ -215,12 +213,12 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
         await updateRecipe(snapshot.source_recipe_id, {
             name: snapshot.name,
             description: snapshot.description,
-            tags: [], // Not currently edited inline
+            tags: [],
         }, snapshot.ingredients.map(ing => ({
             food_id: ing.food_id,
             quantity_grams: ing.quantity_grams,
         })));
-        await handleInlineAccept(mealName, idx, snapshot);
+        handleInlineAccept(mealName, idx, snapshot);
     };
 
     const performSave = async (currentSections) => {
