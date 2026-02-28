@@ -89,6 +89,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
 
     // Initialize grid from items
     useEffect(() => {
+        if (!isInitialLoad.current) return;
         const g = {};
         items.forEach(item => {
             const key = `${item.day_of_week}_${item.meal_name}`;

@@ -71,6 +71,7 @@ export default function PlansTab({ patient }) {
         if (currentPlan.type === 'open') {
             return (
                 <OpenPlanEditor
+                    key={currentPlan.id}
                     plan={currentPlan}
                     items={planItems}
                     initialViewMode={editingPlan.viewMode || 'meals'}
@@ -84,6 +85,7 @@ export default function PlansTab({ patient }) {
 
         return (
             <ClosedPlanEditor
+                key={currentPlan.id}
                 plan={currentPlan}
                 items={planItems}
                 initialViewMode={editingPlan.viewMode || 'grid'}

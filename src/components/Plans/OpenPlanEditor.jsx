@@ -60,6 +60,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     };
 
     useEffect(() => {
+        if (!isInitialLoad.current) return;
         const s = {};
         mealNames.forEach(meal => { s[meal] = []; });
         items.forEach(item => {
