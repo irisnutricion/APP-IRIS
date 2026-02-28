@@ -1457,7 +1457,7 @@ export const DataProvider = ({ children }) => {
         try {
             const { data, error } = await supabase
                 .from('recipe_phrases')
-                .insert([{ ...phrase, nutritionist_id: nutritionistId }])
+                .insert([phrase])
                 .select()
                 .single();
             if (error) throw error;
@@ -1474,27 +1474,33 @@ export const DataProvider = ({ children }) => {
             const { error } = await supabase
                 .from('recipe_phrases')
                 .update(updates)
-                .match({ id, nutritionist_id: nutritionistId });
-            if (error) throw error;
+                .eq('id', id);
+            if (error) {
+                console.error('Supabase update error:', error);
+                throw error;
+            }
 
             // Optimistically update local state since select() might fail due to RLS
             const updatedPhrase = { id, ...updates };
             setRecipePhrases(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
             return updatedPhrase;
         } catch (error) {
-            console.error('Error updating recipe phrase:', error);
+            console.error('Catch Error updating recipe phrase:', error);
             return null;
         }
     };
 
     const deleteRecipePhrase = async (id) => {
         try {
-            const { error } = await supabase.from('recipe_phrases').delete().match({ id, nutritionist_id: nutritionistId });
-            if (error) throw error;
+            const { error } = await supabase.from('recipe_phrases').delete().eq('id', id);
+            if (error) {
+                console.error('Supabase delete error:', error);
+                throw error;
+            }
             setRecipePhrases(prev => prev.filter(p => p.id !== id));
             return true;
         } catch (error) {
-            console.error('Error deleting recipe phrase:', error);
+            console.error('Catch Error deleting recipe phrase:', error);
             return false;
         }
     };
