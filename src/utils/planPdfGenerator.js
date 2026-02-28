@@ -454,7 +454,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                         ingredients.forEach(ing => {
                             const ingLines = doc.splitTextToSize(ing, colWidth);
                             doc.text(ingLines, leftX, leftY);
-                            leftY += (ingLines.length * 4);
+                            leftY += (ingLines.length * 5); // Increased from 4 for more spacing
                         });
                     }
 
@@ -464,7 +464,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                         doc.setTextColor(...lightColor);
                         const descLines = doc.splitTextToSize(desc, colWidth);
                         doc.text(descLines, rightX, rightY);
-                        rightY += (descLines.length * 4) + 2;
+                        rightY += (descLines.length * 5) + 3; // Increased from 4 and 2 for more spacing
                         doc.setFontSize(10);
                         doc.setTextColor(...textColor);
                     }
@@ -482,9 +482,9 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                             checkPageBreak(yPos, 5);
                             const ingLines = doc.splitTextToSize(ing, 210 - margins.left - margins.right - 5);
                             doc.text(ingLines, margins.left + 5, yPos);
-                            yPos += (ingLines.length * 4);
+                            yPos += (ingLines.length * 5); // Increased from 4
                         });
-                        yPos += 1;
+                        yPos += 2; // Increased padding after ingredients
                     }
 
                     // Add description if available
@@ -493,7 +493,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                         doc.setTextColor(...lightColor);
                         const descLines = doc.splitTextToSize(desc, 210 - margins.left - margins.right - 5);
                         doc.text(descLines, margins.left + 5, yPos);
-                        yPos += (descLines.length * 4) + 2;
+                        yPos += (descLines.length * 5) + 3; // Increased line height and padding
                         doc.setFontSize(10);
                         doc.setTextColor(...textColor);
                     } else {
