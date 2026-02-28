@@ -216,6 +216,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     const handleInlineSaveAsRecipe = async (cellKey, snapshot) => {
         await addRecipe({
             name: snapshot.name,
+            description: snapshot.description,
             is_active: true,
             tags: [],
         }, snapshot.ingredients.map(ing => ({
