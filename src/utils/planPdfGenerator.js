@@ -136,59 +136,75 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
         doc.text(patientName, 210 - margins.right, 14, { align: 'right' });
     };
 
-    const drawFooter = () => {
-        const pageCount = doc.internal.getNumberOfPages();
-        doc.setPage(pageCount);
+    const drawFooter = (pageNumber) => {
+        doc.setPage(pageNumber);
         const footerY = 297 - 10;
 
         // Branding colors for footer text
         doc.setTextColor(...primaryColor);
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
 
         // Draw Contact Info Left & Center
         const emailContact = "info@irisnutricion.com";
         const igContact = "iris_nutricion";
         const tiktokContact = "iris_nutricion";
 
-        let currentX = margins.left;
-        const iconSize = 3;
+        const iconSize = 4;
         const spacing = 4;
+
+        // Calculate total width of the block
+        let totalWidth = 0;
+        if (mailLogoImg) totalWidth += iconSize + 1;
+        totalWidth += doc.getTextWidth(emailContact) + spacing;
+        totalWidth += doc.getTextWidth("|") + spacing;
+        if (igLogoImg) totalWidth += iconSize + 1;
+        totalWidth += doc.getTextWidth(igContact) + spacing;
+        totalWidth += doc.getTextWidth("|") + spacing;
+        if (tiktokLogoImg) totalWidth += iconSize + 1;
+        totalWidth += doc.getTextWidth(tiktokContact);
+
+        let currentX = (210 - totalWidth) / 2;
 
         // Email
         if (mailLogoImg) {
             // Adjust y offset to roughly match text baseline
-            doc.addImage(mailLogoImg, 'PNG', currentX, footerY - 2.5, iconSize, iconSize, undefined, 'FAST');
+            doc.addImage(mailLogoImg, 'PNG', currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
             currentX += iconSize + 1;
         }
         doc.text(emailContact, currentX, footerY);
         currentX += doc.getTextWidth(emailContact) + spacing;
 
         // IG Separator
+        doc.setTextColor(...lightColor);
         doc.text("|", currentX, footerY);
+        doc.setTextColor(...primaryColor);
         currentX += doc.getTextWidth("|") + spacing;
 
         // Instagram
         if (igLogoImg) {
-            doc.addImage(igLogoImg, 'PNG', currentX, footerY - 2.5, iconSize, iconSize, undefined, 'FAST');
+            doc.addImage(igLogoImg, 'PNG', currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
             currentX += iconSize + 1;
         }
         doc.text(igContact, currentX, footerY);
         currentX += doc.getTextWidth(igContact) + spacing;
 
         // TikTok Separator
+        doc.setTextColor(...lightColor);
         doc.text("|", currentX, footerY);
+        doc.setTextColor(...primaryColor);
         currentX += doc.getTextWidth("|") + spacing;
 
         // TikTok
         if (tiktokLogoImg) {
-            doc.addImage(tiktokLogoImg, 'PNG', currentX, footerY - 2.5, iconSize, iconSize, undefined, 'FAST');
+            doc.addImage(tiktokLogoImg, 'PNG', currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
             currentX += iconSize + 1;
         }
         doc.text(tiktokContact, currentX, footerY);
 
         // Draw Page Number Right
-        doc.text(`Página ${pageCount}`, 210 - margins.right, footerY, { align: 'right' });
+        doc.setFontSize(8);
+        doc.text(`Página ${pageNumber}`, 210 - margins.right, footerY, { align: 'right' });
     };
 
     // ----- PAGE 1: MAIN COVER ----- //
@@ -488,8 +504,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
     const totalPages = doc.internal.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
         if (!coverPages.has(i)) {
-            doc.setPage(i);
-            drawFooter();
+            drawFooter(i);
         }
     }
 
