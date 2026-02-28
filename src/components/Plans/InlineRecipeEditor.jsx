@@ -23,11 +23,12 @@ function SortableIngredient({ id, children }) {
  * InlineRecipeEditor — edita un snapshot de receta sin tocar la original.
  * Props:
  *   snapshot: { name, source_recipe_id?, ingredients: [{ food_id, food_name, quantity_grams, kcal_per_100g, carbs, protein, fat }] } | null
- *   onAccept(snapshot) — devuelve el snapshot editado al plan
+ *   onChange(snapshot) — triggers every time an edit is made (debounced)
  *   onSaveAsRecipe(snapshot) — guarda como nueva receta en DB
- *   onClose() — cierra sin cambios
+ *   onUpdateRecipe(snapshot) — actualiza la receta maestra
+ *   onClose() — cierra el panel
  */
-export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe, onUpdateRecipe, onClose }) {
+export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe, onUpdateRecipe, onClose }) {
     const { foods = [], recipePhrases = [] } = useData();
     const [phraseSearch, setPhraseSearch] = useState('');
     const [showPhraseSearch, setShowPhraseSearch] = useState(false);
@@ -139,16 +140,21 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
         }, { kcal: 0, carbs: 0, protein: 0, fat: 0 });
     }, [ingredients]);
 
-    const buildSnapshot = () => ({
+    const buildSnapshot = useCallback(() => ({
         name: name.trim() || 'Sin nombre',
         description: description.trim(),
         source_recipe_id: initial.source_recipe_id || null,
         ingredients,
-    });
+    }), [name, description, ingredients, initial.source_recipe_id]);
 
-    const handleAccept = () => {
-        onAccept(buildSnapshot());
-    };
+    // Auto-sync with parent (debounced)
+    useEffect(() => {
+        if (!onChange) return;
+        const timer = setTimeout(() => {
+            onChange(buildSnapshot());
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [name, description, ingredients, onChange, buildSnapshot]);
 
     const handleSaveAsRecipe = () => {
         onSaveAsRecipe(buildSnapshot());
@@ -422,11 +428,8 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
                     </button>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={onClose} className="px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-100 rounded-lg dark:hover:bg-slate-800 font-medium">
+                    <button onClick={onClose} className="px-5 py-1.5 text-xs text-white bg-slate-800 hover:bg-slate-900 rounded-lg dark:bg-slate-700 dark:hover:bg-slate-600 font-medium transition-colors">
                         Cerrar panel
-                    </button>
-                    <button onClick={handleAccept} className="btn-primary px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1">
-                        <Save size={14} /> Guardar cambios del plan
                     </button>
                 </div>
             </div>

@@ -276,15 +276,11 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                 });
             }
             await onSaveItems(newItems);
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 2000);
         } finally {
             setSaving(false);
         }
-    };
-
-    const handleSave = async () => {
-        await performSave(grid);
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 2000);
     };
 
     // Auto-save with debounce
@@ -369,15 +365,14 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                     >
                         {isGeneratingPdf ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
                     </button>
-                    <button onClick={handleSave} disabled={saving || saveSuccess} className={`btn text-sm py-2 transition-colors ${saveSuccess ? 'bg-emerald-500 text-white hover:bg-emerald-600 border-emerald-500' : 'btn-primary'}`}>
+                    {/* Auto-save status indicator */}
+                    <div className="flex justify-end min-w-[100px] text-xs font-semibold">
                         {saving ? (
-                            <><Loader2 className="animate-spin" size={16} /> Guardando...</>
+                            <span className="text-slate-400 flex items-center gap-1.5"><Loader2 className="animate-spin" size={14} /> Guardando...</span>
                         ) : saveSuccess ? (
-                            <><CheckCircle2 size={16} /> ¡Guardado!</>
-                        ) : (
-                            <><Save size={16} /> Guardar</>
-                        )}
-                    </button>
+                            <span className="text-emerald-500 dark:text-emerald-400 flex items-center gap-1.5"><CheckCircle2 size={14} /> ¡Guardado!</span>
+                        ) : null}
+                    </div>
                 </div>
             </div>
 
@@ -447,7 +442,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                             <div className="w-[500px] z-20">
                                                                 <InlineRecipeEditor
                                                                     snapshot={cell.custom_recipe_data || recipeToSnapshot(cell.recipes) || null}
-                                                                    onAccept={s => { handleInlineAccept(key, s); toggleEditor(key); }}
+                                                                    onChange={s => handleInlineAccept(key, s)}
                                                                     onSaveAsRecipe={s => handleInlineSaveAsRecipe(key, s)}
                                                                     onClose={() => toggleEditor(key)}
                                                                 />
