@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import useUndo from '../../hooks/useUndo';
 import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download, PieChart, GripVertical, Loader2, CheckCircle2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { calcSnapshotMacros, recipeToSnapshot, checkRecipeIsSaved } from './ClosedPlanEditor';
@@ -23,7 +24,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     const [planName, setPlanName] = useState(plan.name);
     const [planIndications, setPlanIndications] = useState(plan.indications || '');
     const [mealNames, setMealNames] = useState(plan.meal_names || ['Desayuno', 'Almuerzo', 'Comida', 'Merienda', 'Cena']);
-    const [sections, setSections] = useState({});
+    const [sections, setSections, undoSections, redoSections, canUndoSections, canRedoSections] = useUndo({});
     const [saving, setSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -262,8 +263,35 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
         return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
     }, [sections, planName, mealNames, planIndications]);
 
+    const handleKeyDown = (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+            const tag = e.target.tagName?.toLowerCase();
+            if (tag === 'input' || tag === 'textarea') return;
+            e.preventDefault();
+            if (e.shiftKey) {
+                if (canRedoSections) redoSections();
+            } else {
+                if (canUndoSections) undoSections();
+            }
+        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+            const tag = e.target.tagName?.toLowerCase();
+            if (tag === 'input' || tag === 'textarea') return;
+            e.preventDefault();
+            if (canRedoSections) redoSections();
+        }
+    };
+
     return (
-        <div className="space-y-4">
+        <div
+            className="space-y-4 focus:outline-none"
+            tabIndex={-1}
+            onKeyDown={handleKeyDown}
+            onClick={(e) => {
+                if (e.target === e.currentTarget || !e.currentTarget.contains(document.activeElement)) {
+                    e.currentTarget.focus();
+                }
+            }}
+        >
             {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">

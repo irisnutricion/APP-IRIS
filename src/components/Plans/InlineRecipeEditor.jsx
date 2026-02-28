@@ -1,4 +1,5 @@
-import { useState, useMemo, useId } from 'react';
+import { useState, useMemo, useId, useRef, useEffect } from 'react';
+import useUndo from '../../hooks/useUndo';
 import { Search, X, Trash2, GripVertical, Plus, BookmarkPlus, Save, CheckCircle2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -34,7 +35,7 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
     const initial = snapshot || { name: '', description: '', source_recipe_id: null, ingredients: [] };
     const [name, setName] = useState(snapshot?.name || '');
     const [description, setDescription] = useState(snapshot?.description || '');
-    const [ingredients, setIngredients] = useState(() => {
+    const [ingredients, setIngredients, undoIngredients, redoIngredients, canUndoIngredients, canRedoIngredients] = useUndo(() => {
         const initialIngs = snapshot?.ingredients || [];
         return initialIngs.map(ing => ({ ...ing, unique_id: ing.unique_id || crypto.randomUUID() }));
     });
@@ -161,8 +162,37 @@ export default function InlineRecipeEditor({ snapshot, onAccept, onSaveAsRecipe,
         }
     };
 
+    const handleKeyDown = (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+            const tag = e.target.tagName?.toLowerCase();
+            if (tag === 'input' || tag === 'textarea') return;
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.shiftKey) {
+                if (canRedoIngredients) redoIngredients();
+            } else {
+                if (canUndoIngredients) undoIngredients();
+            }
+        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+            const tag = e.target.tagName?.toLowerCase();
+            if (tag === 'input' || tag === 'textarea') return;
+            e.preventDefault();
+            e.stopPropagation();
+            if (canRedoIngredients) redoIngredients();
+        }
+    };
+
     return (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 w-full mt-2 mb-4 overflow-hidden shadow-sm relative group/editor">
+        <div
+            className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 w-full mt-2 mb-4 overflow-hidden shadow-sm relative group/editor focus:outline-none focus:ring-1 focus:ring-primary-500/50"
+            tabIndex={-1}
+            onKeyDown={handleKeyDown}
+            onClick={(e) => {
+                if (e.target === e.currentTarget || !e.currentTarget.contains(document.activeElement)) {
+                    e.currentTarget.focus();
+                }
+            }}
+        >
             {/* Header */}
             <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800">
                 <input

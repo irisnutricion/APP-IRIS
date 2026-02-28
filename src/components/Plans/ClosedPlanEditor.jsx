@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import useUndo from '../../hooks/useUndo';
 import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, List, Grid3X3, Table2, Pencil, FileText, ChevronDown, Download, PieChart, ClipboardCopy, Loader2, CheckCircle2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { calcRecipeMacros } from '../Recipes/Recipes';
@@ -296,8 +297,35 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
         return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
     }, [grid, planName, mealNames, planIndications]);
 
+    const handleKeyDown = (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+            const tag = e.target.tagName?.toLowerCase();
+            if (tag === 'input' || tag === 'textarea') return;
+            e.preventDefault();
+            if (e.shiftKey) {
+                if (canRedoGrid) redoGrid();
+            } else {
+                if (canUndoGrid) undoGrid();
+            }
+        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+            const tag = e.target.tagName?.toLowerCase();
+            if (tag === 'input' || tag === 'textarea') return;
+            e.preventDefault();
+            if (canRedoGrid) redoGrid();
+        }
+    };
+
     return (
-        <div className="space-y-4">
+        <div
+            className="space-y-4 focus:outline-none"
+            tabIndex={-1}
+            onKeyDown={handleKeyDown}
+            onClick={(e) => {
+                if (e.target === e.currentTarget || !e.currentTarget.contains(document.activeElement)) {
+                    e.currentTarget.focus();
+                }
+            }}
+        >
             {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
