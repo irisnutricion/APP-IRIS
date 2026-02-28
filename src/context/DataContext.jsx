@@ -1474,7 +1474,7 @@ export const DataProvider = ({ children }) => {
             const { error } = await supabase
                 .from('recipe_phrases')
                 .update(updates)
-                .eq('id', id);
+                .match({ id, nutritionist_id: nutritionistId });
             if (error) throw error;
 
             // Optimistically update local state since select() might fail due to RLS
@@ -1489,7 +1489,7 @@ export const DataProvider = ({ children }) => {
 
     const deleteRecipePhrase = async (id) => {
         try {
-            const { error } = await supabase.from('recipe_phrases').delete().eq('id', id);
+            const { error } = await supabase.from('recipe_phrases').delete().match({ id, nutritionist_id: nutritionistId });
             if (error) throw error;
             setRecipePhrases(prev => prev.filter(p => p.id !== id));
             return true;
