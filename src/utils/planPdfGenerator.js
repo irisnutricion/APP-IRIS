@@ -425,26 +425,26 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 // Draw background for option title
                 const maxWidth = 210 - margins.left - margins.right;
                 const nameLines = doc.splitTextToSize(name, maxWidth - 6);
-                const titleBoxHeight = (nameLines.length * 5) + 3;
+                const titleBoxHeight = (nameLines.length * 4) + 2;
 
                 doc.setFillColor(...brandLight);
-                doc.rect(margins.left, yPos - 4, maxWidth, titleBoxHeight, 'F');
+                doc.rect(margins.left, yPos - 3, maxWidth, titleBoxHeight, 'F');
 
                 doc.setTextColor(...primaryColor); // Dark green for title
 
                 // Centered text logic
                 if (nameLines.length === 1) {
                     const textWidth = doc.getTextWidth(nameLines[0]);
-                    doc.text(nameLines[0], margins.left + (maxWidth - textWidth) / 2, yPos + 0.5);
+                    doc.text(nameLines[0], margins.left + (maxWidth - textWidth) / 2, yPos + 0);
                 } else {
                     // If it wraps, just left align it with padding to keep it simple, or center each line
                     nameLines.forEach((line, lIdx) => {
                         const lineWidth = doc.getTextWidth(line);
-                        doc.text(line, margins.left + (maxWidth - lineWidth) / 2, yPos + 0.5 + (lIdx * 5));
+                        doc.text(line, margins.left + (maxWidth - lineWidth) / 2, yPos + 0 + (lIdx * 4));
                     });
                 }
 
-                yPos += titleBoxHeight + 2; // Extra padding below title
+                yPos += titleBoxHeight + 1; // Extra padding below title
 
                 const ingredients = getOptIngredients(opt);
                 const desc = getOptDescription(opt);
@@ -464,7 +464,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                     ingredients.forEach(ing => {
                         const ingLines = doc.splitTextToSize(ing, colWidth);
                         doc.text(ingLines, leftX, leftY);
-                        leftY += (ingLines.length * 5); // Increased line height from 4 to 5
+                        leftY += (ingLines.length * 4);
                     });
                 }
 
@@ -474,18 +474,18 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                     doc.setTextColor(...lightColor);
                     const descLines = doc.splitTextToSize(desc, colWidth);
                     doc.text(descLines, rightX, rightY);
-                    rightY += (descLines.length * 5) + 1; // Increased line height from 4 to 5
+                    rightY += (descLines.length * 4) + 1;
                     doc.setFontSize(10);
                     doc.setTextColor(...textColor);
                 }
 
                 // Advance yPos to whichever column was longer
-                yPos = Math.max(leftY, rightY) + 2;
+                yPos = Math.max(leftY, rightY) + 1;
 
                 // Add extra padding between recipe options
-                yPos += 6;
+                yPos += 3;
             });
-            yPos += 6;
+            yPos += 3;
         }
     }
 
@@ -549,8 +549,8 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
     doc.save(filename);
 
     function checkPageBreak(currentY, neededHeight, sectionName = '') {
-        // Reduced max height by 15mm to create a safety buffer above the footer
-        if (currentY + neededHeight > 297 - margins.bottom - 15) {
+        // Reduced buffer to allow components to fill more of the page
+        if (currentY + neededHeight > 282) {
             doc.addPage();
             drawHeader(sectionName);
             yPos = 35;
