@@ -551,8 +551,8 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
     doc.save(filename);
 
     function checkPageBreak(currentY, neededHeight, sectionName = '') {
-        // Reduced buffer to allow components to fill more of the page
-        if (currentY + neededHeight > 282) {
+        // Leave a safety margin so content doesn't crash into the footer
+        if (currentY + neededHeight > 275) {
             doc.addPage();
             drawHeader(sectionName);
             yPos = 35;
