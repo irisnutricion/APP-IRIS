@@ -379,13 +379,13 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
             doc.setTextColor(...textColor);
             doc.setFont('helvetica', 'normal');
-            doc.setFontSize(9);
+            doc.setFontSize(10); // Increased from 9 to 10
             mealItems.forEach((opt) => {
                 const name = getOptName(opt);
                 const lines = doc.splitTextToSize(`• ${name}`, 210 - margins.left - margins.right - 5);
-                checkPageBreak(yPos, lines.length * 4);
+                checkPageBreak(yPos, lines.length * 4.5);
                 doc.text(lines, margins.left + 5, yPos);
-                yPos += (lines.length * 4);
+                yPos += (lines.length * 4.5);
             });
             yPos += 4;
         });
