@@ -698,7 +698,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                     <div className="mt-3 pt-4 border-t border-slate-100 dark:border-slate-700/50">
                                                                         <InlineRecipeEditor
                                                                             snapshot={cell.custom_recipe_data || recipeToSnapshot(cell.recipes) || null}
-                                                                            onAccept={s => { handleInlineAccept(key, s); toggleDayEditor(key); }}
+                                                                            onChange={s => handleInlineAccept(key, s)}
                                                                             onSaveAsRecipe={s => handleInlineSaveAsRecipe(key, s)}
                                                                             onUpdateRecipe={s => handleInlineUpdateRecipe(key, s)}
                                                                             onClose={() => toggleDayEditor(key)}
