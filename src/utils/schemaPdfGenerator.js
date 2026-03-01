@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
-export const generateSchemaPdf = async (nutritionist) => {
+export const generateSchemaPdf = async (nutritionist, patient = null) => {
     // 1. Configuración inicial
     const doc = new jsPDF('l', 'mm', 'a4'); // 'l' for landscape
     let currentPage = 1;
@@ -62,6 +62,13 @@ export const generateSchemaPdf = async (nutritionist) => {
         doc.setFontSize(14);
         doc.setTextColor(...primaryColor);
         doc.text(title, pageWidth / 2, 16, { align: 'center' });
+
+        if (patient && patient.first_name) {
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...primaryColor);
+            doc.text(`Plan nutricional personalizado para ${patient.first_name}`, pageWidth - margins.right, 16, { align: 'right' });
+        }
 
         // Línea separadora
         doc.setDrawColor(...primaryColor);

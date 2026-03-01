@@ -380,9 +380,10 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                     <button
                         onClick={async () => {
                             const nutri = nutritionists.find(n => n.is_active !== false) || nutritionists[0] || {};
+                            const patient = patients.find(p => p.id === plan.patient_id);
                             setIsGeneratingSchema(true);
                             try {
-                                await generateSchemaPdf(nutri);
+                                await generateSchemaPdf(nutri, patient);
                             } catch (err) {
                                 console.error('Error generating schema PDF:', err);
                             } finally {
