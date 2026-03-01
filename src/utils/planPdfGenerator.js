@@ -256,6 +256,10 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
     }
 
     // --- PLAN OPTIONS SUMMARY OR GRID ---
+    const mealNames = plan.meal_names || [];
+    const isClosedPlan = items.some(i => i.day_of_week !== null);
+    let yPos = 30;
+
     if (isClosedPlan) {
         // --- CLOSED PLAN WEEKLY GRID ---
         doc.addPage('a4', 'l'); // Landscape for grid
