@@ -1439,6 +1439,15 @@ const Settings = () => {
             }));
         };
 
+        const PALETTE = [
+            { label: 'Oscuro', value: '#3c3c3c' },
+            { label: 'Verde Oscuro (Marca)', value: '#28483a' },
+            { label: 'Verde Claro', value: '#9db98f' },
+            { label: 'Rojo/Alerta', value: '#ef4444' },
+            { label: 'Naranja', value: '#f97316' },
+            { label: 'Azul', value: '#3b82f6' }
+        ];
+
         return (
             <div className="space-y-6">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -1446,7 +1455,23 @@ const Settings = () => {
                         <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
                             <CalendarDays size={18} /> Plantilla de Esquema Semanal
                         </h4>
-                        <p className="text-sm text-gray-500 mt-1">Configura los textos base (macronutrientes) que conformarán el PDF del esquema semanal genérico.</p>
+                        <p className="text-sm text-gray-500 mt-1">Configura los textos base (macronutrientes). Selecciona un texto y elige un color.</p>
+
+                        <div className="mt-3 flex flex-wrap gap-2 items-center bg-slate-50 dark:bg-slate-900/50 p-2 rounded-lg border border-slate-200 dark:border-slate-700 w-max">
+                            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest px-2">Color:</span>
+                            {PALETTE.map(color => (
+                                <button
+                                    key={color.value}
+                                    title={color.label}
+                                    onMouseDown={(e) => {
+                                        e.preventDefault(); // Evitar perder el foco del contenteditable
+                                        document.execCommand('foreColor', false, color.value);
+                                    }}
+                                    className="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-600 shadow-sm hover:scale-110 transition-transform"
+                                    style={{ backgroundColor: color.value }}
+                                />
+                            ))}
+                        </div>
                     </div>
                 </div>
 
@@ -1488,13 +1513,13 @@ const Settings = () => {
                                             {day}
                                         </td>
                                         {MEALS.map(meal => (
-                                            <td key={`${day}-${meal}`} className="p-0 border-r border-slate-200 dark:border-slate-700 last:border-r-0 align-top">
-                                                <textarea
-                                                    className="w-full h-full text-xs p-3 border-none bg-transparent hover:bg-slate-50/80 dark:hover:bg-slate-700/50 focus:bg-white dark:focus:bg-slate-800 focus:ring-inset focus:ring-1 focus:ring-primary-400 transition-colors resize-none overflow-hidden"
-                                                    rows={4}
-                                                    placeholder="Ej: Verdura + Proteína..."
-                                                    value={schemaMatrix[`${day}_${meal}`] || ''}
-                                                    onChange={e => handleCellChange(day, meal, e.target.value)}
+                                            <td key={`${day}-${meal}`} className="p-0 border-r border-slate-200 dark:border-slate-700 last:border-r-0 align-top relative">
+                                                <div
+                                                    className="w-full h-full text-xs p-3 min-h-[100px] border-none bg-transparent hover:bg-slate-50/80 dark:hover:bg-slate-700/50 focus:bg-white dark:focus:bg-slate-800 focus:ring-inset focus:ring-1 focus:ring-primary-400 transition-colors cursor-text whitespace-pre-wrap outline-none"
+                                                    contentEditable
+                                                    suppressContentEditableWarning
+                                                    onBlur={(e) => handleCellChange(day, meal, e.target.innerHTML)}
+                                                    dangerouslySetInnerHTML={{ __html: schemaMatrix[`${day}_${meal}`] || '' }}
                                                 />
                                             </td>
                                         ))}

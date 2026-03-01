@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 
 export const generateSchemaPdf = async (nutritionist, patient = null) => {
     // 1. Configuración inicial
@@ -147,46 +148,58 @@ export const generateSchemaPdf = async (nutritionist, patient = null) => {
 
     drawHeader();
 
-    // Tabla 1: ESQUEMA MENÚ SEMANAL (Rellena con la configuración)
-    const table1Body = DAYS.map(day => {
-        const row = [day];
-        MEALS.forEach(meal => {
-            row.push(schemaMatrix[`${day}_${meal}`] || '');
-        });
-        return row;
-    });
+    // To preserve rich text colors, we render a hidden HTML table and use html2canvas
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.style.width = '1200px'; // Render wide for good resolution
+    container.style.backgroundColor = '#ffffff';
 
-    doc.autoTable({
-        startY: yPos,
-        head: [['', ...MEALS]],
-        body: table1Body,
-        theme: 'grid',
-        headStyles: {
-            fillColor: brandLight,
-            textColor: textColor,
-            fontStyle: 'bold',
-            halign: 'center',
-            lineColor: [200, 200, 200],
-            lineWidth: 0.1
-        },
-        bodyStyles: {
-            fontSize: 9, // Slightly larger base font since it's landscape
-            textColor: textColor,
-            halign: 'center',
-            valign: 'middle',
-            lineColor: [200, 200, 200],
-            lineWidth: 0.1
-        },
-        columnStyles: {
-            0: { // Columna de Días
-                fontStyle: 'bold',
-                fillColor: brandLight,
-                halign: 'center',
-                cellWidth: 25 // Slightly wider to accommodate larger font
-            }
-        },
-        margin: { left: margins.left, right: margins.right }
+    const brandLightHex = '#e3f6ed';
+    const borderColor = '#cbd5e1';
+
+    let htmlTable = `
+    <div id="pdf-table-capture" style="padding: 10px; font-family: Helvetica, Arial, sans-serif; color: #3c3c3c; width: 1200px; box-sizing: border-box;">
+      <table style="width: 100%; border-collapse: collapse; border: 1px solid ${borderColor};">
+        <thead>
+          <tr style="background-color: ${brandLightHex};">
+            <th style="padding: 12px; border: 1px solid ${borderColor}; width: 120px;"></th>
+    `;
+    MEALS.forEach(meal => {
+        htmlTable += `<th style="padding: 12px; border: 1px solid ${borderColor}; text-align: center; color: #3c3c3c;">${meal}</th>`;
     });
+    htmlTable += `</tr></thead><tbody>`;
+
+    DAYS.forEach(day => {
+        htmlTable += `<tr>
+            <td style="padding: 12px; border: 1px solid ${borderColor}; background-color: ${brandLightHex}; font-weight: bold; text-align: center; color: #3c3c3c;">${day}</td>`;
+        MEALS.forEach(meal => {
+            const cellHtml = schemaMatrix[`${day}_${meal}`] || '';
+            // cellHtml usually contains lines and styling due to contentEditable
+            htmlTable += `<td style="padding: 12px; border: 1px solid ${borderColor}; vertical-align: top; font-size: 14px; line-height: 1.5;">${cellHtml}</td>`;
+        });
+        htmlTable += `</tr>`;
+    });
+    htmlTable += `</tbody></table></div>`;
+
+    container.innerHTML = htmlTable;
+    document.body.appendChild(container);
+
+    // Capture the HTML
+    const captureEl = document.getElementById('pdf-table-capture');
+    const canvas = await html2canvas(captureEl, { scale: 2, useCORS: true, logging: false });
+    const imgData = canvas.toDataURL('image/png');
+
+    // Clean up DOM
+    document.body.removeChild(container);
+
+    // Fit table to PDF width (margin to margin)
+    const availableWidth = pageWidth - margins.left - margins.right;
+    const imgProps = doc.getImageProperties(imgData);
+    const pdfHeightForTable = (imgProps.height * availableWidth) / imgProps.width;
+
+    doc.addImage(imgData, 'PNG', margins.left, yPos, availableWidth, pdfHeightForTable, undefined, 'FAST');
 
     drawFooter(currentPage);
 
