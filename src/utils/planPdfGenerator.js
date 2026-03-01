@@ -438,71 +438,41 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 const ingredients = getOptIngredients(opt);
                 const desc = getOptDescription(opt);
 
-                if (meal === 'Almuerzo') {
-                    // EXPERIMENTAL SPLIT LAYOUT FOR ALMUERZOS
-                    const colWidth = (maxWidth / 2) - 5;
-                    const leftX = margins.left + 2;
-                    const rightX = margins.left + (maxWidth / 2) + 5;
+                // SPLIT LAYOUT FOR ALL MEALS
+                const colWidth = (maxWidth / 2) - 5;
+                const leftX = margins.left + 2;
+                const rightX = margins.left + (maxWidth / 2) + 5;
 
-                    let leftY = yPos;
-                    let rightY = yPos;
+                let leftY = yPos;
+                let rightY = yPos;
 
-                    // Left Column: Ingredients
-                    if (ingredients.length > 0) {
-                        doc.setFontSize(9);
-                        doc.setTextColor(...textColor);
-                        ingredients.forEach(ing => {
-                            const ingLines = doc.splitTextToSize(ing, colWidth);
-                            doc.text(ingLines, leftX, leftY);
-                            leftY += (ingLines.length * 5); // Increased from 4 for more spacing
-                        });
-                    }
-
-                    // Right Column: Description (Instructions)
-                    if (desc) {
-                        doc.setFontSize(9);
-                        doc.setTextColor(...lightColor);
-                        const descLines = doc.splitTextToSize(desc, colWidth);
-                        doc.text(descLines, rightX, rightY);
-                        rightY += (descLines.length * 5) + 3; // Increased from 4 and 2 for more spacing
-                        doc.setFontSize(10);
-                        doc.setTextColor(...textColor);
-                    }
-
-                    // Advance yPos to whichever column was longer
-                    yPos = Math.max(leftY, rightY) + 4;
-
-                } else {
-                    // STANDARD LAYOUT (Sequential)
-                    // Add ingredients
-                    if (ingredients.length > 0) {
-                        doc.setFontSize(9);
-                        doc.setTextColor(...textColor);
-                        ingredients.forEach(ing => {
-                            checkPageBreak(yPos, 5);
-                            const ingLines = doc.splitTextToSize(ing, 210 - margins.left - margins.right - 5);
-                            doc.text(ingLines, margins.left + 5, yPos);
-                            yPos += (ingLines.length * 5); // Increased from 4
-                        });
-                        yPos += 2; // Increased padding after ingredients
-                    }
-
-                    // Add description if available
-                    if (desc) {
-                        doc.setFontSize(9);
-                        doc.setTextColor(...lightColor);
-                        const descLines = doc.splitTextToSize(desc, 210 - margins.left - margins.right - 5);
-                        doc.text(descLines, margins.left + 5, yPos);
-                        yPos += (descLines.length * 5) + 3; // Increased line height and padding
-                        doc.setFontSize(10);
-                        doc.setTextColor(...textColor);
-                    } else {
-                        yPos += 2;
-                    }
+                // Left Column: Ingredients
+                if (ingredients.length > 0) {
+                    doc.setFontSize(9);
+                    doc.setTextColor(...textColor);
+                    ingredients.forEach(ing => {
+                        const ingLines = doc.splitTextToSize(ing, colWidth);
+                        doc.text(ingLines, leftX, leftY);
+                        leftY += (ingLines.length * 4); // Standard spacing
+                    });
                 }
 
+                // Right Column: Description (Instructions)
+                if (desc) {
+                    doc.setFontSize(9);
+                    doc.setTextColor(...lightColor);
+                    const descLines = doc.splitTextToSize(desc, colWidth);
+                    doc.text(descLines, rightX, rightY);
+                    rightY += (descLines.length * 4) + 1; // Standard spacing
+                    doc.setFontSize(10);
+                    doc.setTextColor(...textColor);
+                }
+
+                // Advance yPos to whichever column was longer
+                yPos = Math.max(leftY, rightY) + 2;
+
                 // Add extra padding between recipe options
-                yPos += 10;
+                yPos += 6;
             });
             yPos += 6;
         }
@@ -568,7 +538,8 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
     doc.save(filename);
 
     function checkPageBreak(currentY, neededHeight, sectionName = '') {
-        if (currentY + neededHeight > 297 - margins.bottom) {
+        // Reduced max height by 15mm to create a safety buffer above the footer
+        if (currentY + neededHeight > 297 - margins.bottom - 15) {
             doc.addPage();
             drawHeader(sectionName);
             yPos = 35;
