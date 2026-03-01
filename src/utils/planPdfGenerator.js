@@ -453,7 +453,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                     ingredients.forEach(ing => {
                         const ingLines = doc.splitTextToSize(ing, colWidth);
                         doc.text(ingLines, leftX, leftY);
-                        leftY += (ingLines.length * 4); // Standard spacing
+                        leftY += (ingLines.length * 5); // Increased line height from 4 to 5
                     });
                 }
 
@@ -463,7 +463,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                     doc.setTextColor(...lightColor);
                     const descLines = doc.splitTextToSize(desc, colWidth);
                     doc.text(descLines, rightX, rightY);
-                    rightY += (descLines.length * 4) + 1; // Standard spacing
+                    rightY += (descLines.length * 5) + 1; // Increased line height from 4 to 5
                     doc.setFontSize(10);
                     doc.setTextColor(...textColor);
                 }
