@@ -480,12 +480,12 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 }
 
                 // Advance yPos to whichever column was longer
-                yPos = Math.max(leftY, rightY) + 1;
+                yPos = Math.max(leftY, rightY) + 0.5;
 
                 // Add extra padding between recipe options
-                yPos += 3;
+                yPos += 0.5;
             });
-            yPos += 3;
+            yPos += 1;
         }
     }
 
