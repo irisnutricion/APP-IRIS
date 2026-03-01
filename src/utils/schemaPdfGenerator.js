@@ -52,20 +52,17 @@ export const generateSchemaPdf = async (nutritionist, patient = null) => {
     const tiktokLogoImg = await loadImageAsBase64('/covers/logo tiktok.png');
 
     // 3. Funciones de dibujo compartidas
-    const drawHeader = () => {
+    const drawHeader = (title) => {
         // Logo superior izquierdo
         if (logoImg) {
             const format = logoImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
             doc.addImage(logoImg, format, margins.left, 5, 20, 20, undefined, 'FAST');
         }
 
-        // Título del documento
-        const mainTitle = patient && patient.first_name ? `Plan Nutricional ${patient.first_name}` : 'Plan Nutricional';
-
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(14);
         doc.setTextColor(...primaryColor);
-        doc.text(mainTitle, pageWidth / 2, 16, { align: 'center' });
+        doc.text(title, pageWidth / 2, 16, { align: 'center' });
 
         // Línea separadora
         doc.setDrawColor(...primaryColor);
@@ -146,7 +143,7 @@ export const generateSchemaPdf = async (nutritionist, patient = null) => {
 
     // 4. Generación de las tablas
 
-    drawHeader();
+    drawHeader('Esquema menú semanal');
 
     // To preserve rich text colors, we render a hidden HTML table and use html2canvas
     const container = document.createElement('div');
@@ -206,7 +203,8 @@ export const generateSchemaPdf = async (nutritionist, patient = null) => {
     // Force page break for second table
     doc.addPage();
     currentPage++;
-    drawHeader();
+    const secondHeaderTitle = patient && patient.first_name ? `Plan nutricional ${patient.first_name}` : 'Plan nutricional';
+    drawHeader(secondHeaderTitle);
     yPos = 35;
 
     // Tabla 2: PLAN NUTRICIONAL (Vacía)
