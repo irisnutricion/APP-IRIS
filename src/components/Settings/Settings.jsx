@@ -1445,7 +1445,8 @@ const Settings = () => {
             { label: 'Verde Claro', value: '#9db98f' },
             { label: 'Rojo/Alerta', value: '#ef4444' },
             { label: 'Naranja', value: '#f97316' },
-            { label: 'Azul', value: '#3b82f6' }
+            { label: 'Azul', value: '#3b82f6' },
+            { label: 'Marrón', value: '#8b4513' }
         ];
 
         return (
@@ -1513,14 +1514,18 @@ const Settings = () => {
                                             {day}
                                         </td>
                                         {MEALS.map(meal => (
-                                            <td key={`${day}-${meal}`} className="p-0 border-r border-slate-200 dark:border-slate-700 last:border-r-0 align-top relative">
+                                            <td key={`${day}-${meal}`} className="p-0 border-r border-slate-200 dark:border-slate-700 last:border-r-0 relative">
                                                 <div
-                                                    className="w-full h-full text-xs p-3 min-h-[100px] border-none bg-transparent hover:bg-slate-50/80 dark:hover:bg-slate-700/50 focus:bg-white dark:focus:bg-slate-800 focus:ring-inset focus:ring-1 focus:ring-primary-400 transition-colors cursor-text whitespace-pre-wrap outline-none"
-                                                    contentEditable
-                                                    suppressContentEditableWarning
-                                                    onBlur={(e) => handleCellChange(day, meal, e.target.innerHTML)}
-                                                    dangerouslySetInnerHTML={{ __html: schemaMatrix[`${day}_${meal}`] || '' }}
-                                                />
+                                                    className="w-full h-full min-h-[100px] flex items-center justify-center"
+                                                >
+                                                    <div
+                                                        className="w-full text-xs p-3 border-none bg-transparent hover:bg-slate-50/80 dark:hover:bg-slate-700/50 focus:bg-white dark:focus:bg-slate-800 focus:ring-inset focus:ring-1 focus:ring-primary-400 transition-colors cursor-text whitespace-pre-wrap outline-none text-center"
+                                                        contentEditable
+                                                        suppressContentEditableWarning
+                                                        onBlur={(e) => handleCellChange(day, meal, e.target.innerHTML)}
+                                                        dangerouslySetInnerHTML={{ __html: schemaMatrix[`${day}_${meal}`] || '' }}
+                                                    />
+                                                </div>
                                             </td>
                                         ))}
                                     </tr>

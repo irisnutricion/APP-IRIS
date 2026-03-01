@@ -163,11 +163,11 @@ export const generateSchemaPdf = async (nutritionist, patient = null) => {
     <div id="pdf-table-capture" style="padding: 10px; font-family: Helvetica, Arial, sans-serif; color: #3c3c3c; width: 1200px; box-sizing: border-box;">
       <table style="width: 100%; border-collapse: collapse; border: 1px solid ${borderColor};">
         <thead>
-          <tr style="background-color: ${brandLightHex};">
-            <th style="padding: 12px; border: 1px solid ${borderColor}; width: 120px;"></th>
+          <tr>
+            <th style="padding: 12px; border: 1px solid ${borderColor}; background-color: ${brandLightHex}; width: 120px;"></th>
     `;
     MEALS.forEach(meal => {
-        htmlTable += `<th style="padding: 12px; border: 1px solid ${borderColor}; text-align: center; color: #3c3c3c;">${meal}</th>`;
+        htmlTable += `<th style="padding: 12px; border: 1px solid ${borderColor}; background-color: ${brandLightHex}; text-align: center; color: #3c3c3c;">${meal}</th>`;
     });
     htmlTable += `</tr></thead><tbody>`;
 
@@ -176,8 +176,8 @@ export const generateSchemaPdf = async (nutritionist, patient = null) => {
             <td style="padding: 12px; border: 1px solid ${borderColor}; background-color: ${brandLightHex}; font-weight: bold; text-align: center; color: #3c3c3c;">${day}</td>`;
         MEALS.forEach(meal => {
             const cellHtml = schemaMatrix[`${day}_${meal}`] || '';
-            // cellHtml usually contains lines and styling due to contentEditable
-            htmlTable += `<td style="padding: 12px; border: 1px solid ${borderColor}; vertical-align: top; font-size: 14px; line-height: 1.5;">${cellHtml}</td>`;
+            // center text both horizontally and vertically
+            htmlTable += `<td style="padding: 12px; border: 1px solid ${borderColor}; text-align: center; vertical-align: middle; font-size: 14px; line-height: 1.5;">${cellHtml}</td>`;
         });
         htmlTable += `</tr>`;
     });
@@ -218,28 +218,28 @@ export const generateSchemaPdf = async (nutritionist, patient = null) => {
         body: table2Body,
         theme: 'grid',
         headStyles: {
-            fillColor: [255, 255, 255], // Blanco en la tabla vacía
+            fillColor: brandLight, // Misma cabecera verde que en la hoja 1
             textColor: textColor,
             fontStyle: 'bold',
             halign: 'center',
             valign: 'middle',
-            lineColor: [100, 100, 100],
-            lineWidth: 0.2
+            lineColor: [200, 200, 200],
+            lineWidth: 0.1
         },
         bodyStyles: {
             fontSize: 10,
             textColor: textColor,
             halign: 'center',
             valign: 'middle',
-            lineColor: [100, 100, 100],
-            lineWidth: 0.2,
+            lineColor: [200, 200, 200],
+            lineWidth: 0.1,
             minCellHeight: 20 // Celdas mucho más altas para escribir al estar en apaisado
         },
         columnStyles: {
             0: {
                 fontStyle: 'bold',
-                fillColor: brandLight, // Días en verde claro como en la imagen
-                halign: 'left',
+                fillColor: brandLight, // Días en verde claro como en la hoja 1
+                halign: 'center', // Centrado igual que en la primera tabla
                 cellWidth: 25
             }
         },
