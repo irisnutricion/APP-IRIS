@@ -354,7 +354,20 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
         yPos += 16; // Increased from 12 to 16 for slightly more space
 
         mealNames.forEach(meal => {
-            const mealItems = items.filter(i => i.meal_name === meal);
+            let mealItems = items.filter(i => i.meal_name === meal);
+
+            // Deduplicate options by name
+            const uniqueMealItems = [];
+            const seenNames = new Set();
+            for (const opt of mealItems) {
+                const name = getOptName(opt);
+                if (!seenNames.has(name)) {
+                    seenNames.add(name);
+                    uniqueMealItems.push(opt);
+                }
+            }
+            mealItems = uniqueMealItems;
+
             if (mealItems.length === 0) return;
 
             checkPageBreak(yPos, 15);
@@ -382,7 +395,20 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
         // --- DETAILED OPEN PLAN ---
         for (const meal of mealNames) {
-            const mealItems = items.filter(i => i.meal_name === meal);
+            let mealItems = items.filter(i => i.meal_name === meal);
+
+            // Deduplicate options by name
+            const uniqueMealItems = [];
+            const seenNames = new Set();
+            for (const opt of mealItems) {
+                const name = getOptName(opt);
+                if (!seenNames.has(name)) {
+                    seenNames.add(name);
+                    uniqueMealItems.push(opt);
+                }
+            }
+            mealItems = uniqueMealItems;
+
             if (mealItems.length === 0) continue;
 
             const expectedName = meal.toLowerCase().includes('desayun') ? 'Desayuno' :
@@ -416,17 +442,41 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
             doc.setTextColor(...textColor);
             mealItems.forEach((opt, idx) => {
-                checkPageBreak(yPos, 15);
-
                 const name = getOptName(opt);
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(10);
-
-                // Draw background for option title
+                const desc = getOptDescription(opt);
+                const ingredients = getOptIngredients(opt);
                 const maxWidth = 210 - margins.left - margins.right;
+                const colWidth = (maxWidth / 2) - 5;
+
+                // 1. Precalculate total height required
+                doc.setFontSize(10);
                 const nameLines = doc.splitTextToSize(name, maxWidth - 6);
                 const titleBoxHeight = (nameLines.length * 4) + 2;
 
+                let leftH = 0;
+                if (ingredients.length > 0) {
+                    doc.setFontSize(9);
+                    ingredients.forEach(ing => {
+                        const ingLines = doc.splitTextToSize(ing, colWidth);
+                        leftH += (ingLines.length * 4.5);
+                    });
+                }
+
+                let rightH = 0;
+                if (desc) {
+                    doc.setFontSize(9);
+                    const descLines = doc.splitTextToSize(desc, colWidth);
+                    rightH += (descLines.length * 4.4) + 1;
+                }
+
+                const totalNeededHeight = titleBoxHeight + 1 + Math.max(leftH, rightH) + 2;
+
+                // 2. Safely trigger page break if total height exceeds page BEFORE starting to draw
+                checkPageBreak(yPos, totalNeededHeight);
+
+                // 3. Render title box
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10);
                 doc.setFillColor(...brandLight);
                 doc.rect(margins.left, yPos - 3, maxWidth, titleBoxHeight, 'F');
 
@@ -448,11 +498,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
                 yPos += titleBoxHeight + 1; // Extra padding below title
 
-                const ingredients = getOptIngredients(opt);
-                const desc = getOptDescription(opt);
-
                 // SPLIT LAYOUT FOR ALL MEALS
-                const colWidth = (maxWidth / 2) - 5;
                 const leftX = margins.left + 2;
                 const rightX = margins.left + (maxWidth / 2) + 5;
 
