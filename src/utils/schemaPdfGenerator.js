@@ -3,7 +3,7 @@ import 'jspdf-autotable';
 
 export const generateSchemaPdf = async (nutritionist) => {
     // 1. Configuración inicial
-    const doc = new jsPDF('p', 'mm', 'a4');
+    const doc = new jsPDF('l', 'mm', 'a4'); // 'l' for landscape
     let currentPage = 1;
     let yPos = 20;
 
@@ -14,8 +14,10 @@ export const generateSchemaPdf = async (nutritionist) => {
     const textColor = [60, 60, 60];
     const lightColor = [150, 150, 150];
 
-    // Márgenes
+    // Márgenes (Landscape)
     const margins = { top: 20, right: 15, bottom: 25, left: 15 };
+    const pageWidth = 297;
+    const pageHeight = 210;
 
     // Días y Comidas
     const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -59,23 +61,23 @@ export const generateSchemaPdf = async (nutritionist) => {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(14);
         doc.setTextColor(...primaryColor);
-        doc.text(title, 210 / 2, 16, { align: 'center' });
+        doc.text(title, pageWidth / 2, 16, { align: 'center' });
 
         // Línea separadora
         doc.setDrawColor(...primaryColor);
         doc.setLineWidth(0.5);
-        doc.line(margins.left, 25, 210 - margins.right, 25);
+        doc.line(margins.left, 25, pageWidth - margins.right, 25);
 
         yPos = 35; // Position below header
     };
 
     const drawFooter = async (pageNumber) => {
-        const footerY = 297 - 10;
+        const footerY = pageHeight - 10;
 
         // Línea separadora pie
         doc.setDrawColor(...secondaryColor);
         doc.setLineWidth(0.5);
-        doc.line(margins.left, footerY - 5, 210 - margins.right, footerY - 5);
+        doc.line(margins.left, footerY - 5, pageWidth - margins.right, footerY - 5);
 
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
@@ -103,7 +105,7 @@ export const generateSchemaPdf = async (nutritionist) => {
         if (tiktokLogoImg) totalWidth += iconSize + 1;
         totalWidth += doc.getTextWidth(tiktokContact);
 
-        let currentX = (210 - totalWidth) / 2;
+        let currentX = (pageWidth - totalWidth) / 2;
 
         if (mailLogoImg) {
             doc.addImage(mailLogoImg, 'PNG', currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
@@ -137,12 +139,10 @@ export const generateSchemaPdf = async (nutritionist) => {
 
         // Page number
         doc.setFontSize(8);
-        doc.text(`Página ${pageNumber}`, 210 - margins.right, footerY, { align: 'right' });
+        doc.text(`Página ${pageNumber}`, pageWidth - margins.right, footerY, { align: 'right' });
     };
 
     // 4. Generación de las tablas
-
-    // Portada opcional (as you have in plans, if it applies, though not requested. Skip portadas to keep it generic)
 
     drawHeader('Esquema Semanal Genérico');
 
@@ -150,7 +150,7 @@ export const generateSchemaPdf = async (nutritionist) => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
-    doc.text('ESQUEMA MENÚ SEMANAL', 210 / 2, yPos, { align: 'center' });
+    doc.text('ESQUEMA MENÚ SEMANAL', pageWidth / 2, yPos, { align: 'center' });
     yPos += 5;
 
     const table1Body = DAYS.map(day => {
@@ -160,13 +160,6 @@ export const generateSchemaPdf = async (nutritionist) => {
         });
         return row;
     });
-
-    const createColoredText = (text) => {
-        // En un futuro, si el usuario quiere que "Verdura" sea verde, etc... se podría parsear.
-        // Pero jspdf-autotable no soporta múltiples colores en una misma celda fácilmente.
-        // Lo dejaremos como texto plano con el textColor corporal a menos que pida parseo complejo.
-        return text;
-    };
 
     doc.autoTable({
         startY: yPos,
@@ -182,7 +175,7 @@ export const generateSchemaPdf = async (nutritionist) => {
             lineWidth: 0.1
         },
         bodyStyles: {
-            fontSize: 8,
+            fontSize: 9, // Slightly larger base font since it's landscape
             textColor: textColor,
             halign: 'center',
             valign: 'middle',
@@ -194,31 +187,25 @@ export const generateSchemaPdf = async (nutritionist) => {
                 fontStyle: 'bold',
                 fillColor: brandLight,
                 halign: 'center',
-                cellWidth: 20
+                cellWidth: 25 // Slightly wider to accommodate larger font
             }
         },
-        margin: { left: margins.left, right: margins.right },
-        didParseCell: function (data) {
-            // Apply a slight red tint to proteins, green to veggies? (complex, skipping for now)
-        }
+        margin: { left: margins.left, right: margins.right }
     });
 
-    yPos = doc.lastAutoTable.finalY + 15;
+    drawFooter(currentPage);
 
-    // Check page break for second table
-    if (yPos > 297 - margins.bottom - 60) {
-        drawFooter(currentPage);
-        doc.addPage();
-        currentPage++;
-        drawHeader('Plan Nutricional Vacío');
-        yPos = 35;
-    }
+    // Force page break for second table
+    doc.addPage();
+    currentPage++;
+    drawHeader('Plan Nutricional Vacío');
+    yPos = 35;
 
     // Tabla 2: PLAN NUTRICIONAL (Vacía)
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
-    doc.text('Plan nutricional', 210 / 2, yPos, { align: 'center' });
+    doc.text('Plan nutricional', pageWidth / 2, yPos, { align: 'center' });
     yPos += 5;
 
     const table2Body = DAYS.map(day => [day, '', '', '', '', '']);
@@ -244,14 +231,14 @@ export const generateSchemaPdf = async (nutritionist) => {
             valign: 'middle',
             lineColor: [100, 100, 100],
             lineWidth: 0.2,
-            minCellHeight: 15 // Celdas más altas para escribir
+            minCellHeight: 20 // Celdas mucho más altas para escribir al estar en apaisado
         },
         columnStyles: {
             0: {
                 fontStyle: 'bold',
                 fillColor: brandLight, // Días en verde claro como en la imagen
                 halign: 'left',
-                cellWidth: 22
+                cellWidth: 25
             }
         },
         margin: { left: margins.left, right: margins.right }
