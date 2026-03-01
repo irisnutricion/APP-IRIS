@@ -94,7 +94,8 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     const [viewMode, setViewMode] = useState(initialViewMode);
     const [recipeSearch, setRecipeSearch] = useState('');
     const [activeCell, setActiveCell] = useState(null);
-    const [collapsedCells, setCollapsedCells] = useState(new Set()); // key of cells manually collapsed
+    const [expandedCells, setExpandedCells] = useState(new Set()); // key of grid cells inline-edited
+    const [collapsedCells, setCollapsedCells] = useState(new Set()); // key of day cells manually collapsed
     const [showTemplateMenu, setShowTemplateMenu] = useState(false);
     const [activeDetailDay, setActiveDetailDay] = useState('all');
     const [expandedDays, setExpandedDays] = useState(new Set([1])); // default to day 1 open
@@ -199,7 +200,16 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     };
 
     // Inline editor handlers
-    const toggleEditor = (cellKey) => {
+    const toggleGridEditor = (cellKey) => {
+        setExpandedCells(prev => {
+            const next = new Set(prev);
+            if (next.has(cellKey)) next.delete(cellKey);
+            else next.add(cellKey);
+            return next;
+        });
+    };
+
+    const toggleDayEditor = (cellKey) => {
         setCollapsedCells(prev => {
             const next = new Set(prev);
             if (next.has(cellKey)) next.delete(cellKey);
@@ -444,7 +454,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                         </button>
                                                     ) : (
                                                         <div className="flex flex-col gap-2">
-                                                            <div className="relative p-1.5 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs min-h-[48px] flex items-center cursor-pointer" onClick={() => toggleEditor(key)}>
+                                                            <div className="relative p-1.5 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs min-h-[48px] flex items-center cursor-pointer" onClick={() => toggleGridEditor(key)}>
                                                                 <div className="flex items-center gap-1.5 line-clamp-2 pr-8">
                                                                     {(() => {
                                                                         const isSaved = checkRecipeIsSaved(cell, recipes);
@@ -458,7 +468,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                     <button onClick={(e) => { e.stopPropagation(); setCopyMenuCell(copyMenuCell === key ? null : key); }} className="p-0.5 text-slate-300 hover:text-emerald-500" title="Copiar a otra comida">
                                                                         <ClipboardCopy size={11} />
                                                                     </button>
-                                                                    <button onClick={(e) => { e.stopPropagation(); toggleEditor(key); }} className="p-0.5 text-slate-300 hover:text-primary-500">
+                                                                    <button onClick={(e) => { e.stopPropagation(); toggleGridEditor(key); }} className="p-0.5 text-slate-300 hover:text-primary-500">
                                                                         <Pencil size={11} />
                                                                     </button>
                                                                     <button onClick={(e) => { e.stopPropagation(); clearCell(dayIdx + 1, meal); }} className="p-0.5 text-slate-300 hover:text-red-500">
@@ -486,7 +496,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                         snapshot={cell.custom_recipe_data || recipeToSnapshot(cell.recipes) || null}
                                                                         onChange={s => handleInlineAccept(key, s)}
                                                                         onSaveAsRecipe={s => handleInlineSaveAsRecipe(key, s)}
-                                                                        onClose={() => toggleEditor(key)}
+                                                                        onClose={() => toggleGridEditor(key)}
                                                                     />
                                                                 </div>
                                                             )}
@@ -641,7 +651,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                                 </button>
                                                                             ) : (
                                                                                 <>
-                                                                                    <button onClick={() => toggleEditor(key)} className={`p-2 rounded-lg transition-colors ${!collapsedCells.has(key) ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-400' : 'text-slate-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-slate-700'}`} title={!collapsedCells.has(key) ? "Ocultar editor" : "Editar opción"}>
+                                                                                    <button onClick={() => toggleDayEditor(key)} className={`p-2 rounded-lg transition-colors ${!collapsedCells.has(key) ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-400' : 'text-slate-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-slate-700'}`} title={!collapsedCells.has(key) ? "Ocultar editor" : "Editar opción"}>
                                                                                         <Pencil size={16} />
                                                                                     </button>
                                                                                     <button onClick={() => clearCell(dayIdx + 1, meal)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Eliminar opción">
@@ -688,10 +698,10 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                     <div className="mt-3 pt-4 border-t border-slate-100 dark:border-slate-700/50">
                                                                         <InlineRecipeEditor
                                                                             snapshot={cell.custom_recipe_data || recipeToSnapshot(cell.recipes) || null}
-                                                                            onAccept={s => { handleInlineAccept(key, s); toggleEditor(key); }}
+                                                                            onAccept={s => { handleInlineAccept(key, s); toggleDayEditor(key); }}
                                                                             onSaveAsRecipe={s => handleInlineSaveAsRecipe(key, s)}
                                                                             onUpdateRecipe={s => handleInlineUpdateRecipe(key, s)}
-                                                                            onClose={() => toggleEditor(key)}
+                                                                            onClose={() => toggleDayEditor(key)}
                                                                         />
                                                                     </div>
                                                                 )}
