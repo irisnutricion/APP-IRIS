@@ -466,7 +466,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                     ingredients.forEach(ing => {
                         const ingLines = doc.splitTextToSize(ing, colWidth);
                         doc.text(ingLines, leftX, leftY);
-                        leftY += (ingLines.length * 4);
+                        leftY += (ingLines.length * 4.5);
                     });
                 }
 
@@ -476,18 +476,18 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                     doc.setTextColor(...lightColor);
                     const descLines = doc.splitTextToSize(desc, colWidth);
                     doc.text(descLines, rightX, rightY);
-                    rightY += (descLines.length * 4) + 1;
+                    rightY += (descLines.length * 4.4) + 1;
                     doc.setFontSize(10);
                     doc.setTextColor(...textColor);
                 }
 
                 // Advance yPos to whichever column was longer
-                yPos = Math.max(leftY, rightY) + 0.5;
+                yPos = Math.max(leftY, rightY) + 2;
 
                 // Add extra padding between recipe options
-                yPos += 0.5;
+                yPos += 2;
             });
-            yPos += 1;
+            yPos += 2;
         }
     }
 
