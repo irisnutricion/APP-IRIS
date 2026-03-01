@@ -1,6 +1,5 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { calcSnapshotMacros } from '../components/Plans/ClosedPlanEditor'; // We can borrow this
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
@@ -60,16 +59,29 @@ function aggregateIngredients(items) {
         .map(([name, qty]) => ({ name, qty }));
 }
 
+// Helper for Hex to RGB
+function hexToRgb(hex) {
+    if (!hex) return null;
+    let r = 0, g = 0, b = 0;
+    if (hex.length === 4) {
+        r = parseInt(hex[1] + hex[1], 16);
+        g = parseInt(hex[2] + hex[2], 16);
+        b = parseInt(hex[3] + hex[3], 16);
+    } else if (hex.length === 7) {
+        r = parseInt(hex.slice(1, 3), 16);
+        g = parseInt(hex.slice(3, 5), 16);
+        b = parseInt(hex.slice(5, 7), 16);
+    }
+    return [r, g, b];
+}
+
 export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
     const loadImageAsBase64 = async (url) => {
         try {
             const response = await fetch(url);
             if (!response.ok) return null;
             const blob = await response.blob();
-            if (!blob.type.startsWith('image/')) {
-                console.warn(`URL ${url} returns non-image type: ${blob.type}`);
-                return null;
-            }
+            if (!blob.type.startsWith('image/')) return null;
             return new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onloadend = () => {
@@ -85,40 +97,34 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
         }
     };
 
-    // A4 sheet: 210 x 297 mm
     const doc = new jsPDF('p', 'mm', 'a4');
     const coverPages = new Set();
 
-    const brandColor = [40, 72, 58]; // #28483a (Primary 700)
-    const brandLight = [227, 246, 237]; // #e3f6ed (Primary 100)
-    const secondaryColor = [208, 154, 132]; // #d09a84 (Secondary Default)
-    const textColor = [51, 65, 85]; // Slate 700
-    const lightColor = [100, 116, 139]; // Slate 500
+    const brandColor = [40, 72, 58]; // #28483a
+    const brandLight = [227, 246, 237]; // #e3f6ed
+    const secondaryColor = [208, 154, 132]; // #d09a84
+    const textColor = [51, 65, 85];
+    const lightColor = [100, 116, 139];
     const margins = { top: 20, left: 15, right: 15, bottom: 20 };
 
-    // Config: Primary theme color
     const primaryColor = nutritionist?.pdf_color ? hexToRgb(nutritionist.pdf_color) : brandColor;
 
-    // ----- LOAD RESOURCES ----- //
     const logoImg = await loadImageAsBase64('/covers/logo rosa.png');
     const mailLogoImg = await loadImageAsBase64('/covers/logo gmail.png');
     const igLogoImg = await loadImageAsBase64('/covers/logo instagram.png');
     const tiktokLogoImg = await loadImageAsBase64('/covers/logo tiktok.png');
 
-    let currentPage = 1;
-    const drawHeader = (sectionName = '') => {
-        // Draw primary color background
-        doc.setFillColor(...primaryColor);
-        doc.rect(0, 0, 210, 20, 'F'); // Increased height slightly to fit logo/text better
+    let yPos = 30;
 
-        // Draw Left Logo (if loaded)
+    const drawHeader = (sectionName = '') => {
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, 0, 210, 20, 'F');
+
         if (logoImg) {
-            // Keep proportion roughly intact (assuming it's a typical logo shape, adjust dimensions as needed)
             const format = logoImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
             doc.addImage(logoImg, format, margins.left, 2, 16, 16, undefined, 'FAST');
         }
 
-        // Draw Center Text (Section Name)
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
@@ -127,7 +133,6 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
             doc.text(sectionName, (210 - sectionWidth) / 2, 13);
         }
 
-        // Draw Right Text (Patient Info)
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         const planText = `Plan nutricional personalizado para`;
@@ -140,25 +145,18 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
     const drawFooter = (pageNumber) => {
         doc.setPage(pageNumber);
         const footerY = 297 - 10;
-
-        // Branding colors for footer text
         doc.setTextColor(...primaryColor);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
 
-        // Phone (left)
-        const phone = "633 67 45 63";
-        doc.text(phone, margins.left, footerY);
+        doc.text("633 67 45 63", margins.left, footerY);
 
-        // Draw Contact Info Center
         const emailContact = "info@irisnutricion.com";
         const igContact = "iris_nutricion";
         const tiktokContact = "iris_nutricion";
-
         const iconSize = 4;
         const spacing = 4;
 
-        // Calculate total width of the block
         let totalWidth = 0;
         if (mailLogoImg) totalWidth += iconSize + 1;
         totalWidth += doc.getTextWidth(emailContact) + spacing;
@@ -171,125 +169,98 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
         let currentX = (210 - totalWidth) / 2;
 
-        // Email
         if (mailLogoImg) {
-            // Adjust y offset to roughly match text baseline
-            const format = mailLogoImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
-            doc.addImage(mailLogoImg, format, currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
+            doc.addImage(mailLogoImg, 'PNG', currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
             currentX += iconSize + 1;
         }
         doc.text(emailContact, currentX, footerY);
         currentX += doc.getTextWidth(emailContact) + spacing;
 
-        // IG Separator
         doc.setTextColor(...lightColor);
         doc.text("|", currentX, footerY);
         doc.setTextColor(...primaryColor);
         currentX += doc.getTextWidth("|") + spacing;
 
-        // Instagram
         if (igLogoImg) {
-            const format = igLogoImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
-            doc.addImage(igLogoImg, format, currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
+            doc.addImage(igLogoImg, 'PNG', currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
             currentX += iconSize + 1;
         }
         doc.text(igContact, currentX, footerY);
         currentX += doc.getTextWidth(igContact) + spacing;
 
-        // TikTok Separator
         doc.setTextColor(...lightColor);
         doc.text("|", currentX, footerY);
         doc.setTextColor(...primaryColor);
         currentX += doc.getTextWidth("|") + spacing;
 
-        // TikTok
         if (tiktokLogoImg) {
-            const format = tiktokLogoImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
-            doc.addImage(tiktokLogoImg, format, currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
+            doc.addImage(tiktokLogoImg, 'PNG', currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
             currentX += iconSize + 1;
         }
         doc.text(tiktokContact, currentX, footerY);
 
-        // Draw Page Number Right
         doc.setFontSize(8);
         doc.text(`Página ${pageNumber}`, 210 - margins.right, footerY, { align: 'right' });
     };
 
-    // ----- PAGE 1: MAIN COVER ----- //
+    const checkPageBreak = (currentY, neededHeight, sectionName = '') => {
+        if (currentY + neededHeight > 275) {
+            doc.addPage();
+            drawHeader(sectionName);
+            yPos = 35;
+        }
+    };
+
+    // ----- COVER ----- //
     const portadaImg = await loadImageAsBase64('/covers/Portada.png');
     if (portadaImg) {
-        const format = portadaImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
-        doc.addImage(portadaImg, format, 0, 0, 210, 297, undefined, 'FAST');
+        doc.addImage(portadaImg, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
         coverPages.add(doc.internal.getNumberOfPages());
         doc.addPage();
     }
 
-    // ----- PAGE 2: INDICATIONS ----- //
-    if (plan.indications && plan.indications.trim().length > 0) {
-        // First try to load recommendations cover
+    // ----- INDICATIONS ----- //
+    if (plan.indications && plan.indications.trim()) {
         const recCoverImg = await loadImageAsBase64('/covers/Portada recetario.png');
         if (recCoverImg) {
-            const format = recCoverImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
-            doc.addImage(recCoverImg, format, 0, 0, 210, 297, undefined, 'FAST');
+            doc.addImage(recCoverImg, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
             coverPages.add(doc.internal.getNumberOfPages());
             doc.addPage();
         }
-
         drawHeader('Indicaciones');
-
         doc.setTextColor(...textColor);
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
         doc.text('Indicaciones del Plan', margins.left, 30);
-
         doc.setFontSize(11);
         doc.setFont('helvetica', 'normal');
-
-        // Split text to fit page width
-        const maxWidth = 210 - margins.left - margins.right;
-        const textLines = doc.splitTextToSize(plan.indications, maxWidth);
-
-        doc.text(textLines, margins.left, 42);
-
+        const lines = doc.splitTextToSize(plan.indications, 210 - margins.left - margins.right);
+        doc.text(lines, margins.left, 42);
         doc.addPage();
-        currentPage++;
     }
 
-    // --- PLAN OPTIONS SUMMARY OR GRID ---
     const mealNames = plan.meal_names || [];
     const isClosedPlan = items.some(i => i.day_of_week !== null);
-    let yPos = 30;
+    yPos = 30;
 
+    // --- SUMMARY / GRID ---
     if (isClosedPlan) {
-        // --- CLOSED PLAN WEEKLY GRID ---
-        doc.addPage('a4', 'l'); // Landscape for grid
-        const drawHorizontalHeader = (titleText) => {
-            const currentY = 15;
-            if (nutritionist?.logo_url) {
-                // If we need the logo, we'd preload it, but let's reuse doc.addImage if we passed it in state. 
-                // To keep this robust and synchronous, we'll just draw the text header for landscape since drawHeader is bound to Portrait Y-coordinates and margins.
-            }
-            doc.setFillColor(...brandColor);
-            doc.rect(0, 0, 297, 30, 'F');
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(20);
-            doc.setFont('helvetica', 'bold');
-            doc.text(titleText, 148.5, 20, { align: 'center' });
-        };
+        doc.addPage('a4', 'l');
+        doc.setFillColor(...brandColor);
+        doc.rect(0, 0, 297, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(20);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Esquema Semanal', 148.5, 20, { align: 'center' });
 
-        drawHorizontalHeader('Esquema Semanal');
-
-        // Prepare autotable data
         const tableHead = [['Comidas', ...DAYS]];
-        const tableBody = [];
-
-        mealNames.forEach(meal => {
+        const tableBody = mealNames.map(meal => {
             const row = [meal];
-            DAYS.forEach((_, dayIdx) => {
-                const opt = items.find(i => i.meal_name === meal && i.day_of_week === (dayIdx + 1));
+            DAYS.forEach((_, d) => {
+                const opt = items.find(i => i.meal_name === meal && i.day_of_week === (d + 1));
                 row.push(opt ? getOptName(opt) : '—');
             });
-            tableBody.push(row);
+            return row;
         });
 
         doc.autoTable({
@@ -297,321 +268,152 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
             head: tableHead,
             body: tableBody,
             theme: 'grid',
-            headStyles: {
-                fillColor: primaryColor,
-                textColor: [255, 255, 255],
-                fontStyle: 'bold',
-                halign: 'center',
-                valign: 'middle',
-                fontSize: 11
-            },
-            bodyStyles: {
-                textColor: textColor,
-                fontSize: 9,
-                valign: 'middle',
-                halign: 'center',
-                cellPadding: 4,
-            },
-            columnStyles: {
-                0: { fontStyle: 'bold', fillColor: brandLight, textColor: primaryColor }
-            },
-            alternateRowStyles: {
-                fillColor: [250, 250, 250]
-            },
-            styles: {
-                lineWidth: 0.1,
-                lineColor: [220, 220, 220],
-                minCellHeight: 18
-            },
-            margin: { top: 40, bottom: 20, left: 15, right: 15 }
+            headStyles: { fillColor: primaryColor, halign: 'center', fontSize: 11 },
+            bodyStyles: { fontSize: 9, halign: 'center', minCellHeight: 18 },
+            columnStyles: { 0: { fontStyle: 'bold', fillColor: brandLight, textColor: primaryColor } },
+            margin: { top: 40, left: 15, right: 15 }
         });
-
-        // Switch back to portrait for upcoming detailed pages
         doc.addPage('a4', 'p');
-        yPos = 30; // Reset yPos for portrait
+        yPos = 30;
     } else {
-        // --- OPEN PLAN SUMMARY ---
         drawHeader('Resumen de Opciones');
         doc.setTextColor(...textColor);
         doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-
         checkPageBreak(yPos, 20);
         doc.setFillColor(...brandLight);
-        doc.rect(margins.left, yPos, 210 - margins.left - margins.right, 8, 'F');
+        doc.rect(margins.left, yPos, 180, 8, 'F');
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...primaryColor);
         doc.text("Resumen de Opciones", margins.left + 3, yPos + 5.5);
-        yPos += 16; // Increased from 12 to 16 for slightly more space
+        yPos += 16;
 
         mealNames.forEach(meal => {
-            let mealItems = items.filter(i => i.meal_name === meal);
-
-            // Deduplicate options by name
-            const uniqueMealItems = [];
-            const seenNames = new Set();
-            for (const opt of mealItems) {
-                const name = getOptName(opt);
-                if (!seenNames.has(name)) {
-                    seenNames.add(name);
-                    uniqueMealItems.push(opt);
-                }
-            }
-            mealItems = uniqueMealItems;
-
+            const mealItems = [];
+            const seen = new Set();
+            items.filter(i => i.meal_name === meal).forEach(i => {
+                const n = getOptName(i);
+                if (!seen.has(n)) { seen.add(n); mealItems.push(i); }
+            });
             if (mealItems.length === 0) return;
 
             checkPageBreak(yPos, 15);
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(10);
-            doc.setTextColor(...secondaryColor); // Secondary color for category
+            doc.setTextColor(...secondaryColor);
             doc.text(meal, margins.left, yPos);
             yPos += 5;
-
-            doc.setTextColor(...textColor);
             doc.setFont('helvetica', 'normal');
-            doc.setFontSize(10); // Increased from 9 to 10
-            mealItems.forEach((opt) => {
-                const name = getOptName(opt);
-                const lines = doc.splitTextToSize(`• ${name}`, 210 - margins.left - margins.right - 5);
+            doc.setTextColor(...textColor);
+            mealItems.forEach(opt => {
+                const lines = doc.splitTextToSize(`• ${getOptName(opt)}`, 175);
                 checkPageBreak(yPos, lines.length * 4.5);
                 doc.text(lines, margins.left + 5, yPos);
-                yPos += (lines.length * 4.5);
+                yPos += lines.length * 4.5;
             });
             yPos += 4;
         });
-
-        yPos += 10;
-        checkPageBreak(yPos, 20);
     }
 
-    // --- DETAILED RECIPES (COMMON FOR OPEN & CLOSED PLANS) ---
+    // --- DETAILS ---
     for (const meal of mealNames) {
-        let mealItems = items.filter(i => i.meal_name === meal);
-
-        // Deduplicate options by name
-        const uniqueMealItems = [];
-        const seenNames = new Set();
-        for (const opt of mealItems) {
-            const name = getOptName(opt);
-            if (!seenNames.has(name)) {
-                seenNames.add(name);
-                uniqueMealItems.push(opt);
-            }
-        }
-        mealItems = uniqueMealItems;
-
+        const mealItems = [];
+        const seen = new Set();
+        items.filter(i => i.meal_name === meal).forEach(i => {
+            const n = getOptName(i);
+            if (!seen.has(n)) { seen.add(n); mealItems.push(i); }
+        });
         if (mealItems.length === 0) continue;
 
-        const expectedName = meal.toLowerCase().includes('desayun') ? 'Desayuno' :
+        const expected = meal.toLowerCase().includes('desayun') ? 'Desayuno' :
             meal.toLowerCase().includes('almuerz') ? 'Almuerzo' :
-                meal.toLowerCase().includes('comid') ? 'Almuerzo' : // Fallback Comida to Almuerzo cover if missing Comida
+                meal.toLowerCase().includes('comid') ? 'Almuerzo' :
                     meal.toLowerCase().includes('meriend') ? 'Merienda' :
                         meal.toLowerCase().includes('cen') ? 'Cena' : meal;
 
-        const displayMealName = expectedName === 'Desayuno' ? 'Desayunos' :
-            expectedName === 'Almuerzo' ? 'Almuerzos' :
-                expectedName === 'Merienda' ? 'Meriendas' :
-                    expectedName === 'Cena' ? 'Cenas' : meal;
+        const plural = expected === 'Desayuno' ? 'Desayunos' :
+            expected === 'Almuerzo' ? 'Almuerzos' :
+                expected === 'Merienda' ? 'Meriendas' :
+                    expected === 'Cena' ? 'Cenas' : meal;
 
-        const coverImg = await loadImageAsBase64(`/covers/${expectedName}.png`);
-        if (coverImg) {
-            // If not on a fresh page (or after Portada), add page for cover
+        const cover = await loadImageAsBase64(`/covers/${expected}.png`);
+        if (cover) {
             if (yPos > 30) doc.addPage();
-            const format = coverImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
-            doc.addImage(coverImg, format, 0, 0, 210, 297, undefined, 'FAST');
+            doc.addImage(cover, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
             coverPages.add(doc.internal.getNumberOfPages());
-
-            // Add page for the content
             doc.addPage();
-            drawHeader(displayMealName); // Pluralized header
-            yPos = 35; // Adjusted YPos for taller header
+            drawHeader(plural);
+            yPos = 35;
         } else {
-            checkPageBreak(yPos, 20, displayMealName); // Pluralized header
+            checkPageBreak(yPos, 20, plural);
         }
 
-        // Removed the redundant green meal header block (doc.rect with meal name)
-
-        doc.setTextColor(...textColor);
-        mealItems.forEach((opt, idx) => {
+        mealItems.forEach(opt => {
             const name = getOptName(opt);
             const desc = getOptDescription(opt);
-            const ingredients = getOptIngredients(opt);
-            const maxWidth = 210 - margins.left - margins.right;
-            const colWidth = (maxWidth / 2) - 5;
-
-            // 1. Precalculate total height required
-            doc.setFontSize(10);
-            const nameLines = doc.splitTextToSize(name, maxWidth - 6);
-            const titleBoxHeight = (nameLines.length * 4) + 2;
+            const ings = getOptIngredients(opt);
+            const lines = doc.splitTextToSize(name, 174);
+            const boxH = (lines.length * 4) + 2;
 
             let leftH = 0;
-            if (ingredients.length > 0) {
-                doc.setFontSize(9);
-                ingredients.forEach(ing => {
-                    const ingLines = doc.splitTextToSize(ing, colWidth);
-                    leftH += (ingLines.length * 4.5);
-                });
-            }
+            ings.forEach(ing => { leftH += (doc.splitTextToSize(ing, 85).length * 4.5); });
+            let rightH = (desc ? doc.splitTextToSize(desc, 85).length * 4.4 : 0);
 
-            let rightH = 0;
-            if (desc) {
-                doc.setFontSize(9);
-                const descLines = doc.splitTextToSize(desc, colWidth);
-                rightH += (descLines.length * 4.4) + 1;
-            }
+            checkPageBreak(yPos, boxH + Math.max(leftH, rightH) + 10);
 
-            const totalNeededHeight = titleBoxHeight + 1 + Math.max(leftH, rightH) + 2;
-
-            // 2. Safely trigger page break if total height exceeds page BEFORE starting to draw
-            checkPageBreak(yPos, totalNeededHeight);
-
-            // 3. Render title box
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(10);
             doc.setFillColor(...brandLight);
-            doc.rect(margins.left, yPos - 3, maxWidth, titleBoxHeight, 'F');
+            doc.rect(margins.left, yPos - 3, 180, boxH, 'F');
+            doc.setTextColor(...primaryColor);
+            doc.getFont('helvetica', 'bold');
+            doc.text(lines, 105, yPos + (boxH / 2) - 3, { align: 'center' });
 
-            doc.setTextColor(...primaryColor); // Dark green for title
-
-            // Centered text logic
-            const boxMiddleY = (yPos - 3) + (titleBoxHeight / 2);
-            const boxCenterX = margins.left + (maxWidth / 2);
-
-            if (nameLines.length === 1) {
-                doc.text(nameLines[0], boxCenterX, boxMiddleY, { align: 'center', baseline: 'middle' });
-            } else {
-                const totalTextHeight = (nameLines.length - 1) * 4;
-                const startY = boxMiddleY - (totalTextHeight / 2);
-                nameLines.forEach((line, lIdx) => {
-                    doc.text(line, boxCenterX, startY + (lIdx * 4), { align: 'center', baseline: 'middle' });
-                });
-            }
-
-            yPos += titleBoxHeight + 1; // Extra padding below title
-
-            // SPLIT LAYOUT FOR ALL MEALS
-            const leftX = margins.left + 2;
-            const rightX = margins.left + (maxWidth / 2) + 5;
-
-            let leftY = yPos;
-            let rightY = yPos;
-
-            // Left Column: Ingredients
-            if (ingredients.length > 0) {
-                doc.setFontSize(9);
-                doc.setTextColor(...textColor);
-                ingredients.forEach(ing => {
-                    const ingLines = doc.splitTextToSize(ing, colWidth);
-                    doc.text(ingLines, leftX, leftY);
-                    leftY += (ingLines.length * 4.5);
-                });
-            }
-
-            // Right Column: Description (Instructions)
+            yPos += boxH + 2;
+            let lY = yPos, rY = yPos;
+            doc.setTextColor(...textColor);
+            doc.setFontSize(9);
+            ings.forEach(ing => {
+                const il = doc.splitTextToSize(ing, 85);
+                doc.text(il, margins.left + 2, lY);
+                lY += il.length * 4.5;
+            });
             if (desc) {
-                doc.setFontSize(9);
                 doc.setTextColor(...lightColor);
-                const descLines = doc.splitTextToSize(desc, colWidth);
-                doc.text(descLines, rightX, rightY);
-                rightY += (descLines.length * 4.4) + 1;
-                doc.setFontSize(10);
-                doc.setTextColor(...textColor);
+                const dl = doc.splitTextToSize(desc, 85);
+                doc.text(dl, margins.left + 95, rY);
+                rY += dl.length * 4.4;
             }
-
-            // Advance yPos to whichever column was longer
-            yPos = Math.max(leftY, rightY) + 2;
-
-            // Add extra padding between recipe options
-            yPos += 2;
-        });
-        yPos += 2;
-    }
-}
-
-// --- SHOPPING LIST FOR CLOSED PLANS ---
-if (isClosedPlan) {
-    const shoppingList = aggregateIngredients(items);
-    if (shoppingList.length > 0) {
-        // Need a page break for the shopping list
-        doc.addPage();
-        currentPage++;
-        yPos = 35;
-        drawHeader('Lista de la Compra Semanal');
-
-        doc.setFillColor(...brandLight);
-        doc.rect(margins.left, yPos, 210 - margins.left - margins.right, 8, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...primaryColor);
-        doc.text("Lista de la Compra Semanal", margins.left + 3, yPos + 5.5);
-        yPos += 12;
-
-        doc.setTextColor(...textColor);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-
-        const col1X = margins.left + 5;
-        const col2X = margins.left + 95;
-        let currentX = col1X;
-
-        shoppingList.forEach((item) => {
-            if (currentX === col1X) {
-                checkPageBreak(yPos, 6);
-            }
-
-            const qtyStr = item.qty > 0 ? `${Math.round(item.qty)}g - ` : '';
-            const line = `• ${qtyStr}${item.name}`;
-            // Truncate to fit half page
-            const truncated = line.length > 45 ? line.substring(0, 42) + '...' : line;
-
-            doc.text(truncated, currentX, yPos);
-
-            if (currentX === col1X) {
-                currentX = col2X;
-            } else {
-                currentX = col1X;
-                yPos += 6;
-            }
+            yPos = Math.max(lY, rY) + 5;
         });
     }
 
-    function checkPageBreak(currentY, neededHeight, sectionName = '') {
-        // Leave a safety margin so content doesn't crash into the footer
-        if (currentY + neededHeight > 275) {
+    // --- SHOPPING LIST ---
+    if (isClosedPlan) {
+        const shopping = aggregateIngredients(items);
+        if (shopping.length > 0) {
             doc.addPage();
-            drawHeader(sectionName);
+            drawHeader('Lista de la Compra Semanal');
             yPos = 35;
+            doc.setFillColor(...brandLight);
+            doc.rect(margins.left, yPos, 180, 8, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...primaryColor);
+            doc.text("Lista de la Compra Semanal", margins.left + 3, yPos + 5.5);
+            yPos += 12;
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...textColor);
+            let currentX = margins.left + 5;
+            shopping.forEach(item => {
+                if (currentX === margins.left + 5) checkPageBreak(yPos, 6);
+                const txt = `• ${item.qty > 0 ? Math.round(item.qty) + 'g - ' : ''}${item.name}`;
+                doc.text(txt.substring(0, 45), currentX, yPos);
+                if (currentX === margins.left + 5) { currentX = margins.left + 95; }
+                else { currentX = margins.left + 5; yPos += 6; }
+            });
         }
     }
 
-    // Call drawFooter on all pages EXCEPT covers
     const totalPages = doc.internal.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
-        if (!coverPages.has(i)) {
-            drawFooter(i);
-        }
+        if (!coverPages.has(i)) drawFooter(i);
     }
 
-    // Save PDF
-    const filename = `Plan_${plan.name.replace(/\s+/g, '_')}_${patient?.first_name || 'Paciente'}.pdf`;
-    doc.save(filename);
+    doc.save(`Plan_${plan.name.replace(/\s+/g, '_')}_${patient?.first_name || 'Paciente'}.pdf`);
 };
-
-// Helper for Hex to RGB
-function hexToRgb(hex) {
-    if (!hex) return null;
-    let r = 0, g = 0, b = 0;
-    // 3 digits
-    if (hex.length === 4) {
-        r = parseInt(hex[1] + hex[1], 16);
-        g = parseInt(hex[2] + hex[2], 16);
-        b = parseInt(hex[3] + hex[3], 16);
-    }
-    // 6 digits
-    else if (hex.length === 7) {
-        r = parseInt(hex.slice(1, 3), 16);
-        g = parseInt(hex.slice(3, 5), 16);
-        b = parseInt(hex.slice(5, 7), 16);
-    }
-    return [r, g, b];
-}
