@@ -8,9 +8,9 @@ export const generateSchemaPdf = async (nutritionist, patient = null) => {
     let yPos = 20;
 
     // Colores corporativos (coherentes con planPdfGenerator)
-    const primaryColor = [157, 185, 143]; // #9db98f
-    const brandLight = [224, 237, 217];   // #e0edd9
-    const secondaryColor = [220, 224, 219];
+    const primaryColor = [40, 72, 58]; // #28483a
+    const brandLight = [227, 246, 237];   // #e3f6ed
+    const secondaryColor = [208, 154, 132]; // #d09a84
     const textColor = [60, 60, 60];
     const lightColor = [150, 150, 150];
 
@@ -54,7 +54,8 @@ export const generateSchemaPdf = async (nutritionist, patient = null) => {
     const drawHeader = (title) => {
         // Logo superior izquierdo
         if (logoImg) {
-            doc.addImage(logoImg, 'PNG', margins.left, 5, 20, 20, undefined, 'FAST');
+            const format = logoImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
+            doc.addImage(logoImg, format, margins.left, 5, 20, 20, undefined, 'FAST');
         }
 
         // Título del documento
@@ -115,7 +116,8 @@ export const generateSchemaPdf = async (nutritionist, patient = null) => {
         let currentX = (pageWidth - totalWidth) / 2;
 
         if (mailLogoImg) {
-            doc.addImage(mailLogoImg, 'PNG', currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
+            const format = mailLogoImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
+            doc.addImage(mailLogoImg, format, currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
             currentX += iconSize + 1;
         }
         doc.text(emailContact, currentX, footerY);
@@ -127,7 +129,8 @@ export const generateSchemaPdf = async (nutritionist, patient = null) => {
         currentX += doc.getTextWidth("|") + spacing;
 
         if (igLogoImg) {
-            doc.addImage(igLogoImg, 'PNG', currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
+            const format = igLogoImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
+            doc.addImage(igLogoImg, format, currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
             currentX += iconSize + 1;
         }
         doc.text(igContact, currentX, footerY);
@@ -139,7 +142,8 @@ export const generateSchemaPdf = async (nutritionist, patient = null) => {
         currentX += doc.getTextWidth("|") + spacing;
 
         if (tiktokLogoImg) {
-            doc.addImage(tiktokLogoImg, 'PNG', currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
+            const format = tiktokLogoImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
+            doc.addImage(tiktokLogoImg, format, currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
             currentX += iconSize + 1;
         }
         doc.text(tiktokContact, currentX, footerY);

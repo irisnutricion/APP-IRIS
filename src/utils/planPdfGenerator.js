@@ -114,7 +114,8 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
         // Draw Left Logo (if loaded)
         if (logoImg) {
             // Keep proportion roughly intact (assuming it's a typical logo shape, adjust dimensions as needed)
-            doc.addImage(logoImg, 'PNG', margins.left, 2, 16, 16, undefined, 'FAST');
+            const format = logoImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
+            doc.addImage(logoImg, format, margins.left, 2, 16, 16, undefined, 'FAST');
         }
 
         // Draw Center Text (Section Name)
@@ -169,7 +170,8 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
         // Email
         if (mailLogoImg) {
             // Adjust y offset to roughly match text baseline
-            doc.addImage(mailLogoImg, 'PNG', currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
+            const format = mailLogoImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
+            doc.addImage(mailLogoImg, format, currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
             currentX += iconSize + 1;
         }
         doc.text(emailContact, currentX, footerY);
@@ -183,7 +185,8 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
         // Instagram
         if (igLogoImg) {
-            doc.addImage(igLogoImg, 'PNG', currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
+            const format = igLogoImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
+            doc.addImage(igLogoImg, format, currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
             currentX += iconSize + 1;
         }
         doc.text(igContact, currentX, footerY);
@@ -197,7 +200,8 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
         // TikTok
         if (tiktokLogoImg) {
-            doc.addImage(tiktokLogoImg, 'PNG', currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
+            const format = tiktokLogoImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
+            doc.addImage(tiktokLogoImg, format, currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
             currentX += iconSize + 1;
         }
         doc.text(tiktokContact, currentX, footerY);
@@ -210,7 +214,8 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
     // ----- PAGE 1: MAIN COVER ----- //
     const portadaImg = await loadImageAsBase64('/covers/Portada.png');
     if (portadaImg) {
-        doc.addImage(portadaImg, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
+        const format = portadaImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
+        doc.addImage(portadaImg, format, 0, 0, 210, 297, undefined, 'FAST');
         coverPages.add(doc.internal.getNumberOfPages());
         doc.addPage();
     }
@@ -220,7 +225,8 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
         // First try to load recommendations cover
         const recCoverImg = await loadImageAsBase64('/covers/Portada recetario.png');
         if (recCoverImg) {
-            doc.addImage(recCoverImg, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
+            const format = recCoverImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
+            doc.addImage(recCoverImg, format, 0, 0, 210, 297, undefined, 'FAST');
             coverPages.add(doc.internal.getNumberOfPages());
             doc.addPage();
         }
@@ -390,7 +396,8 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
             if (coverImg) {
                 // If not on a fresh page (or after Portada), add page for cover
                 if (yPos > 30) doc.addPage();
-                doc.addImage(coverImg, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
+                const format = coverImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
+                doc.addImage(coverImg, format, 0, 0, 210, 297, undefined, 'FAST');
                 coverPages.add(doc.internal.getNumberOfPages());
 
                 // Add page for the content
