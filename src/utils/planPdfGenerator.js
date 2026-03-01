@@ -255,96 +255,83 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
         currentPage++;
     }
 
-    // ----- PLAN OPTIONS SUMMARY ----- //
-    drawHeader('Resumen de Opciones');
-
-    doc.setTextColor(...textColor);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-
-    // Group items by day (Standard closed plan structure or Open Plan simulation)
-    // To keep it simple, we do a day-by-day list or meal-by-meal list depending on plan type.
-
-    // Open Plan: Group by meal
-    const mealNames = plan.meal_names || [];
-
-    // Assume items are attached to meals (if open plan, day_of_week is null. If closed, we group by day)
-    const isClosedPlan = items.some(i => i.day_of_week !== null);
-
-    let yPos = 30;
-
+    // --- PLAN OPTIONS SUMMARY OR GRID ---
     if (isClosedPlan) {
-        // Group by day 1..7
-        DAYS.forEach((day, dayIdx) => {
-            const dayNum = dayIdx + 1;
-            const dayItems = items.filter(i => i.day_of_week === dayNum);
-
-            if (dayItems.length === 0) return;
-
-            // Subheader: Day
-            doc.setFillColor(...brandLight);
-            doc.rect(margins.left, yPos, 210 - margins.left - margins.right, 8, 'F');
+        // --- CLOSED PLAN WEEKLY GRID ---
+        doc.addPage('a4', 'l'); // Landscape for grid
+        const drawHorizontalHeader = (titleText) => {
+            const currentY = 15;
+            if (nutritionist?.logo_url) {
+                // If we need the logo, we'd preload it, but let's reuse doc.addImage if we passed it in state. 
+                // To keep this robust and synchronous, we'll just draw the text header for landscape since drawHeader is bound to Portrait Y-coordinates and margins.
+            }
+            doc.setFillColor(...brandColor);
+            doc.rect(0, 0, 297, 30, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(20);
             doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...primaryColor);
-            doc.text(day, margins.left + 3, yPos + 5.5);
-            yPos += 12;
+            doc.text(titleText, 148.5, 20, { align: 'center' });
+        };
 
-            mealNames.forEach(meal => {
-                const opt = dayItems.find(i => i.meal_name === meal);
-                if (!opt) return;
+        drawHorizontalHeader('Esquema Semanal');
 
-                checkPageBreak(yPos, 15);
+        // Prepare autotable data
+        const tableHead = [['Comidas', ...DAYS]];
+        const tableBody = [];
 
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(10);
-                doc.setTextColor(...secondaryColor); // Secondary color for meal name (Desayuno, etc)
-                doc.text(`${meal}:`, margins.left, yPos);
-
-                doc.setTextColor(...textColor); // Reset to slate for recipe name
-                doc.setFont('helvetica', 'normal');
-                const name = getOptName(opt);
-                // measure width
-                const mealWidth = doc.getTextWidth(`${meal}:  `);
-
-                const maxWidth = 210 - margins.left - margins.right - mealWidth;
-                const lines = doc.splitTextToSize(name, maxWidth);
-                doc.text(lines, margins.left + mealWidth, yPos);
-
-                yPos += (lines.length * 5);
-
-                // Add ingredients
-                const ingredients = getOptIngredients(opt);
-                if (ingredients.length > 0) {
-                    doc.setFontSize(9);
-                    doc.setTextColor(...textColor);
-                    ingredients.forEach(ing => {
-                        checkPageBreak(yPos, 5);
-                        const ingLines = doc.splitTextToSize(ing, 210 - margins.left - margins.right - 5);
-                        doc.text(ingLines, margins.left + 5, yPos);
-                        yPos += (ingLines.length * 4);
-                    });
-                    yPos += 1;
-                }
-
-                // Add description if available
-                const desc = getOptDescription(opt);
-                if (desc) {
-                    doc.setFontSize(9);
-                    doc.setTextColor(...lightColor);
-                    const descLines = doc.splitTextToSize(desc, 210 - margins.left - margins.right - 5);
-                    doc.text(descLines, margins.left + 5, yPos);
-                    yPos += (descLines.length * 4) + 2;
-                    doc.setFontSize(10);
-                    doc.setTextColor(...textColor);
-                } else {
-                    yPos += 2;
-                }
+        mealNames.forEach(meal => {
+            const row = [meal];
+            DAYS.forEach((_, dayIdx) => {
+                const opt = items.find(i => i.meal_name === meal && i.day_of_week === (dayIdx + 1));
+                row.push(opt ? getOptName(opt) : '—');
             });
-            yPos += 6;
-            checkPageBreak(yPos, 20);
+            tableBody.push(row);
         });
+
+        doc.autoTable({
+            startY: 40,
+            head: tableHead,
+            body: tableBody,
+            theme: 'grid',
+            headStyles: {
+                fillColor: primaryColor,
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                halign: 'center',
+                valign: 'middle',
+                fontSize: 11
+            },
+            bodyStyles: {
+                textColor: textColor,
+                fontSize: 9,
+                valign: 'middle',
+                halign: 'center',
+                cellPadding: 4,
+            },
+            columnStyles: {
+                0: { fontStyle: 'bold', fillColor: brandLight, textColor: primaryColor }
+            },
+            alternateRowStyles: {
+                fillColor: [250, 250, 250]
+            },
+            styles: {
+                lineWidth: 0.1,
+                lineColor: [220, 220, 220],
+                minCellHeight: 18
+            },
+            margin: { top: 40, bottom: 20, left: 15, right: 15 }
+        });
+
+        // Switch back to portrait for upcoming detailed pages
+        doc.addPage('a4', 'p');
+        yPos = 30; // Reset yPos for portrait
     } else {
         // --- OPEN PLAN SUMMARY ---
+        drawHeader('Resumen de Opciones');
+        doc.setTextColor(...textColor);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+
         checkPageBreak(yPos, 20);
         doc.setFillColor(...brandLight);
         doc.rect(margins.left, yPos, 210 - margins.left - margins.right, 8, 'F');
@@ -392,195 +379,204 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
         yPos += 10;
         checkPageBreak(yPos, 20);
-
-        // --- DETAILED OPEN PLAN ---
-        for (const meal of mealNames) {
-            let mealItems = items.filter(i => i.meal_name === meal);
-
-            // Deduplicate options by name
-            const uniqueMealItems = [];
-            const seenNames = new Set();
-            for (const opt of mealItems) {
-                const name = getOptName(opt);
-                if (!seenNames.has(name)) {
-                    seenNames.add(name);
-                    uniqueMealItems.push(opt);
-                }
-            }
-            mealItems = uniqueMealItems;
-
-            if (mealItems.length === 0) continue;
-
-            const expectedName = meal.toLowerCase().includes('desayun') ? 'Desayuno' :
-                meal.toLowerCase().includes('almuerz') ? 'Almuerzo' :
-                    meal.toLowerCase().includes('comid') ? 'Almuerzo' : // Fallback Comida to Almuerzo cover if missing Comida
-                        meal.toLowerCase().includes('meriend') ? 'Merienda' :
-                            meal.toLowerCase().includes('cen') ? 'Cena' : meal;
-
-            const displayMealName = expectedName === 'Desayuno' ? 'Desayunos' :
-                expectedName === 'Almuerzo' ? 'Almuerzos' :
-                    expectedName === 'Merienda' ? 'Meriendas' :
-                        expectedName === 'Cena' ? 'Cenas' : meal;
-
-            const coverImg = await loadImageAsBase64(`/covers/${expectedName}.png`);
-            if (coverImg) {
-                // If not on a fresh page (or after Portada), add page for cover
-                if (yPos > 30) doc.addPage();
-                const format = coverImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
-                doc.addImage(coverImg, format, 0, 0, 210, 297, undefined, 'FAST');
-                coverPages.add(doc.internal.getNumberOfPages());
-
-                // Add page for the content
-                doc.addPage();
-                drawHeader(displayMealName); // Pluralized header
-                yPos = 35; // Adjusted YPos for taller header
-            } else {
-                checkPageBreak(yPos, 20, displayMealName); // Pluralized header
-            }
-
-            // Removed the redundant green meal header block (doc.rect with meal name)
-
-            doc.setTextColor(...textColor);
-            mealItems.forEach((opt, idx) => {
-                const name = getOptName(opt);
-                const desc = getOptDescription(opt);
-                const ingredients = getOptIngredients(opt);
-                const maxWidth = 210 - margins.left - margins.right;
-                const colWidth = (maxWidth / 2) - 5;
-
-                // 1. Precalculate total height required
-                doc.setFontSize(10);
-                const nameLines = doc.splitTextToSize(name, maxWidth - 6);
-                const titleBoxHeight = (nameLines.length * 4) + 2;
-
-                let leftH = 0;
-                if (ingredients.length > 0) {
-                    doc.setFontSize(9);
-                    ingredients.forEach(ing => {
-                        const ingLines = doc.splitTextToSize(ing, colWidth);
-                        leftH += (ingLines.length * 4.5);
-                    });
-                }
-
-                let rightH = 0;
-                if (desc) {
-                    doc.setFontSize(9);
-                    const descLines = doc.splitTextToSize(desc, colWidth);
-                    rightH += (descLines.length * 4.4) + 1;
-                }
-
-                const totalNeededHeight = titleBoxHeight + 1 + Math.max(leftH, rightH) + 2;
-
-                // 2. Safely trigger page break if total height exceeds page BEFORE starting to draw
-                checkPageBreak(yPos, totalNeededHeight);
-
-                // 3. Render title box
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(10);
-                doc.setFillColor(...brandLight);
-                doc.rect(margins.left, yPos - 3, maxWidth, titleBoxHeight, 'F');
-
-                doc.setTextColor(...primaryColor); // Dark green for title
-
-                // Centered text logic
-                const boxMiddleY = (yPos - 3) + (titleBoxHeight / 2);
-                const boxCenterX = margins.left + (maxWidth / 2);
-
-                if (nameLines.length === 1) {
-                    doc.text(nameLines[0], boxCenterX, boxMiddleY, { align: 'center', baseline: 'middle' });
-                } else {
-                    const totalTextHeight = (nameLines.length - 1) * 4;
-                    const startY = boxMiddleY - (totalTextHeight / 2);
-                    nameLines.forEach((line, lIdx) => {
-                        doc.text(line, boxCenterX, startY + (lIdx * 4), { align: 'center', baseline: 'middle' });
-                    });
-                }
-
-                yPos += titleBoxHeight + 1; // Extra padding below title
-
-                // SPLIT LAYOUT FOR ALL MEALS
-                const leftX = margins.left + 2;
-                const rightX = margins.left + (maxWidth / 2) + 5;
-
-                let leftY = yPos;
-                let rightY = yPos;
-
-                // Left Column: Ingredients
-                if (ingredients.length > 0) {
-                    doc.setFontSize(9);
-                    doc.setTextColor(...textColor);
-                    ingredients.forEach(ing => {
-                        const ingLines = doc.splitTextToSize(ing, colWidth);
-                        doc.text(ingLines, leftX, leftY);
-                        leftY += (ingLines.length * 4.5);
-                    });
-                }
-
-                // Right Column: Description (Instructions)
-                if (desc) {
-                    doc.setFontSize(9);
-                    doc.setTextColor(...lightColor);
-                    const descLines = doc.splitTextToSize(desc, colWidth);
-                    doc.text(descLines, rightX, rightY);
-                    rightY += (descLines.length * 4.4) + 1;
-                    doc.setFontSize(10);
-                    doc.setTextColor(...textColor);
-                }
-
-                // Advance yPos to whichever column was longer
-                yPos = Math.max(leftY, rightY) + 2;
-
-                // Add extra padding between recipe options
-                yPos += 2;
-            });
-            yPos += 2;
-        }
     }
 
-    // --- SHOPPING LIST FOR CLOSED PLANS ---
-    if (isClosedPlan) {
-        const shoppingList = aggregateIngredients(items);
-        if (shoppingList.length > 0) {
-            // Need a page break for the shopping list
+    // --- DETAILED RECIPES (COMMON FOR OPEN & CLOSED PLANS) ---
+    for (const meal of mealNames) {
+        let mealItems = items.filter(i => i.meal_name === meal);
+
+        // Deduplicate options by name
+        const uniqueMealItems = [];
+        const seenNames = new Set();
+        for (const opt of mealItems) {
+            const name = getOptName(opt);
+            if (!seenNames.has(name)) {
+                seenNames.add(name);
+                uniqueMealItems.push(opt);
+            }
+        }
+        mealItems = uniqueMealItems;
+
+        if (mealItems.length === 0) continue;
+
+        const expectedName = meal.toLowerCase().includes('desayun') ? 'Desayuno' :
+            meal.toLowerCase().includes('almuerz') ? 'Almuerzo' :
+                meal.toLowerCase().includes('comid') ? 'Almuerzo' : // Fallback Comida to Almuerzo cover if missing Comida
+                    meal.toLowerCase().includes('meriend') ? 'Merienda' :
+                        meal.toLowerCase().includes('cen') ? 'Cena' : meal;
+
+        const displayMealName = expectedName === 'Desayuno' ? 'Desayunos' :
+            expectedName === 'Almuerzo' ? 'Almuerzos' :
+                expectedName === 'Merienda' ? 'Meriendas' :
+                    expectedName === 'Cena' ? 'Cenas' : meal;
+
+        const coverImg = await loadImageAsBase64(`/covers/${expectedName}.png`);
+        if (coverImg) {
+            // If not on a fresh page (or after Portada), add page for cover
+            if (yPos > 30) doc.addPage();
+            const format = coverImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
+            doc.addImage(coverImg, format, 0, 0, 210, 297, undefined, 'FAST');
+            coverPages.add(doc.internal.getNumberOfPages());
+
+            // Add page for the content
             doc.addPage();
-            currentPage++;
-            yPos = 35;
-            drawHeader('Lista de la Compra Semanal');
+            drawHeader(displayMealName); // Pluralized header
+            yPos = 35; // Adjusted YPos for taller header
+        } else {
+            checkPageBreak(yPos, 20, displayMealName); // Pluralized header
+        }
 
-            doc.setFillColor(...brandLight);
-            doc.rect(margins.left, yPos, 210 - margins.left - margins.right, 8, 'F');
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...primaryColor);
-            doc.text("Lista de la Compra Semanal", margins.left + 3, yPos + 5.5);
-            yPos += 12;
+        // Removed the redundant green meal header block (doc.rect with meal name)
 
-            doc.setTextColor(...textColor);
-            doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...textColor);
+        mealItems.forEach((opt, idx) => {
+            const name = getOptName(opt);
+            const desc = getOptDescription(opt);
+            const ingredients = getOptIngredients(opt);
+            const maxWidth = 210 - margins.left - margins.right;
+            const colWidth = (maxWidth / 2) - 5;
+
+            // 1. Precalculate total height required
             doc.setFontSize(10);
+            const nameLines = doc.splitTextToSize(name, maxWidth - 6);
+            const titleBoxHeight = (nameLines.length * 4) + 2;
 
-            const col1X = margins.left + 5;
-            const col2X = margins.left + 95;
-            let currentX = col1X;
+            let leftH = 0;
+            if (ingredients.length > 0) {
+                doc.setFontSize(9);
+                ingredients.forEach(ing => {
+                    const ingLines = doc.splitTextToSize(ing, colWidth);
+                    leftH += (ingLines.length * 4.5);
+                });
+            }
 
-            shoppingList.forEach((item) => {
-                if (currentX === col1X) {
-                    checkPageBreak(yPos, 6);
-                }
+            let rightH = 0;
+            if (desc) {
+                doc.setFontSize(9);
+                const descLines = doc.splitTextToSize(desc, colWidth);
+                rightH += (descLines.length * 4.4) + 1;
+            }
 
-                const qtyStr = item.qty > 0 ? `${Math.round(item.qty)}g - ` : '';
-                const line = `• ${qtyStr}${item.name}`;
-                // Truncate to fit half page
-                const truncated = line.length > 45 ? line.substring(0, 42) + '...' : line;
+            const totalNeededHeight = titleBoxHeight + 1 + Math.max(leftH, rightH) + 2;
 
-                doc.text(truncated, currentX, yPos);
+            // 2. Safely trigger page break if total height exceeds page BEFORE starting to draw
+            checkPageBreak(yPos, totalNeededHeight);
 
-                if (currentX === col1X) {
-                    currentX = col2X;
-                } else {
-                    currentX = col1X;
-                    yPos += 6;
-                }
-            });
+            // 3. Render title box
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.setFillColor(...brandLight);
+            doc.rect(margins.left, yPos - 3, maxWidth, titleBoxHeight, 'F');
+
+            doc.setTextColor(...primaryColor); // Dark green for title
+
+            // Centered text logic
+            const boxMiddleY = (yPos - 3) + (titleBoxHeight / 2);
+            const boxCenterX = margins.left + (maxWidth / 2);
+
+            if (nameLines.length === 1) {
+                doc.text(nameLines[0], boxCenterX, boxMiddleY, { align: 'center', baseline: 'middle' });
+            } else {
+                const totalTextHeight = (nameLines.length - 1) * 4;
+                const startY = boxMiddleY - (totalTextHeight / 2);
+                nameLines.forEach((line, lIdx) => {
+                    doc.text(line, boxCenterX, startY + (lIdx * 4), { align: 'center', baseline: 'middle' });
+                });
+            }
+
+            yPos += titleBoxHeight + 1; // Extra padding below title
+
+            // SPLIT LAYOUT FOR ALL MEALS
+            const leftX = margins.left + 2;
+            const rightX = margins.left + (maxWidth / 2) + 5;
+
+            let leftY = yPos;
+            let rightY = yPos;
+
+            // Left Column: Ingredients
+            if (ingredients.length > 0) {
+                doc.setFontSize(9);
+                doc.setTextColor(...textColor);
+                ingredients.forEach(ing => {
+                    const ingLines = doc.splitTextToSize(ing, colWidth);
+                    doc.text(ingLines, leftX, leftY);
+                    leftY += (ingLines.length * 4.5);
+                });
+            }
+
+            // Right Column: Description (Instructions)
+            if (desc) {
+                doc.setFontSize(9);
+                doc.setTextColor(...lightColor);
+                const descLines = doc.splitTextToSize(desc, colWidth);
+                doc.text(descLines, rightX, rightY);
+                rightY += (descLines.length * 4.4) + 1;
+                doc.setFontSize(10);
+                doc.setTextColor(...textColor);
+            }
+
+            // Advance yPos to whichever column was longer
+            yPos = Math.max(leftY, rightY) + 2;
+
+            // Add extra padding between recipe options
+            yPos += 2;
+        });
+        yPos += 2;
+    }
+}
+
+// --- SHOPPING LIST FOR CLOSED PLANS ---
+if (isClosedPlan) {
+    const shoppingList = aggregateIngredients(items);
+    if (shoppingList.length > 0) {
+        // Need a page break for the shopping list
+        doc.addPage();
+        currentPage++;
+        yPos = 35;
+        drawHeader('Lista de la Compra Semanal');
+
+        doc.setFillColor(...brandLight);
+        doc.rect(margins.left, yPos, 210 - margins.left - margins.right, 8, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...primaryColor);
+        doc.text("Lista de la Compra Semanal", margins.left + 3, yPos + 5.5);
+        yPos += 12;
+
+        doc.setTextColor(...textColor);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+
+        const col1X = margins.left + 5;
+        const col2X = margins.left + 95;
+        let currentX = col1X;
+
+        shoppingList.forEach((item) => {
+            if (currentX === col1X) {
+                checkPageBreak(yPos, 6);
+            }
+
+            const qtyStr = item.qty > 0 ? `${Math.round(item.qty)}g - ` : '';
+            const line = `• ${qtyStr}${item.name}`;
+            // Truncate to fit half page
+            const truncated = line.length > 45 ? line.substring(0, 42) + '...' : line;
+
+            doc.text(truncated, currentX, yPos);
+
+            if (currentX === col1X) {
+                currentX = col2X;
+            } else {
+                currentX = col1X;
+                yPos += 6;
+            }
+        });
+    }
+
+    function checkPageBreak(currentY, neededHeight, sectionName = '') {
+        // Leave a safety margin so content doesn't crash into the footer
+        if (currentY + neededHeight > 275) {
+            doc.addPage();
+            drawHeader(sectionName);
+            yPos = 35;
         }
     }
 
@@ -595,15 +591,6 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
     // Save PDF
     const filename = `Plan_${plan.name.replace(/\s+/g, '_')}_${patient?.first_name || 'Paciente'}.pdf`;
     doc.save(filename);
-
-    function checkPageBreak(currentY, neededHeight, sectionName = '') {
-        // Leave a safety margin so content doesn't crash into the footer
-        if (currentY + neededHeight > 275) {
-            doc.addPage();
-            drawHeader(sectionName);
-            yPos = 35;
-        }
-    }
 };
 
 // Helper for Hex to RGB
