@@ -146,7 +146,11 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
 
-        // Draw Contact Info Left & Center
+        // Phone (left)
+        const phone = "633 67 45 63";
+        doc.text(phone, margins.left, footerY);
+
+        // Draw Contact Info Center
         const emailContact = "info@irisnutricion.com";
         const igContact = "iris_nutricion";
         const tiktokContact = "iris_nutricion";
