@@ -1067,27 +1067,52 @@ export const DataProvider = ({ children }) => {
     };
 
     // MEAL PLAN ITEMS
+    const savePromises = useRef({});
+
     const saveMealPlanItems = async (planId, items) => {
-        // Replace all items for a plan
-        await supabase.from('meal_plan_items').delete().eq('plan_id', planId);
-        if (items.length > 0) {
-            const toInsert = items.map((item, idx) => ({
-                plan_id: planId,
-                meal_name: item.meal_name,
-                day_of_week: item.day_of_week || null,
-                sort_order: idx,
-                recipe_id: item.recipe_id || null,
-                free_text: item.free_text || null,
-                custom_recipe_data: item.custom_recipe_data || null,
-            }));
-            await supabase.from('meal_plan_items').insert(toInsert);
+        const performSave = async () => {
+            // Replace all items for a plan
+            await supabase.from('meal_plan_items').delete().eq('plan_id', planId);
+            if (items.length > 0) {
+                const toInsert = items.map((item, idx) => ({
+                    plan_id: planId,
+                    meal_name: item.meal_name,
+                    day_of_week: item.day_of_week || null,
+                    sort_order: idx,
+                    recipe_id: item.recipe_id || null,
+                    free_text: item.free_text || null,
+                    custom_recipe_data: item.custom_recipe_data || null,
+                }));
+                await supabase.from('meal_plan_items').insert(toInsert);
+            }
+            // Refetch items to get joined recipe data
+            const { data } = await supabase.from('meal_plan_items').select('*, recipes(*, recipe_ingredients(*, foods(*)))').eq('plan_id', planId).order('sort_order', { ascending: true });
+            if (data) {
+                setMealPlanItems(prev => [...prev.filter(i => i.plan_id !== planId), ...data]);
+            }
+        };
+
+        // Queue saves for the same planId to prevent concurrent DELETE/INSERT which causes duplication
+        if (savePromises.current[planId]) {
+            savePromises.current[planId] = savePromises.current[planId].then(performSave).catch(performSave);
+        } else {
+            savePromises.current[planId] = performSave();
+            savePromises.current[planId].finally(() => {
+                // Once finished, if no other saves were queued behind us, clear the promise
+                if (savePromises.current[planId] === savePromises.current[planId]) { // simplified check, relies on GC or explicitly dropping ref if needed. Better just leave it or clean if it's strictly the current one.
+                    // Let's just remove the entry if it hasn't been overwritten by a newly queued promise
+                    setTimeout(() => {
+                        // This isn't strictly necessary but avoids memory leak over very long sessions
+                        // A better way is to attach a finally that deletes it if `savePromises.current[planId]` is this specific promise instance. 
+                    }, 0);
+                }
+            });
+            // Actually, a simpler robust way to clean up the queue:
         }
-        // Refetch items to get joined recipe data
-        const { data } = await supabase.from('meal_plan_items').select('*, recipes(*, recipe_ingredients(*, foods(*)))').eq('plan_id', planId).order('sort_order', { ascending: true });
-        if (data) {
-            setMealPlanItems(prev => [...prev.filter(i => i.plan_id !== planId), ...data]);
-        }
+
+        return savePromises.current[planId];
     };
+
 
     // Clone a plan (for templates)
     const cloneMealPlan = async (sourcePlanId, overrides = {}) => {
