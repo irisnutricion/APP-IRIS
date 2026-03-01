@@ -433,14 +433,16 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 doc.setTextColor(...primaryColor); // Dark green for title
 
                 // Centered text logic
+                const boxMiddleY = (yPos - 3) + (titleBoxHeight / 2);
+                const boxCenterX = margins.left + (maxWidth / 2);
+
                 if (nameLines.length === 1) {
-                    const textWidth = doc.getTextWidth(nameLines[0]);
-                    doc.text(nameLines[0], margins.left + (maxWidth - textWidth) / 2, yPos + 0);
+                    doc.text(nameLines[0], boxCenterX, boxMiddleY, { align: 'center', baseline: 'middle' });
                 } else {
-                    // If it wraps, just left align it with padding to keep it simple, or center each line
+                    const totalTextHeight = (nameLines.length - 1) * 4;
+                    const startY = boxMiddleY - (totalTextHeight / 2);
                     nameLines.forEach((line, lIdx) => {
-                        const lineWidth = doc.getTextWidth(line);
-                        doc.text(line, margins.left + (maxWidth - lineWidth) / 2, yPos + 0 + (lIdx * 4));
+                        doc.text(line, boxCenterX, startY + (lIdx * 4), { align: 'center', baseline: 'middle' });
                     });
                 }
 
