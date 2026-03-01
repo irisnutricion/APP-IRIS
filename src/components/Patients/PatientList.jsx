@@ -257,18 +257,6 @@ const PatientList = () => {
                                                     <span className="font-semibold text-sm text-slate-800 dark:text-slate-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors line-clamp-1">
                                                         {patient.name}
                                                     </span>
-
-                                                    {/* Quick Action: Finish (Visible on hover) */}
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            updatePatient(patient.id, { status: 'finished' });
-                                                        }}
-                                                        className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-opacity p-0.5"
-                                                        title="Finalizar/Archivar"
-                                                    >
-                                                        <CheckCircle size={12} />
-                                                    </button>
                                                 </div>
 
                                                 {/* Start Plan Button for Waiting Patients without a plan */}
