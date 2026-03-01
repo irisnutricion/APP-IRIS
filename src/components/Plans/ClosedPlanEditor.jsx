@@ -94,7 +94,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     const [viewMode, setViewMode] = useState(initialViewMode);
     const [recipeSearch, setRecipeSearch] = useState('');
     const [activeCell, setActiveCell] = useState(null);
-    const [expandedCells, setExpandedCells] = useState(new Set()); // key of cells being inline-edited
+    const [collapsedCells, setCollapsedCells] = useState(new Set()); // key of cells manually collapsed
     const [showTemplateMenu, setShowTemplateMenu] = useState(false);
     const [activeDetailDay, setActiveDetailDay] = useState('all');
     const [expandedDays, setExpandedDays] = useState(new Set([1])); // default to day 1 open
@@ -200,7 +200,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
 
     // Inline editor handlers
     const toggleEditor = (cellKey) => {
-        setExpandedCells(prev => {
+        setCollapsedCells(prev => {
             const next = new Set(prev);
             if (next.has(cellKey)) next.delete(cellKey);
             else next.add(cellKey);
@@ -641,7 +641,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                                 </button>
                                                                             ) : (
                                                                                 <>
-                                                                                    <button onClick={() => toggleEditor(key)} className={`p-2 rounded-lg transition-colors ${expandedCells.has(key) ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-400' : 'text-slate-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-slate-700'}`} title="Editar opción">
+                                                                                    <button onClick={() => toggleEditor(key)} className={`p-2 rounded-lg transition-colors ${!collapsedCells.has(key) ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-400' : 'text-slate-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-slate-700'}`} title={!collapsedCells.has(key) ? "Ocultar editor" : "Editar opción"}>
                                                                                         <Pencil size={16} />
                                                                                     </button>
                                                                                     <button onClick={() => clearCell(dayIdx + 1, meal)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Eliminar opción">
@@ -684,7 +684,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                 )}
 
                                                                 {/* Inline Editor block */}
-                                                                {expandedCells.has(key) && cell && (
+                                                                {!collapsedCells.has(key) && cell && (
                                                                     <div className="mt-3 pt-4 border-t border-slate-100 dark:border-slate-700/50">
                                                                         <InlineRecipeEditor
                                                                             snapshot={cell.custom_recipe_data || recipeToSnapshot(cell.recipes) || null}
@@ -797,14 +797,14 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                             }));
 
                                             return (
-                                                <div key={meal} className="p-5 bg-white dark:bg-slate-800 transition-colors">
+                                                <div key={meal} className="p-4 bg-white dark:bg-slate-800 transition-colors">
                                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-3">
-                                                        <div className="flex items-center gap-4">
-                                                            <span className="text-sm font-semibold text-slate-400 w-24 shrink-0 dark:text-slate-500 uppercase">{meal}</span>
-                                                            <span className="text-lg font-bold text-slate-800 dark:text-slate-200">{getCellName(cell)}</span>
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase w-20 shrink-0">{meal}</span>
+                                                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{getCellName(cell)}</span>
                                                         </div>
                                                         {cellMacros && (
-                                                            <div className="flex gap-3 text-xs font-semibold bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
+                                                            <div className="flex gap-3 text-xs font-medium bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
                                                                 <span className="text-orange-500">{Math.round(cellMacros.kcal)} kcal</span>
                                                                 <span className="text-amber-500">{cellMacros.carbs.toFixed(1)}g HC</span>
                                                                 <span className="text-blue-500">{cellMacros.protein.toFixed(1)}g P</span>
@@ -813,9 +813,9 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                         )}
                                                     </div>
                                                     {ingredients.length > 0 && (
-                                                        <div className="ml-0 sm:ml-28 mt-2 space-y-1.5">
+                                                        <div className="ml-0 sm:ml-24 mt-2 space-y-1.5">
                                                             {ingredients.map((ing, i) => (
-                                                                <div key={i} className="flex items-center gap-2 text-base text-slate-600 dark:text-slate-300 relative pl-4">
+                                                                <div key={i} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 relative pl-4">
                                                                     <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 flex-shrink-0"></span>
                                                                     <span className="font-medium">{ing.food_name}</span>
                                                                     <span className="text-slate-400 dark:text-slate-500 font-normal">— {ing.quantity_grams}g</span>
