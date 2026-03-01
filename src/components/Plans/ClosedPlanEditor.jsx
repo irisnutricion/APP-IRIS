@@ -316,15 +316,40 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
         return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
     }, [grid, planName, mealNames, planIndications]);
 
-    // Force save on exit if there are unsaved changes pending
-    const handleClose = async () => {
+    const flushSaveRef = useRef();
+    flushSaveRef.current = () => {
         if (debounceTimer.current) {
             clearTimeout(debounceTimer.current);
-            await performSave(gridRef.current);
+            performSave(gridRef.current);
             debounceTimer.current = null;
         }
+    };
+
+    // Auto-save on unmount
+    useEffect(() => {
+        return () => {
+            if (flushSaveRef.current) {
+                flushSaveRef.current();
+            }
+        };
+    }, []);
+
+    // Force save on exit if there are unsaved changes pending
+    const handleClose = async () => {
+        flushSaveRef.current();
         onBack();
     };
+
+    // Click outside listener for search popups
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (activeCell && !e.target.closest('.search-popup-container') && !e.target.closest('.add-button-container')) {
+                setActiveCell(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [activeCell]);
 
     const handleKeyDown = (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
@@ -449,7 +474,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                             return (
                                                 <td key={dayIdx} className="p-1 relative group/cell" style={{ minWidth: '110px' }}>
                                                     {!cell ? (
-                                                        <button onClick={() => { setActiveCell(key); setRecipeSearch(''); }} className="w-full h-12 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg text-slate-300 hover:border-primary-300 hover:text-primary-400 flex items-center justify-center transition-all text-xs">
+                                                        <button onClick={() => { setActiveCell(key); setRecipeSearch(''); }} className="w-full h-12 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg text-slate-300 hover:border-primary-300 hover:text-primary-400 flex items-center justify-center transition-all text-xs add-button-container">
                                                             <Plus size={14} />
                                                         </button>
                                                     ) : (
@@ -504,7 +529,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                     )}
                                                     {/* Recipe search popup */}
                                                     {isActive && (
-                                                        <div className="absolute z-30 top-full left-0 mt-1 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl">
+                                                        <div className="absolute z-30 top-full left-0 mt-1 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl search-popup-container">
                                                             <div className="p-2">
                                                                 <div className="relative">
                                                                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
@@ -646,7 +671,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
 
                                                                         <div className="flex items-center gap-1.5 border-l border-slate-200 dark:border-slate-700 pl-4">
                                                                             {!cell ? (
-                                                                                <button onClick={() => { setActiveCell(key); setRecipeSearch(''); }} className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/20 rounded-lg transition-colors border border-primary-100 dark:border-primary-900/30">
+                                                                                <button onClick={() => { setActiveCell(key); setRecipeSearch(''); }} className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/20 rounded-lg transition-colors border border-primary-100 dark:border-primary-900/30 add-button-container">
                                                                                     <Plus size={14} /> Añadir
                                                                                 </button>
                                                                             ) : (
@@ -665,7 +690,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
 
                                                                 {/* Empty state search block */}
                                                                 {isActive && !cell && (
-                                                                    <div className="mt-2 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 shadow-inner">
+                                                                    <div className="mt-2 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 shadow-inner search-popup-container">
                                                                         <div className="p-2 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 relative">
                                                                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                                                                             <input type="text" value={recipeSearch} onChange={e => setRecipeSearch(e.target.value)} placeholder="Buscar receta por nombre..." className="w-full pl-10 pr-3 py-2 text-sm bg-transparent outline-none dark:text-white" autoFocus />

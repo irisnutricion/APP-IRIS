@@ -260,15 +260,40 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
         return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
     }, [sections, planName, mealNames, planIndications]);
 
-    // Force save on exit if there are unsaved changes pending
-    const handleClose = async () => {
+    const flushSaveRef = useRef();
+    flushSaveRef.current = () => {
         if (debounceTimer.current) {
             clearTimeout(debounceTimer.current);
-            await performSave(sectionsRef.current);
+            performSave(sectionsRef.current);
             debounceTimer.current = null;
         }
+    };
+
+    // Auto-save on unmount
+    useEffect(() => {
+        return () => {
+            if (flushSaveRef.current) {
+                flushSaveRef.current();
+            }
+        };
+    }, []);
+
+    // Force save on exit if there are unsaved changes pending
+    const handleClose = async () => {
+        flushSaveRef.current();
         onBack();
     };
+
+    // Click outside listener for search popups
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (activeSearch && !e.target.closest('.search-popup-container') && !e.target.closest('.add-button-container')) {
+                setActiveSearch(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [activeSearch]);
 
     const handleKeyDown = (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
@@ -473,7 +498,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
 
                                         {/* Add option */}
                                         {activeSearch === meal ? (
-                                            <div className="mt-3 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                                            <div className="mt-3 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden search-popup-container">
                                                 <div className="p-2">
                                                     <div className="relative">
                                                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
@@ -503,7 +528,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                                 </div>
                                             </div>
                                         ) : (
-                                            <button onClick={() => { setActiveSearch(meal); setRecipeSearch(''); }} className="mt-3 w-full py-2 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-400 hover:border-primary-300 hover:text-primary-500 transition-all flex items-center justify-center gap-1">
+                                            <button onClick={() => { setActiveSearch(meal); setRecipeSearch(''); }} className="mt-3 w-full py-2 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-400 hover:border-primary-300 hover:text-primary-500 transition-all flex items-center justify-center gap-1 add-button-container">
                                                 <Plus size={14} /> Añadir opción
                                             </button>
                                         )}
