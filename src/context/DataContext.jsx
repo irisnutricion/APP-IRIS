@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { addDays, differenceInDays, parseISO, format } from 'date-fns';
 import { supabase } from '../supabaseClient';
 import { useAuth } from './AuthContext';
