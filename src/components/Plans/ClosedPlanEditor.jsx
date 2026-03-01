@@ -98,6 +98,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     const [showTemplateMenu, setShowTemplateMenu] = useState(false);
     const [activeDetailDay, setActiveDetailDay] = useState(1); // Default to Day 1
     const [copyMenuCell, setCopyMenuCell] = useState(null); // key of cell showing copy-to menu
+    const [grid, setGrid] = useState({}); // Stores cell data as { "day_meal": { recipe_id, free_text, ... } }
 
     // Auto-save debounce refs
     const debounceTimer = useRef(null);
