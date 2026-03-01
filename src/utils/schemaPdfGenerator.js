@@ -51,7 +51,7 @@ export const generateSchemaPdf = async (nutritionist, patient = null) => {
     const tiktokLogoImg = await loadImageAsBase64('/covers/logo tiktok.png');
 
     // 3. Funciones de dibujo compartidas
-    const drawHeader = (title) => {
+    const drawHeader = () => {
         // Logo superior izquierdo
         if (logoImg) {
             const format = logoImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
@@ -59,17 +59,12 @@ export const generateSchemaPdf = async (nutritionist, patient = null) => {
         }
 
         // Título del documento
+        const mainTitle = patient && patient.first_name ? `Plan Nutricional ${patient.first_name}` : 'Plan Nutricional';
+
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(14);
         doc.setTextColor(...primaryColor);
-        doc.text(title, pageWidth / 2, 16, { align: 'center' });
-
-        if (patient && patient.first_name) {
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(...primaryColor);
-            doc.text(`Plan nutricional personalizado para ${patient.first_name}`, pageWidth - margins.right, 16, { align: 'right' });
-        }
+        doc.text(mainTitle, pageWidth / 2, 16, { align: 'center' });
 
         // Línea separadora
         doc.setDrawColor(...primaryColor);
@@ -81,11 +76,6 @@ export const generateSchemaPdf = async (nutritionist, patient = null) => {
 
     const drawFooter = async (pageNumber) => {
         const footerY = pageHeight - 10;
-
-        // Línea separadora pie
-        doc.setDrawColor(...secondaryColor);
-        doc.setLineWidth(0.5);
-        doc.line(margins.left, footerY - 5, pageWidth - margins.right, footerY - 5);
 
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
@@ -155,15 +145,9 @@ export const generateSchemaPdf = async (nutritionist, patient = null) => {
 
     // 4. Generación de las tablas
 
-    drawHeader('Esquema Semanal Genérico');
+    drawHeader();
 
     // Tabla 1: ESQUEMA MENÚ SEMANAL (Rellena con la configuración)
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.setTextColor(0, 0, 0);
-    doc.text('ESQUEMA MENÚ SEMANAL', pageWidth / 2, yPos, { align: 'center' });
-    yPos += 5;
-
     const table1Body = DAYS.map(day => {
         const row = [day];
         MEALS.forEach(meal => {
@@ -209,16 +193,10 @@ export const generateSchemaPdf = async (nutritionist, patient = null) => {
     // Force page break for second table
     doc.addPage();
     currentPage++;
-    drawHeader('Plan Nutricional Vacío');
+    drawHeader();
     yPos = 35;
 
     // Tabla 2: PLAN NUTRICIONAL (Vacía)
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.setTextColor(0, 0, 0);
-    doc.text('Plan nutricional', pageWidth / 2, yPos, { align: 'center' });
-    yPos += 5;
-
     const table2Body = DAYS.map(day => [day, '', '', '', '', '']);
 
     doc.autoTable({
