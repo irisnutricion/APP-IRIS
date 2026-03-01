@@ -3,8 +3,11 @@ import { useData } from '../../context/DataContext';
 import { supabase } from '../../supabaseClient';
 import {
     Plus, Trash2, Edit2, Check, X, Settings as SettingsIcon, CreditCard, User, Database,
-    Download, Upload, ArrowDown, ArrowUp, Tag, Wallet, ChevronDown, ChevronRight, Layers, Heart, Users, KeyRound, FileText
+    Download, Upload, ArrowDown, ArrowUp, Tag, Wallet, ChevronDown, ChevronRight, Layers, Heart, Users, KeyRound, FileText, CalendarDays, Save
 } from 'lucide-react';
+
+const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+const MEALS = ['Desayuno', 'Almuerzo', 'Comida', 'Merienda', 'Cena'];
 
 const Settings = () => {
     const {
@@ -76,6 +79,11 @@ const Settings = () => {
     const [isEditingPhrase, setIsEditingPhrase] = useState(null);
     const [phraseForm, setPhraseForm] = useState({ name: '', content: '' });
 
+    // Schema Template
+    const [schemaNutritionistId, setSchemaNutritionistId] = useState(null);
+    const [schemaMatrix, setSchemaMatrix] = useState({});
+    const [isSavingSchema, setIsSavingSchema] = useState(false);
+
     const colorOptions = [
         { label: 'Gris', value: 'bg-slate-100 text-slate-700' },
         { label: 'Rojo', value: 'bg-red-100 text-red-700' },
@@ -95,6 +103,7 @@ const Settings = () => {
         { id: 'tareas', label: 'Tareas', icon: Tag, description: 'Etiquetas y tipos de tarea' },
         { id: 'clinical', label: 'Datos Clínicos', icon: Heart, description: 'Opciones de patologías y alimentos' },
         { id: 'recetas', label: 'Textos de Recetas', icon: FileText, description: 'Frases prediseñadas para descripciones de recetas' },
+        { id: 'esquema', label: 'Esquema Semanal', icon: CalendarDays, description: 'Plantilla base de menú para PDF' },
         { id: 'datos', label: 'Datos', icon: Database, description: 'Copias de seguridad' },
     ];
 
@@ -1396,6 +1405,118 @@ const Settings = () => {
         </div>
     );
 
+    const handleSaveSchema = async () => {
+        if (!schemaNutritionistId) return;
+        setIsSavingSchema(true);
+        try {
+            await updateNutritionist(schemaNutritionistId, { weekly_schema: schemaMatrix });
+        } catch (error) {
+            console.error("Error saving schema:", error);
+            alert("Error al guardar el esquema.");
+        } finally {
+            setIsSavingSchema(false);
+        }
+    };
+
+    const renderEsquemaSection = () => {
+        const nutris = nutritionists.filter(n => n.is_active !== false);
+        const selectedNutri = nutris.find(n => n.id === schemaNutritionistId) || nutris[0];
+
+        // Default layout selection to first active nutri if not set
+        if (!schemaNutritionistId && selectedNutri) {
+            setTimeout(() => {
+                setSchemaNutritionistId(selectedNutri.id);
+                setSchemaMatrix(selectedNutri.weekly_schema || {});
+            }, 0);
+        }
+
+        if (!selectedNutri) return <p className="text-muted">No hay nutricionistas activos.</p>;
+
+        const handleCellChange = (day, meal, value) => {
+            setSchemaMatrix(prev => ({
+                ...prev,
+                [`${day}_${meal}`]: value
+            }));
+        };
+
+        return (
+            <div className="space-y-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <CalendarDays size={18} /> Plantilla de Esquema Semanal
+                        </h4>
+                        <p className="text-sm text-gray-500 mt-1">Configura los textos base (macronutrientes) que conformarán el PDF del esquema semanal genérico.</p>
+                    </div>
+                </div>
+
+                {nutris.length > 1 && (
+                    <div className="flex items-center gap-2 mb-4">
+                        <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Nutricionista:</label>
+                        <select
+                            className="form-select text-sm w-64"
+                            value={schemaNutritionistId || selectedNutri.id}
+                            onChange={(e) => {
+                                const nId = e.target.value;
+                                setSchemaNutritionistId(nId);
+                                const nutri = nutritionists.find(n => n.id === nId);
+                                setSchemaMatrix(nutri?.weekly_schema || {});
+                            }}
+                        >
+                            {nutris.map(n => (
+                                <option key={n.id} value={n.id}>{n.label}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div className="overflow-x-auto overflow-y-hidden pb-2">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-b border-primary-100 dark:border-primary-800">
+                                <tr>
+                                    <th className="px-4 py-3 font-bold w-24 border-r border-primary-100 dark:border-primary-800">Día</th>
+                                    {MEALS.map(meal => (
+                                        <th key={meal} className="px-4 py-3 font-bold text-center border-r border-primary-100 dark:border-primary-800 last:border-r-0 min-w-[150px]">{meal}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                                {DAYS.map(day => (
+                                    <tr key={day} className="hover:bg-slate-50 dark:hover:bg-slate-700/20">
+                                        <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-300 bg-slate-50/50 dark:bg-slate-800/50 whitespace-nowrap border-r border-slate-200 dark:border-slate-700">
+                                            {day}
+                                        </td>
+                                        {MEALS.map(meal => (
+                                            <td key={`${day}-${meal}`} className="p-0 border-r border-slate-200 dark:border-slate-700 last:border-r-0 align-top">
+                                                <textarea
+                                                    className="w-full h-full text-xs p-3 border-none bg-transparent hover:bg-slate-50/80 dark:hover:bg-slate-700/50 focus:bg-white dark:focus:bg-slate-800 focus:ring-inset focus:ring-1 focus:ring-primary-400 transition-colors resize-none overflow-hidden"
+                                                    rows={4}
+                                                    placeholder="Ej: Verdura + Proteína..."
+                                                    value={schemaMatrix[`${day}_${meal}`] || ''}
+                                                    onChange={e => handleCellChange(day, meal, e.target.value)}
+                                                />
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 flex justify-end">
+                        <button
+                            onClick={handleSaveSchema}
+                            disabled={isSavingSchema}
+                            className="btn btn-primary shadow-sm flex items-center gap-2"
+                        >
+                            {isSavingSchema ? 'Guardando...' : <><Save size={16} /> Guardar Plantilla</>}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const getSectionContent = (sectionId) => {
         switch (sectionId) {
             case 'tarifas': return renderTarifasSection();
@@ -1406,6 +1527,7 @@ const Settings = () => {
 
             case 'clinical': return renderClinicalSection();
             case 'recetas': return renderRecetasSection();
+            case 'esquema': return renderEsquemaSection();
             case 'datos': return renderDatosSection();
             default: return null;
         }

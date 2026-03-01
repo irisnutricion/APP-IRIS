@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import useUndo from '../../hooks/useUndo';
-import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download, PieChart, GripVertical, Loader2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download, PieChart, GripVertical, Loader2, CheckCircle2, CalendarDays } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { calcSnapshotMacros, recipeToSnapshot, checkRecipeIsSaved } from './ClosedPlanEditor';
 import InlineRecipeEditor from './InlineRecipeEditor';
 import { generatePlanPdf } from '../../utils/planPdfGenerator';
+import { generateSchemaPdf } from '../../utils/schemaPdfGenerator';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -20,7 +21,7 @@ function SortableOption({ id, children }) {
 }
 
 export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpdatePlan, onSaveAsTemplate, initialViewMode = 'meals' }) {
-    const { recipes = [], addRecipe, updateRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null } = useData();
+    const { recipes = [], addRecipe, updateRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null, nutritionists = [] } = useData();
     const [planName, setPlanName] = useState(plan.name);
     const [planIndications, setPlanIndications] = useState(plan.indications || '');
     const [mealNames, setMealNames] = useState(plan.meal_names || ['Desayuno', 'Almuerzo', 'Comida', 'Merienda', 'Cena']);
@@ -28,6 +29,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     const [saving, setSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+    const [isGeneratingSchema, setIsGeneratingSchema] = useState(false);
     const [activeSearch, setActiveSearch] = useState(null);
     const [recipeSearch, setRecipeSearch] = useState('');
     const [collapsedOptions, setCollapsedOptions] = useState(new Set()); // Set of `${mealName}_${idx}`
@@ -337,6 +339,24 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                         title="Exportar PDF"
                     >
                         {isGeneratingPdf ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
+                    </button>
+                    <button
+                        onClick={async () => {
+                            const nutri = nutritionists.find(n => n.is_active !== false) || nutritionists[0] || {};
+                            setIsGeneratingSchema(true);
+                            try {
+                                await generateSchemaPdf(nutri);
+                            } catch (err) {
+                                console.error('Error generating schema PDF:', err);
+                            } finally {
+                                setIsGeneratingSchema(false);
+                            }
+                        }}
+                        disabled={isGeneratingSchema}
+                        className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg dark:hover:bg-green-900/20 disabled:opacity-50"
+                        title="Descargar Esquema Base"
+                    >
+                        {isGeneratingSchema ? <Loader2 className="animate-spin" size={18} /> : <CalendarDays size={18} />}
                     </button>
                     {/* Auto-save status indicator */}
                     <div className="flex justify-end min-w-[100px] text-xs font-semibold">

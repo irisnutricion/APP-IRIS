@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import useUndo from '../../hooks/useUndo';
-import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, List, Grid3X3, Table2, Pencil, FileText, ChevronDown, Download, PieChart, ClipboardCopy, Loader2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, List, Grid3X3, Table2, Pencil, FileText, ChevronDown, Download, PieChart, ClipboardCopy, Loader2, CheckCircle2, CalendarDays } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { calcRecipeMacros } from '../Recipes/Recipes';
 import InlineRecipeEditor from './InlineRecipeEditor';
 import { generatePlanPdf } from '../../utils/planPdfGenerator';
+import { generateSchemaPdf } from '../../utils/schemaPdfGenerator';
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
@@ -81,13 +82,15 @@ function checkRecipeIsSaved(cellOrOpt, allRecipes) {
 export { calcSnapshotMacros, recipeToSnapshot, checkRecipeIsSaved };
 
 export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onUpdatePlan, onSaveAsTemplate, initialViewMode = 'grid' }) {
-    const { recipes = [], addRecipe, updateRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null } = useData();
+    // Form state
+    const { recipes = [], addRecipe, updateRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null, nutritionists = [] } = useData();
     const [planName, setPlanName] = useState(plan.name);
     const [planIndications, setPlanIndications] = useState(plan.indications || '');
     const [mealNames, setMealNames] = useState(plan.meal_names || ['Desayuno', 'Almuerzo', 'Comida', 'Merienda', 'Cena']);
     const [saving, setSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState(false);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+    const [isGeneratingSchema, setIsGeneratingSchema] = useState(false);
     const [viewMode, setViewMode] = useState(initialViewMode);
     const [recipeSearch, setRecipeSearch] = useState('');
     const [activeCell, setActiveCell] = useState(null);
@@ -373,6 +376,24 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                         title="Exportar PDF"
                     >
                         {isGeneratingPdf ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
+                    </button>
+                    <button
+                        onClick={async () => {
+                            const nutri = nutritionists.find(n => n.is_active !== false) || nutritionists[0] || {};
+                            setIsGeneratingSchema(true);
+                            try {
+                                await generateSchemaPdf(nutri);
+                            } catch (err) {
+                                console.error('Error generating schema PDF:', err);
+                            } finally {
+                                setIsGeneratingSchema(false);
+                            }
+                        }}
+                        disabled={isGeneratingSchema}
+                        className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg dark:hover:bg-green-900/20 disabled:opacity-50"
+                        title="Descargar Esquema Base"
+                    >
+                        {isGeneratingSchema ? <Loader2 className="animate-spin" size={18} /> : <CalendarDays size={18} />}
                     </button>
                     {/* Auto-save status indicator */}
                     <div className="flex justify-end min-w-[100px] text-xs font-semibold">
