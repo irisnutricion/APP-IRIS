@@ -314,74 +314,142 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
     }
 
     // --- DETAILS ---
-    for (const meal of mealNames) {
-        const mealItems = [];
-        const seen = new Set();
-        items.filter(i => i.meal_name === meal).forEach(i => {
-            const n = getOptName(i);
-            if (!seen.has(n)) { seen.add(n); mealItems.push(i); }
-        });
-        if (mealItems.length === 0) continue;
+    if (isClosedPlan) {
+        for (let d = 0; d < DAYS.length; d++) {
+            const dayName = DAYS[d];
+            const dayIndex = d + 1;
 
-        const expected = meal.toLowerCase().includes('desayun') ? 'Desayuno' :
-            meal.toLowerCase().includes('almuerz') ? 'Almuerzo' :
-                meal.toLowerCase().includes('comid') ? 'Almuerzo' :
-                    meal.toLowerCase().includes('meriend') ? 'Merienda' :
-                        meal.toLowerCase().includes('cen') ? 'Cena' : meal;
-
-        const plural = expected === 'Desayuno' ? 'Desayunos' :
-            expected === 'Almuerzo' ? 'Almuerzos' :
-                expected === 'Merienda' ? 'Meriendas' :
-                    expected === 'Cena' ? 'Cenas' : meal;
-
-        const cover = await loadImageAsBase64(`/covers/${expected}.png`);
-        if (cover) {
-            if (yPos > 30) doc.addPage();
-            doc.addImage(cover, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
-            coverPages.add(doc.internal.getNumberOfPages());
-            doc.addPage();
-            drawHeader(plural);
-            yPos = 35;
-        } else {
-            checkPageBreak(yPos, 20, plural);
-        }
-
-        mealItems.forEach(opt => {
-            const name = getOptName(opt);
-            const desc = getOptDescription(opt);
-            const ings = getOptIngredients(opt);
-            const lines = doc.splitTextToSize(name, 174);
-            const boxH = (lines.length * 4) + 2;
-
-            let leftH = 0;
-            ings.forEach(ing => { leftH += (doc.splitTextToSize(ing, 85).length * 4.5); });
-            let rightH = (desc ? doc.splitTextToSize(desc, 85).length * 4.4 : 0);
-
-            checkPageBreak(yPos, boxH + Math.max(leftH, rightH) + 10);
-
-            doc.setFillColor(...brandLight);
-            doc.rect(margins.left, yPos - 3, 180, boxH, 'F');
-            doc.setTextColor(...primaryColor);
-            doc.getFont('helvetica', 'bold');
-            doc.text(lines, 105, yPos + (boxH / 2) - 3, { align: 'center' });
-
-            yPos += boxH + 2;
-            let lY = yPos, rY = yPos;
-            doc.setTextColor(...textColor);
-            doc.setFontSize(9);
-            ings.forEach(ing => {
-                const il = doc.splitTextToSize(ing, 85);
-                doc.text(il, margins.left + 2, lY);
-                lY += il.length * 4.5;
+            const dayItems = items.filter(i => i.day_of_week === dayIndex).sort((a, b) => {
+                const idxA = mealNames.indexOf(a.meal_name);
+                const idxB = mealNames.indexOf(b.meal_name);
+                return (idxA > -1 ? idxA : 99) - (idxB > -1 ? idxB : 99);
             });
-            if (desc) {
-                doc.setTextColor(...lightColor);
-                const dl = doc.splitTextToSize(desc, 85);
-                doc.text(dl, margins.left + 95, rY);
-                rY += dl.length * 4.4;
+
+            if (dayItems.length === 0) continue;
+
+            let coverName = dayName;
+            if (dayName === 'Miércoles') coverName = 'Miercoles';
+
+            const cover = await loadImageAsBase64(`/covers/${coverName}.png`);
+            if (cover) {
+                if (yPos > 30) doc.addPage();
+                doc.addImage(cover, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
+                coverPages.add(doc.internal.getNumberOfPages());
+                doc.addPage();
+                drawHeader(dayName);
+                yPos = 35;
+            } else {
+                checkPageBreak(yPos, 20, dayName);
             }
-            yPos = Math.max(lY, rY) + 5;
-        });
+
+            dayItems.forEach(opt => {
+                const recipeName = getOptName(opt);
+                const titleText = `${opt.meal_name}: ${recipeName}`;
+                const desc = getOptDescription(opt);
+                const ings = getOptIngredients(opt);
+                const lines = doc.splitTextToSize(titleText, 174);
+                const boxH = (lines.length * 4) + 2;
+
+                let leftH = 0;
+                ings.forEach(ing => { leftH += (doc.splitTextToSize(ing, 85).length * 4.5); });
+                let rightH = (desc ? doc.splitTextToSize(desc, 85).length * 4.4 : 0);
+
+                checkPageBreak(yPos, boxH + Math.max(leftH, rightH) + 10);
+
+                doc.setFillColor(...brandLight);
+                doc.rect(margins.left, yPos - 3, 180, boxH, 'F');
+                doc.setTextColor(...primaryColor);
+                doc.setFont('helvetica', 'bold');
+                doc.text(lines, 105, yPos + (boxH / 2) - 3, { align: 'center' });
+
+                yPos += boxH + 2;
+                let lY = yPos, rY = yPos;
+                doc.setTextColor(...textColor);
+                doc.setFontSize(9);
+                ings.forEach(ing => {
+                    const il = doc.splitTextToSize(ing, 85);
+                    doc.text(il, margins.left + 2, lY);
+                    lY += il.length * 4.5;
+                });
+                if (desc) {
+                    doc.setTextColor(...lightColor);
+                    const dl = doc.splitTextToSize(desc, 85);
+                    doc.text(dl, margins.left + 95, rY);
+                    rY += dl.length * 4.4;
+                }
+                yPos = Math.max(lY, rY) + 5;
+            });
+        }
+    } else {
+        for (const meal of mealNames) {
+            const mealItems = [];
+            const seen = new Set();
+            items.filter(i => i.meal_name === meal).forEach(i => {
+                const n = getOptName(i);
+                if (!seen.has(n)) { seen.add(n); mealItems.push(i); }
+            });
+            if (mealItems.length === 0) continue;
+
+            const expected = meal.toLowerCase().includes('desayun') ? 'Desayuno' :
+                meal.toLowerCase().includes('almuerz') ? 'Almuerzo' :
+                    meal.toLowerCase().includes('comid') ? 'Almuerzo' :
+                        meal.toLowerCase().includes('meriend') ? 'Merienda' :
+                            meal.toLowerCase().includes('cen') ? 'Cena' : meal;
+
+            const plural = expected === 'Desayuno' ? 'Desayunos' :
+                expected === 'Almuerzo' ? 'Almuerzos' :
+                    expected === 'Merienda' ? 'Meriendas' :
+                        expected === 'Cena' ? 'Cenas' : meal;
+
+            const cover = await loadImageAsBase64(`/covers/${expected}.png`);
+            if (cover) {
+                if (yPos > 30) doc.addPage();
+                doc.addImage(cover, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
+                coverPages.add(doc.internal.getNumberOfPages());
+                doc.addPage();
+                drawHeader(plural);
+                yPos = 35;
+            } else {
+                checkPageBreak(yPos, 20, plural);
+            }
+
+            mealItems.forEach(opt => {
+                const name = getOptName(opt);
+                const desc = getOptDescription(opt);
+                const ings = getOptIngredients(opt);
+                const lines = doc.splitTextToSize(name, 174);
+                const boxH = (lines.length * 4) + 2;
+
+                let leftH = 0;
+                ings.forEach(ing => { leftH += (doc.splitTextToSize(ing, 85).length * 4.5); });
+                let rightH = (desc ? doc.splitTextToSize(desc, 85).length * 4.4 : 0);
+
+                checkPageBreak(yPos, boxH + Math.max(leftH, rightH) + 10);
+
+                doc.setFillColor(...brandLight);
+                doc.rect(margins.left, yPos - 3, 180, boxH, 'F');
+                doc.setTextColor(...primaryColor);
+                doc.setFont('helvetica', 'bold');
+                doc.text(lines, 105, yPos + (boxH / 2) - 3, { align: 'center' });
+
+                yPos += boxH + 2;
+                let lY = yPos, rY = yPos;
+                doc.setTextColor(...textColor);
+                doc.setFontSize(9);
+                ings.forEach(ing => {
+                    const il = doc.splitTextToSize(ing, 85);
+                    doc.text(il, margins.left + 2, lY);
+                    lY += il.length * 4.5;
+                });
+                if (desc) {
+                    doc.setTextColor(...lightColor);
+                    const dl = doc.splitTextToSize(desc, 85);
+                    doc.text(dl, margins.left + 95, rY);
+                    rY += dl.length * 4.4;
+                }
+                yPos = Math.max(lY, rY) + 5;
+            });
+        }
     }
 
     // --- SHOPPING LIST ---
