@@ -253,10 +253,10 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
         doc.setFont('helvetica', 'bold');
         doc.text('Esquema Semanal', 148.5, 20, { align: 'center' });
 
-        const tableHead = [['Comidas', ...DAYS]];
-        const tableBody = mealNames.map(meal => {
-            const row = [meal];
-            DAYS.forEach((_, d) => {
+        const tableHead = [['Día', ...mealNames]];
+        const tableBody = DAYS.map((day, d) => {
+            const row = [day];
+            mealNames.forEach(meal => {
                 const opt = items.find(i => i.meal_name === meal && i.day_of_week === (d + 1));
                 row.push(opt ? getOptName(opt) : '—');
             });
@@ -268,13 +268,78 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
             head: tableHead,
             body: tableBody,
             theme: 'grid',
-            headStyles: { fillColor: primaryColor, halign: 'center', fontSize: 11 },
-            bodyStyles: { fontSize: 9, halign: 'center', minCellHeight: 18 },
-            columnStyles: { 0: { fontStyle: 'bold', fillColor: brandLight, textColor: primaryColor } },
+            headStyles: {
+                fillColor: brandLight,
+                textColor: textColor,
+                fontStyle: 'bold',
+                halign: 'center',
+                valign: 'middle',
+                lineColor: [200, 200, 200],
+                lineWidth: 0.1,
+                fontSize: 10
+            },
+            bodyStyles: {
+                fontSize: 9,
+                textColor: textColor,
+                halign: 'center',
+                valign: 'middle',
+                lineColor: [200, 200, 200],
+                lineWidth: 0.1,
+                minCellHeight: 20
+            },
+            columnStyles: {
+                0: {
+                    fontStyle: 'bold',
+                    fillColor: brandLight,
+                    halign: 'center',
+                    cellWidth: 25
+                }
+            },
             margin: { top: 40, left: 15, right: 15 }
         });
         doc.addPage('a4', 'p');
         yPos = 30;
+
+        drawHeader('Resumen de Opciones');
+        doc.setTextColor(...textColor);
+        doc.setFontSize(10);
+        checkPageBreak(yPos, 20);
+        doc.setFillColor(...brandLight);
+        doc.rect(margins.left, yPos, 180, 8, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...primaryColor);
+        doc.text("Resumen Diario", margins.left + 3, yPos + 5.5);
+        yPos += 16;
+
+        for (let d = 0; d < DAYS.length; d++) {
+            const dayName = DAYS[d];
+            const dayIndex = d + 1;
+            const dayItems = items.filter(i => i.day_of_week === dayIndex).sort((a, b) => {
+                const idxA = mealNames.indexOf(a.meal_name);
+                const idxB = mealNames.indexOf(b.meal_name);
+                return (idxA > -1 ? idxA : 99) - (idxB > -1 ? idxB : 99);
+            });
+
+            if (dayItems.length === 0) continue;
+
+            checkPageBreak(yPos, 25);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...secondaryColor);
+            doc.text(dayName, margins.left, yPos);
+            yPos += 6;
+
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...textColor);
+
+            dayItems.forEach(opt => {
+                const n = getOptName(opt);
+                const lines = doc.splitTextToSize(`• ${opt.meal_name}: ${n}`, 175);
+                checkPageBreak(yPos, lines.length * 5);
+                doc.text(lines, margins.left + 5, yPos);
+                yPos += lines.length * 5;
+            });
+            yPos += 6;
+        }
     } else {
         drawHeader('Resumen de Opciones');
         doc.setTextColor(...textColor);

@@ -826,14 +826,10 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                             if (!cell) return null;
 
                                             const cellMacros = getCellMacros(cell);
-                                            const ingredients = cell?.custom_recipe_data?.ingredients || (cell?.recipes?.recipe_ingredients || []).map(ri => ({
-                                                food_name: (ri.foods || ri.food)?.name || 'Alimento',
-                                                quantity_grams: ri.quantity_grams || 0
-                                            }));
 
                                             return (
                                                 <div key={meal} className="p-4 bg-white dark:bg-slate-800 transition-colors">
-                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-3">
+                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                                         <div className="flex items-center gap-3">
                                                             <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase w-20 shrink-0">{meal}</span>
                                                             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{getCellName(cell)}</span>
@@ -847,17 +843,6 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                             </div>
                                                         )}
                                                     </div>
-                                                    {ingredients.length > 0 && (
-                                                        <div className="ml-0 sm:ml-24 mt-2 space-y-1.5">
-                                                            {ingredients.map((ing, i) => (
-                                                                <div key={i} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 relative pl-4">
-                                                                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 flex-shrink-0"></span>
-                                                                    <span className="font-medium">{ing.food_name}</span>
-                                                                    <span className="text-slate-400 dark:text-slate-500 font-normal">— {ing.quantity_grams}g</span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
                                                 </div>
                                             );
                                         })}
