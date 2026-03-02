@@ -246,57 +246,150 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
     // --- SUMMARY / GRID ---
     if (isClosedPlan) {
         doc.addPage('a4', 'l');
-        doc.setFillColor(...brandColor);
-        doc.rect(0, 0, 297, 30, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(20);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Esquema Semanal', 148.5, 20, { align: 'center' });
 
-        const tableHead = [['Día', ...mealNames]];
-        const tableBody = DAYS.map((day, d) => {
-            const row = [day];
+        let schemaPageNum = doc.internal.getNumberOfPages();
+
+        const schemaHeader = patient && patient.first_name ? `Esquema Semanal ${patient.first_name}` : 'Esquema Semanal';
+        // Need to replicate drawHeader for landscape (pageWidth = 297)
+        const schemaPageWidth = 297;
+
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, 0, schemaPageWidth, 20, 'F');
+
+        if (logoImg) {
+            const format = logoImg.startsWith('/9j/') ? 'JPEG' : 'PNG';
+            doc.addImage(logoImg, format, margins.left, 2, 16, 16, undefined, 'FAST');
+        }
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        const sectionWidth = doc.getTextWidth(schemaHeader);
+        doc.text(schemaHeader, (schemaPageWidth - sectionWidth) / 2, 13);
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        const planText = `Plan nutricional personalizado para`;
+        const patientName = `${patient?.first_name || ''} ${patient?.last_name || ''}`.trim();
+        doc.text(planText, schemaPageWidth - margins.right, 9, { align: 'right' });
+        doc.setFont('helvetica', 'bold');
+        doc.text(patientName, schemaPageWidth - margins.right, 14, { align: 'right' });
+
+        yPos = 35;
+
+
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '0';
+        container.style.width = '1200px';
+        container.style.backgroundColor = '#ffffff';
+
+        const brandLightHex = '#e3f6ed';
+        const borderColor = '#cbd5e1';
+
+        let htmlTable = `
+        <div id="pdf-table-capture" style="padding: 10px; font-family: Helvetica, Arial, sans-serif; color: #3c3c3c; width: 1200px; box-sizing: border-box;">
+          <table style="width: 100%; border-collapse: collapse; border: 1px solid ${borderColor};">
+            <thead>
+              <tr>
+                <th style="padding: 12px; border: 1px solid ${borderColor}; background-color: ${brandLightHex}; width: 120px;">Día</th>
+        `;
+        mealNames.forEach(meal => {
+            htmlTable += `<th style="padding: 12px; border: 1px solid ${borderColor}; background-color: ${brandLightHex}; text-align: center; color: #3c3c3c;">${meal}</th>`;
+        });
+        htmlTable += `</tr></thead><tbody>`;
+
+        DAYS.forEach((day, d) => {
+            htmlTable += `<tr>
+                <td style="padding: 12px; border: 1px solid ${borderColor}; background-color: ${brandLightHex}; font-weight: bold; text-align: center; color: #3c3c3c;">${day}</td>`;
             mealNames.forEach(meal => {
                 const opt = items.find(i => i.meal_name === meal && i.day_of_week === (d + 1));
-                row.push(opt ? getOptName(opt) : '—');
+                const cellHtml = opt ? getOptName(opt) : '—';
+                htmlTable += `<td style="padding: 12px; border: 1px solid ${borderColor}; text-align: center; vertical-align: middle; font-size: 14px; line-height: 1.5;">${cellHtml}</td>`;
             });
-            return row;
+            htmlTable += `</tr>`;
         });
+        htmlTable += `</tbody></table></div>`;
 
-        doc.autoTable({
-            startY: 40,
-            head: tableHead,
-            body: tableBody,
-            theme: 'grid',
-            headStyles: {
-                fillColor: brandLight,
-                textColor: textColor,
-                fontStyle: 'bold',
-                halign: 'center',
-                valign: 'middle',
-                lineColor: [200, 200, 200],
-                lineWidth: 0.1,
-                fontSize: 10
-            },
-            bodyStyles: {
-                fontSize: 9,
-                textColor: textColor,
-                halign: 'center',
-                valign: 'middle',
-                lineColor: [200, 200, 200],
-                lineWidth: 0.1,
-                minCellHeight: 20
-            },
-            columnStyles: {
-                0: {
-                    fontStyle: 'bold',
-                    fillColor: brandLight,
-                    halign: 'center',
-                    cellWidth: 25
-                }
-            },
-            margin: { top: 40, left: 15, right: 15 }
-        });
+        container.innerHTML = htmlTable;
+        document.body.appendChild(container);
+
+        // Capture the HTML
+        const captureEl = document.getElementById('pdf-table-capture');
+        const canvas = await html2canvas(captureEl, { scale: 2, useCORS: true, logging: false });
+        const imgData = canvas.toDataURL('image/png');
+
+        // Clean up DOM
+        document.body.removeChild(container);
+
+        // Fit table to PDF width (margin to margin)
+        const availableWidth = schemaPageWidth - margins.left - margins.right;
+        const imgProps = doc.getImageProperties(imgData);
+        const pdfHeightForTable = (imgProps.height * availableWidth) / imgProps.width;
+
+        doc.addImage(imgData, 'PNG', margins.left, yPos, availableWidth, pdfHeightForTable, undefined, 'FAST');
+
+        // draw schema footer (landscape)
+        const footerY = 210 - 10;
+        doc.setTextColor(...primaryColor);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+
+        doc.text("633 67 45 63", margins.left, footerY);
+
+        const emailContact = "info@irisnutricion.com";
+        const igContact = "iris_nutricion";
+        const tiktokContact = "iris_nutricion";
+        const iconSize = 4;
+        const spacing = 4;
+
+        let totalWidth = 0;
+        if (mailLogoImg) totalWidth += iconSize + 1;
+        totalWidth += doc.getTextWidth(emailContact) + spacing;
+        totalWidth += doc.getTextWidth("|") + spacing;
+        if (igLogoImg) totalWidth += iconSize + 1;
+        totalWidth += doc.getTextWidth(igContact) + spacing;
+        totalWidth += doc.getTextWidth("|") + spacing;
+        if (tiktokLogoImg) totalWidth += iconSize + 1;
+        totalWidth += doc.getTextWidth(tiktokContact);
+
+        let currentX = (schemaPageWidth - totalWidth) / 2;
+
+        if (mailLogoImg) {
+            doc.addImage(mailLogoImg, 'PNG', currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
+            currentX += iconSize + 1;
+        }
+        doc.text(emailContact, currentX, footerY);
+        currentX += doc.getTextWidth(emailContact) + spacing;
+
+        doc.setTextColor(...lightColor);
+        doc.text("|", currentX, footerY);
+        doc.setTextColor(...primaryColor);
+        currentX += doc.getTextWidth("|") + spacing;
+
+        if (igLogoImg) {
+            doc.addImage(igLogoImg, 'PNG', currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
+            currentX += iconSize + 1;
+        }
+        doc.text(igContact, currentX, footerY);
+        currentX += doc.getTextWidth(igContact) + spacing;
+
+        doc.setTextColor(...lightColor);
+        doc.text("|", currentX, footerY);
+        doc.setTextColor(...primaryColor);
+        currentX += doc.getTextWidth("|") + spacing;
+
+        if (tiktokLogoImg) {
+            doc.addImage(tiktokLogoImg, 'PNG', currentX, footerY - 3, iconSize, iconSize, undefined, 'FAST');
+            currentX += iconSize + 1;
+        }
+        doc.text(tiktokContact, currentX, footerY);
+
+        doc.setFontSize(8);
+        // dont count in the general pages logic
+        coverPages.add(schemaPageNum);
+
         doc.addPage('a4', 'p');
         yPos = 30;
 
@@ -333,10 +426,24 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
             dayItems.forEach(opt => {
                 const n = getOptName(opt);
-                const lines = doc.splitTextToSize(`• ${opt.meal_name}: ${n}`, 175);
+
+                checkPageBreak(yPos, 10);
+
+                // Meal name in secondaryColor (pink)
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...secondaryColor);
+                doc.text(opt.meal_name, margins.left + 5, yPos);
+                yPos += 5;
+
+                // Recipe name regular
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...textColor);
+
+                const lines = doc.splitTextToSize(`• ${n}`, 175);
                 checkPageBreak(yPos, lines.length * 5);
                 doc.text(lines, margins.left + 5, yPos);
-                yPos += lines.length * 5;
+
+                yPos += lines.length * 5 + 2;
             });
             yPos += 6;
         }
