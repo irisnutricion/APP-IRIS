@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
@@ -69,7 +69,7 @@ const PatientList = () => {
     };
 
     // Filter Helper Function
-    const filterByScope = (p) => {
+    const filterByScope = useCallback((p) => {
         if (!isAdmin) {
             // Non-admins always see only their own clients
             return nutritionistId ? p.nutritionist_id === nutritionistId : false;
@@ -78,7 +78,7 @@ const PatientList = () => {
         if (filterScope === 'all') return true;
         if (filterScope === 'mine') return p.nutritionist_id === nutritionistId;
         return true;
-    };
+    }, [isAdmin, nutritionistId, filterScope]);
 
     // Group patients by status
     const groupedPatients = useMemo(() => {
@@ -97,7 +97,7 @@ const PatientList = () => {
             }
         });
         return groups;
-    }, [patients, searchTerm, filterScope, nutritionistId]);
+    }, [patients, searchTerm, filterByScope]);
 
     // List View Filtered Data
     const filteredListPatients = useMemo(() => {
@@ -119,7 +119,7 @@ const PatientList = () => {
             if (sortOption === 'date_asc') return new Date(a.created_at || 0) - new Date(b.created_at || 0);
             return 0;
         });
-    }, [patients, searchTerm, filterStatus, sortOption, filterScope, nutritionistId]);
+    }, [patients, searchTerm, filterStatus, sortOption, filterByScope]);
 
     // Drag Handlers
     const handleDragStart = (e, patientId) => {

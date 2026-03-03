@@ -395,9 +395,6 @@ const Settings = () => {
                 await deleteNutritionist(id);
             }
 
-            // Remove from context manually so UI updates immediately
-            setNutritionists(prev => prev.filter(n => n.id !== id));
-
         } catch (err) {
             console.error('Error deleting nutritionist:', err);
             setNutriError(err.message || 'Error al eliminar');

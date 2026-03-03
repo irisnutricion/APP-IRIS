@@ -9,25 +9,36 @@ const TrackingTab = ({ patient, onAddMeasurement, onEditMeasurement, onDeleteMea
     const hasHistory = patient.measurements && patient.measurements.length > 0;
 
     // Create refs for all charts
-    const chartRefs = {
-        weight: useRef(null),
-        pecho: useRef(null),
-        cadera: useRef(null),
-        sobre_ombligo: useRef(null),
-        ombligo: useRef(null),
-        bajo_ombligo: useRef(null),
-        brazo_izq: useRef(null),
-        brazo_der: useRef(null),
-        muslo_izq: useRef(null),
-        muslo_der: useRef(null)
-    };
+    const weightRef = useRef(null);
+    const pechoRef = useRef(null);
+    const caderaRef = useRef(null);
+    const sobreOmbligoRef = useRef(null);
+    const ombligoRef = useRef(null);
+    const bajoOmbligoRef = useRef(null);
+    const brazoIzqRef = useRef(null);
+    const brazoDerRef = useRef(null);
+    const musloIzqRef = useRef(null);
+    const musloDerRef = useRef(null);
+
+    const getChartsMap = () => ({
+        weight: weightRef,
+        pecho: pechoRef,
+        cadera: caderaRef,
+        sobre_ombligo: sobreOmbligoRef,
+        ombligo: ombligoRef,
+        bajo_ombligo: bajoOmbligoRef,
+        brazo_izq: brazoIzqRef,
+        brazo_der: brazoDerRef,
+        muslo_izq: musloIzqRef,
+        muslo_der: musloDerRef
+    });
 
     // Handle PDF export
     const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
     const handleExportPDF = async (selectedCharts) => {
         try {
-            await generateMeasurementsPDF(patient, chartRefs, selectedCharts);
+            await generateMeasurementsPDF(patient, getChartsMap(), selectedCharts);
         } catch (error) {
             console.error('Error generating PDF:', error);
             alert('Hubo un error al generar el PDF. Por favor, inténtalo de nuevo.');
@@ -68,7 +79,7 @@ const TrackingTab = ({ patient, onAddMeasurement, onEditMeasurement, onDeleteMea
                                 dataKey="weight"
                                 label="Peso (kg)"
                                 color="#28483a"
-                                chartRef={chartRefs.weight}
+                                chartRef={weightRef}
                             />
                         </div>
                         <div className="card">
@@ -78,7 +89,7 @@ const TrackingTab = ({ patient, onAddMeasurement, onEditMeasurement, onDeleteMea
                                 dataKey="pecho"
                                 label="Pecho (cm)"
                                 color="#2563EB"
-                                chartRef={chartRefs.pecho}
+                                chartRef={pechoRef}
                             />
                         </div>
                         <div className="card">
@@ -88,7 +99,7 @@ const TrackingTab = ({ patient, onAddMeasurement, onEditMeasurement, onDeleteMea
                                 dataKey="cadera"
                                 label="Cadera (cm)"
                                 color="#9333EA"
-                                chartRef={chartRefs.cadera}
+                                chartRef={caderaRef}
                             />
                         </div>
 
@@ -100,7 +111,7 @@ const TrackingTab = ({ patient, onAddMeasurement, onEditMeasurement, onDeleteMea
                                 dataKey="sobre_ombligo"
                                 label="Sobre Ombligo (cm)"
                                 color="#EA580C"
-                                chartRef={chartRefs.sobre_ombligo}
+                                chartRef={sobreOmbligoRef}
                             />
                         </div>
                         <div className="card">
@@ -110,7 +121,7 @@ const TrackingTab = ({ patient, onAddMeasurement, onEditMeasurement, onDeleteMea
                                 dataKey="ombligo"
                                 label="Ombligo (cm)"
                                 color="#EA580C"
-                                chartRef={chartRefs.ombligo}
+                                chartRef={ombligoRef}
                             />
                         </div>
                         <div className="card">
@@ -120,7 +131,7 @@ const TrackingTab = ({ patient, onAddMeasurement, onEditMeasurement, onDeleteMea
                                 dataKey="bajo_ombligo"
                                 label="Bajo Ombligo (cm)"
                                 color="#EA580C"
-                                chartRef={chartRefs.bajo_ombligo}
+                                chartRef={bajoOmbligoRef}
                             />
                         </div>
 
@@ -132,7 +143,7 @@ const TrackingTab = ({ patient, onAddMeasurement, onEditMeasurement, onDeleteMea
                                 dataKey="brazo_izq"
                                 label="Brazo Izq (cm)"
                                 color="#B45309"
-                                chartRef={chartRefs.brazo_izq}
+                                chartRef={brazoIzqRef}
                             />
                         </div>
                         <div className="card">
@@ -142,7 +153,7 @@ const TrackingTab = ({ patient, onAddMeasurement, onEditMeasurement, onDeleteMea
                                 dataKey="brazo_der"
                                 label="Brazo Der (cm)"
                                 color="#B45309"
-                                chartRef={chartRefs.brazo_der}
+                                chartRef={brazoDerRef}
                             />
                         </div>
                         <div className="card">
@@ -152,7 +163,7 @@ const TrackingTab = ({ patient, onAddMeasurement, onEditMeasurement, onDeleteMea
                                 dataKey="muslo_izq"
                                 label="Muslo Izq (cm)"
                                 color="#0891B2"
-                                chartRef={chartRefs.muslo_izq}
+                                chartRef={musloIzqRef}
                             />
                         </div>
                         <div className="card">
@@ -162,7 +173,7 @@ const TrackingTab = ({ patient, onAddMeasurement, onEditMeasurement, onDeleteMea
                                 dataKey="muslo_der"
                                 label="Muslo Der (cm)"
                                 color="#0891B2"
-                                chartRef={chartRefs.muslo_der}
+                                chartRef={musloDerRef}
                             />
                         </div>
                     </div>

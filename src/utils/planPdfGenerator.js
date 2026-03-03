@@ -502,6 +502,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
             let coverName = dayName;
             if (dayName === 'Miércoles') coverName = 'Miercoles';
+            if (dayName === 'Sábado') coverName = 'Sabado';
 
             const cover = await loadImageAsBase64(`/covers/${coverName}.png`);
             if (cover) {
@@ -565,16 +566,17 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
             const expected = meal.toLowerCase().includes('desayun') ? 'Desayuno' :
                 meal.toLowerCase().includes('almuerz') ? 'Almuerzo' :
-                    meal.toLowerCase().includes('comid') ? 'Almuerzo' :
+                    meal.toLowerCase().includes('comid') ? 'Comida' :
                         meal.toLowerCase().includes('meriend') ? 'Merienda' :
                             meal.toLowerCase().includes('cen') ? 'Cena' : meal;
 
             const plural = expected === 'Desayuno' ? 'Desayunos' :
                 expected === 'Almuerzo' ? 'Almuerzos' :
-                    expected === 'Merienda' ? 'Meriendas' :
-                        expected === 'Cena' ? 'Cenas' : meal;
+                    expected === 'Comida' ? 'Comidas' :
+                        expected === 'Merienda' ? 'Meriendas' :
+                            expected === 'Cena' ? 'Cenas' : meal;
 
-            const cover = await loadImageAsBase64(`/covers/${expected}.png`);
+            const cover = await loadImageAsBase64(`/covers/${plural}.png`);
             if (cover) {
                 if (yPos > 30) doc.addPage();
                 doc.addImage(cover, 'PNG', 0, 0, 210, 297, undefined, 'FAST');

@@ -351,29 +351,10 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [activeCell]);
 
-    const handleKeyDown = (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-            const tag = e.target.tagName?.toLowerCase();
-            if (tag === 'input' || tag === 'textarea') return;
-            e.preventDefault();
-            if (e.shiftKey) {
-                if (canRedoGrid) redoGrid();
-            } else {
-                if (canUndoGrid) undoGrid();
-            }
-        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
-            const tag = e.target.tagName?.toLowerCase();
-            if (tag === 'input' || tag === 'textarea') return;
-            e.preventDefault();
-            if (canRedoGrid) redoGrid();
-        }
-    };
-
     return (
         <div
             className="space-y-4 focus:outline-none"
             tabIndex={-1}
-            onKeyDown={handleKeyDown}
             onClick={(e) => {
                 if (e.target === e.currentTarget || !e.currentTarget.contains(document.activeElement)) {
                     e.currentTarget.focus();
