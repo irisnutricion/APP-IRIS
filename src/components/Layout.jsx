@@ -3,7 +3,6 @@ import {
     LayoutDashboard,
     Users,
     CalendarDays,
-
     Settings,
     LogOut,
     Menu,
@@ -13,10 +12,12 @@ import {
     Repeat,
     PieChart,
     ClipboardList,
-    Wallet
+    Wallet,
+    UsersRound,
+    Apple,
+    ChefHat,
+    FileText
 } from 'lucide-react';
-import { UsersRound } from 'lucide-react';
-import { Apple, ChefHat, FileText } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../utils/cn';
 import { ThemeToggle } from './ThemeToggle.jsx';

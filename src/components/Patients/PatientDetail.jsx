@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
 import { ArrowLeft, User, Activity, Image as ImageIcon, Wallet, Play, Clock, RefreshCw, Edit2, Trash2, Calendar as CalendarIcon, Copy, UtensilsCrossed } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
 
 import MeasurementModal from '../Tracking/MeasurementModal';
 import PaymentModal from '../Payments/PaymentModal';
@@ -13,7 +12,7 @@ import PatientForm from './PatientForm';
 import SubscriptionEditModal from './SubscriptionEditModal';
 
 import { calculateSubscriptionTerms } from '../../utils/subscriptionUtils';
-import { safeFormat } from '../../utils/dateUtils';
+
 
 // Tabs
 import InformationTab from './Tabs/InformationTab';
@@ -31,7 +30,7 @@ import ExtensionHistoryModal from './Modals/ExtensionHistoryModal';
 const PatientDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { patients, deleteMeasurement, extendSubscription, loading: contextLoading, deletePatient, addMeasurement, updateMeasurement, payments = [], paymentMethods = [], paymentCategories = [], updateSubscriptionHistory, deleteSubscription, deletePayment, subscriptionExtensions = [], updateSubscriptionExtension, deleteSubscriptionExtension } = useData() || {};
+    const { patients, deleteMeasurement, extendSubscription, loading: contextLoading, deletePatient, addMeasurement, updateMeasurement, payments = [], paymentCategories = [], updateSubscriptionHistory, deletePayment, subscriptionExtensions = [], updateSubscriptionExtension } = useData() || {};
 
     // Modals State
     const [isRenewalModalOpen, setIsRenewalModalOpen] = useState(false);
@@ -114,9 +113,7 @@ const PatientDetail = () => {
         setActionLoading(true);
         setIsExtendModalOpen(false);
         const success = await extendSubscription(patient.id, days);
-        if (success) {
-            console.log("Subscription extended successfully");
-        } else {
+        if (!success) {
             alert("Error al extender la suscripción");
         }
         setActionLoading(false);
@@ -145,7 +142,7 @@ const PatientDetail = () => {
         setIsMeasurementModalOpen(true);
     };
 
-    const handleEditSubscription = (data = null, isHistory = false) => {
+    const handleEditSubscription = (data = null) => {
         if (data) {
             setSubscriptionEditData(data);
         } else {
@@ -382,9 +379,7 @@ const PatientDetail = () => {
                     subscriptionData={subscriptionEditData}
                     onSave={subscriptionEditData ? async (updates) => {
                         const result = await updateSubscriptionHistory(subscriptionEditData.id, updates);
-                        if (result) {
-                            console.log("Updated", subscriptionEditData.id);
-                        } else {
+                        if (!result) {
                             alert("Error al actualizar la suscripción");
                         }
                     } : null}

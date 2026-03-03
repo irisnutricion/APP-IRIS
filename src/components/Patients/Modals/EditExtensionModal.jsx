@@ -1,13 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 const EditExtensionModal = ({ isOpen, onClose, extension, onConfirm }) => {
-    const [days, setDays] = useState(0);
-
-    useEffect(() => {
-        if (extension) {
-            setDays(extension.days_added);
-        }
-    }, [extension]);
+    const [days, setDays] = useState(extension?.days_added ?? 0);
 
     if (!isOpen) return null;
 

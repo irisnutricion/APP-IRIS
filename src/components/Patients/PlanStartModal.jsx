@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import { X, Calendar, CreditCard, Clock, Users } from 'lucide-react';
-import { addDays, addMonths, format } from 'date-fns';
+import { addMonths } from 'date-fns';
 
 const PlanStartModal = ({ isOpen, onClose, patientId, suggestedStartDate }) => {
     const { patients, updatePatient, subscriptionTypes, paymentRates, addSubscriptionHistory, nutritionists } = useData();
@@ -27,7 +27,7 @@ const PlanStartModal = ({ isOpen, onClose, patientId, suggestedStartDate }) => {
                 reviewDay: ''
             }));
         }
-    }, [isOpen, subscriptionTypes, paymentRates, suggestedStartDate]);
+    }, [isOpen, subscriptionTypes, paymentRates, suggestedStartDate, patient?.nutritionist_id]);
 
     if (!isOpen || !patient) return null;
 

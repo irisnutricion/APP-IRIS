@@ -1,7 +1,7 @@
 import { Edit2, PenLine } from 'lucide-react';
 import { useData } from '../../../context/DataContext';
 import { safeFormat, calculateAge } from '../../../utils/dateUtils';
-import { differenceInDays, parseISO } from 'date-fns';
+// date-fns imports removed (differenceInDays, parseISO were unused)
 
 const InformationTab = ({ patient, onEditSubscription }) => {
     const { clinicalCategories, updatePatient, referralSources, nutritionists } = useData();

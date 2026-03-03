@@ -33,10 +33,7 @@ const PatientForm = ({ isOpen, onClose, initialData }) => {
         reviewDay: '',
     });
 
-    // Set default keys when lists load (only for NEW patients)
-    // This useEffect is now empty as subscription-related defaults are removed.
-    useEffect(() => {
-    }, [isEdit, subscriptionTypes, paymentRates, formData.subscriptionTypeId]);
+
 
     useEffect(() => {
         if (isEdit) {
@@ -92,22 +89,17 @@ const PatientForm = ({ isOpen, onClose, initialData }) => {
                 });
             }
         }
-    }, [isEdit, patientId, patients, plans, initialData, clinicalCategories]);
+    }, [isEdit, patientId, patients, plans, initialData, clinicalCategories, paymentCategories, referralSources]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         let patientData = { ...formData };
 
-        // Only handle subscription for NEW patients
-        // For existing patients, subscription changes are handled via RenewalModal or special actions
-        // For existing patients, subscription changes are handled via RenewalModal or special actions
-        // Subscription logic removed as per instructions.
+        // Subscription logic removed — handled via RenewalModal or special actions.
 
         if (isEdit) {
-            // Remove subscription-related fields from update payload to be safe
-            // Remove subscription-related fields from update payload to be safe
-            // Subscription-related fields are no longer in formData, so no need to delete.
+
 
             await updatePatient(patientId, patientData);
             if (onClose) {

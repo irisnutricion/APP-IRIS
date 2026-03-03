@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import { X, AlertTriangle, Save } from 'lucide-react';
-import { addDays, addMonths, format, parseISO, differenceInDays } from 'date-fns';
+import { addMonths, format, parseISO } from 'date-fns';
 
 const SubscriptionEditModal = ({ isOpen, onClose, patient, subscriptionData, onSave }) => {
-    const { updatePatient, plans, subscriptionTypes, paymentRates } = useData();
+    const { updatePatient, subscriptionTypes, paymentRates } = useData();
     const [formData, setFormData] = useState({
         subscriptionTypeId: '',
         paymentRateId: '',

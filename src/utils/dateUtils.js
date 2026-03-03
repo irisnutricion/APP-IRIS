@@ -1,5 +1,4 @@
 import { format, parseISO, differenceInYears } from 'date-fns';
-import { es } from 'date-fns/locale'; // Default to spanish if needed, though safeFormat didn't use it directly in the helper logic, but good practice.
 
 // Helper to calculate age from birth date
 export const calculateAge = (birthDate) => {

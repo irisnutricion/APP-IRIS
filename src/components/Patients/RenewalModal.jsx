@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import { X, RefreshCw, CreditCard, Clock } from 'lucide-react';
-import { addMonths, format, parseISO, addDays } from 'date-fns';
+import { addMonths, format, parseISO } from 'date-fns';
 
 const RenewalModal = ({ isOpen, onClose, patient, suggestedStartDate }) => {
     const { updatePatient, subscriptionTypes, paymentRates, addSubscriptionHistory } = useData();
@@ -48,7 +48,7 @@ const RenewalModal = ({ isOpen, onClose, patient, suggestedStartDate }) => {
                 reviewDay: patient.review_day || ''
             });
         }
-    }, [patient, isOpen, subscriptionTypes, paymentRates]);
+    }, [patient, isOpen, subscriptionTypes, paymentRates, suggestedStartDate]);
 
     // Update price when rate changes manually
     const handleRateChange = (e) => {

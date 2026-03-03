@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { Users, Clock, AlertTriangle, Plus, ChevronDown, MoreVertical, Search, Filter, TrendingUp, TrendingDown, CheckSquare, Square } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { addDays, isBefore, parseISO, isSameDay, format, startOfWeek } from 'date-fns';
+import { addDays, isBefore, parseISO, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '../context/AuthContext';
 
@@ -108,8 +108,6 @@ const Dashboard = () => {
                     <MetricItem
                         title="Clientes Activos"
                         value={activePatients}
-                        change="+12%"
-                        isPositive={true}
                     />
                     <MetricItem
                         title="Renovaciones (7d)"
@@ -121,7 +119,7 @@ const Dashboard = () => {
                     <MetricItem
                         title="Planes Vencidos"
                         value={expiredPlans}
-                        change={expiredPlans > 0 ? "-2%" : "0%"}
+                        change={expiredPlans > 0 ? "Atención" : "Sin vencidos"}
                         isPositive={expiredPlans === 0}
                     />
                 </div>
@@ -140,7 +138,7 @@ const Dashboard = () => {
                                 <p className="text-xs text-slate-500">Pacientes que requieren seguimiento a lo largo de esta semana</p>
                             </div>
                         </div>
-                        <Link to="/calendar" className="btn btn-ghost btn-sm text-primary-600 font-medium">Ver Calendario</Link>
+                        <Link to="/tracking" className="btn btn-ghost btn-sm text-primary-600 font-medium">Ver Seguimiento</Link>
                     </div>
 
                     <div className="space-y-3">

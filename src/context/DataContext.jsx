@@ -150,7 +150,6 @@ export const DataProvider = ({ children }) => {
             if (clinicalOptionsResult.status === 'fulfilled') setClinicalOptions(clinicalOptionsResult.value.data || []);
             if (clinicalCategoriesResult.status === 'fulfilled') setClinicalCategories(clinicalCategoriesResult.value.data || []);
             if (subTypesResult.status === 'fulfilled') setSubscriptionTypes(subTypesResult.value.data || []);
-            if (subTypesResult.status === 'fulfilled') setSubscriptionTypes(subTypesResult.value.data || []);
             if (paymentRatesResult.status === 'fulfilled') setPaymentRates(paymentRatesResult.value.data || []);
             if (subscriptionExtensionsResult.status === 'fulfilled') setSubscriptionExtensions(subscriptionExtensionsResult.value.data || []);
             if (nutritionistsResult.status === 'fulfilled') setNutritionists(nutritionistsResult.value.data || []);
@@ -314,7 +313,6 @@ export const DataProvider = ({ children }) => {
     };
 
     const deleteSubscription = async (id) => {
-        console.log('Attempting to delete subscription:', id);
         try {
             const { data, error } = await supabase
                 .from('patient_subscriptions')
@@ -327,7 +325,7 @@ export const DataProvider = ({ children }) => {
                 return { success: false, error };
             }
 
-            console.log('Subscription deleted successfully. Data:', data);
+
 
             if (!data || data.length === 0) {
                 console.warn('No rows deleted. Check if ID exists:', id);
@@ -350,7 +348,7 @@ export const DataProvider = ({ children }) => {
 
             if (cleanHistory.length === 0) {
                 // No subscriptions left -> Force reset to inactive
-                console.log('No subscriptions remaining. Resetting patient to inactive.');
+
 
                 // Also delete any lingering extensions for this patient to prevent zombie status
                 // Since extensions are only linked to patient_id, we can only safely mass-delete them
@@ -493,13 +491,9 @@ export const DataProvider = ({ children }) => {
             dbUpdates.review_day = updates.reviewDay ? parseInt(updates.reviewDay) : null;
         }
         // Handle paymentCategoryId -> payment_category_id mapping (Center)
-        // CORRECCIÓN FORZADA: Asegurar que payment_category_id se incluye si está presente
         if (updates.paymentCategoryId !== undefined) {
             dbUpdates.payment_category_id = updates.paymentCategoryId || null;
-            console.log("Forzando actualización de categoría:", dbUpdates.payment_category_id);
         }
-
-        console.log("Payload final a Supabase:", dbUpdates);
 
 
         const { data, error } = await supabase.from('patients').update(dbUpdates).eq('id', id).select('*').single();
@@ -533,7 +527,6 @@ export const DataProvider = ({ children }) => {
     };
 
     const deletePatient = async (id) => {
-        if (!confirm('¿Estás seguro de eliminar este cliente?')) return;
         const { error } = await supabase.from('patients').delete().eq('id', id);
         if (!error) {
             setPatients(prev => prev.filter(p => p.id !== id));
@@ -639,7 +632,6 @@ export const DataProvider = ({ children }) => {
     };
 
     const deleteSubscriptionPause = async (pauseId) => {
-        console.log('deleteSubscriptionPause called with id:', pauseId);
         // Get pause to know patient_id and if it's active
         const { data: pauseToDelete } = await supabase.from('subscription_pauses').select('*').eq('id', pauseId).single();
 
@@ -1093,22 +1085,18 @@ export const DataProvider = ({ children }) => {
         };
 
         // Queue saves for the same planId to prevent concurrent DELETE/INSERT which causes duplication
-        if (savePromises.current[planId]) {
-            savePromises.current[planId] = savePromises.current[planId].then(performSave).catch(performSave);
-        } else {
-            savePromises.current[planId] = performSave();
-            savePromises.current[planId].finally(() => {
-                // Once finished, if no other saves were queued behind us, clear the promise
-                if (savePromises.current[planId] === savePromises.current[planId]) { // simplified check, relies on GC or explicitly dropping ref if needed. Better just leave it or clean if it's strictly the current one.
-                    // Let's just remove the entry if it hasn't been overwritten by a newly queued promise
-                    setTimeout(() => {
-                        // This isn't strictly necessary but avoids memory leak over very long sessions
-                        // A better way is to attach a finally that deletes it if `savePromises.current[planId]` is this specific promise instance. 
-                    }, 0);
-                }
-            });
-            // Actually, a simpler robust way to clean up the queue:
-        }
+        const currentPromise = savePromises.current[planId]
+            ? savePromises.current[planId].then(performSave).catch(performSave)
+            : performSave();
+
+        savePromises.current[planId] = currentPromise;
+
+        // Clean up the ref once this specific promise chain completes
+        currentPromise.finally(() => {
+            if (savePromises.current[planId] === currentPromise) {
+                delete savePromises.current[planId];
+            }
+        });
 
         return savePromises.current[planId];
     };

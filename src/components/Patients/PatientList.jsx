@@ -8,7 +8,7 @@ import PlanStartModal from './PlanStartModal';
 
 const PatientList = () => {
     const { patients, updatePatient } = useData();
-    const { isAdmin, nutritionistId, role } = useAuth(); // Get admin status and nut id
+    const { isAdmin, nutritionistId } = useAuth();
     const navigate = useNavigate(); // Hook initialized
     const [searchTerm, setSearchTerm] = useState('');
     const [draggedPatientId, setDraggedPatientId] = useState(null);

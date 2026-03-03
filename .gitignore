@@ -22,3 +22,29 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Debug/temp scripts
+debug_*.js
+check_*.js
+fix_*.js
+test_*.js
+analyze_*.js
+inspect_*.js
+repair_*.js
+apply_*_temp.js
+prepare_*.cjs
+test_*.mjs
+
+# Data dumps & lint reports
+*.dump.json
+patients_dump.json
+parsed_recipes.json
+payload_chunk_*.json
+angel_details.json
+eslint_report*.json
+lint_*.txt
+lint_*.json
+build_output.txt
+
+# Generated files
+*.pdf
