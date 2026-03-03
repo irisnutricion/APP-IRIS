@@ -538,7 +538,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 doc.setTextColor(...primaryColor);
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(10);
-                doc.text(lines, 105, yPos + (boxH / 2) - 1, { align: 'center', baseline: 'middle' });
+                doc.text(lines, 105, yPos + (boxH / 2) - 3, { align: 'center' });
 
                 yPos += boxH + 2;
                 let lY = yPos, rY = yPos;
@@ -610,7 +610,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 doc.setTextColor(...primaryColor);
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(10);
-                doc.text(lines, 105, yPos + (boxH / 2) - 1, { align: 'center', baseline: 'middle' });
+                doc.text(lines, 105, yPos + (boxH / 2) - 3, { align: 'center' });
 
                 yPos += boxH + 2;
                 let lY = yPos, rY = yPos;
