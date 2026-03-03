@@ -222,12 +222,6 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
     // ----- INDICATIONS ----- //
     if (plan.indications && plan.indications.trim()) {
-        const recCoverImg = await loadImageAsBase64('/covers/Portada recetario.png');
-        if (recCoverImg) {
-            doc.addImage(recCoverImg, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
-            coverPages.add(doc.internal.getNumberOfPages());
-            doc.addPage();
-        }
         drawHeader('Indicaciones');
         doc.setTextColor(...textColor);
         doc.setFontSize(16);
@@ -237,7 +231,6 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
         doc.setFont('helvetica', 'normal');
         const lines = doc.splitTextToSize(plan.indications, 210 - margins.left - margins.right);
         doc.text(lines, margins.left, 42);
-        doc.addPage();
     }
 
     const mealNames = plan.meal_names || [];
@@ -449,6 +442,10 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
             yPos += 6;
         }
     } else {
+        if (plan.indications && plan.indications.trim()) {
+            doc.addPage();
+        }
+        yPos = 30;
         drawHeader('Resumen de Opciones');
         doc.setTextColor(...textColor);
         doc.setFontSize(10);
@@ -518,7 +515,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
             dayItems.forEach(opt => {
                 const recipeName = getOptName(opt);
-                const titleText = `${opt.meal_name}: ${recipeName}`;
+                const titleText = recipeName;
                 const desc = getOptDescription(opt);
                 const ings = getOptIngredients(opt);
                 const lines = doc.splitTextToSize(titleText, 174);
@@ -528,13 +525,20 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 ings.forEach(ing => { leftH += (doc.splitTextToSize(ing, 85).length * 4.5); });
                 let rightH = (desc ? doc.splitTextToSize(desc, 85).length * 4.4 : 0);
 
-                checkPageBreak(yPos, boxH + Math.max(leftH, rightH) + 10);
+                checkPageBreak(yPos, boxH + Math.max(leftH, rightH) + 15);
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(11);
+                doc.setTextColor(...secondaryColor);
+                doc.text(opt.meal_name, margins.left, yPos);
+                yPos += 5;
 
                 doc.setFillColor(...brandLight);
                 doc.rect(margins.left, yPos - 3, 180, boxH, 'F');
                 doc.setTextColor(...primaryColor);
                 doc.setFont('helvetica', 'bold');
-                doc.text(lines, 105, yPos + (boxH / 2) - 3, { align: 'center' });
+                doc.setFontSize(10);
+                doc.text(lines, 105, yPos + (boxH / 2) - 1, { align: 'center', baseline: 'middle' });
 
                 yPos += boxH + 2;
                 let lY = yPos, rY = yPos;
@@ -605,7 +609,8 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 doc.rect(margins.left, yPos - 3, 180, boxH, 'F');
                 doc.setTextColor(...primaryColor);
                 doc.setFont('helvetica', 'bold');
-                doc.text(lines, 105, yPos + (boxH / 2) - 3, { align: 'center' });
+                doc.setFontSize(10);
+                doc.text(lines, 105, yPos + (boxH / 2) - 1, { align: 'center', baseline: 'middle' });
 
                 yPos += boxH + 2;
                 let lY = yPos, rY = yPos;
@@ -658,5 +663,8 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
         if (!coverPages.has(i)) drawFooter(i);
     }
 
-    doc.save(`Plan_${plan.name.replace(/\s+/g, '_')}_${patient?.first_name || 'Paciente'}.pdf`);
+    const dateToUse = plan?.created_at ? new Date(plan.created_at) : new Date();
+    const dateStr = `${String(dateToUse.getDate()).padStart(2, '0')}-${String(dateToUse.getMonth() + 1).padStart(2, '0')}-${dateToUse.getFullYear()}`;
+    const patientName = `${patient?.first_name || ''} ${patient?.last_name || ''}`.trim() || 'Paciente';
+    doc.save(`Plan nutricional ${patientName} ${dateStr}.pdf`);
 };
