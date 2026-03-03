@@ -411,9 +411,11 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
             checkPageBreak(yPos, 25);
             doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...secondaryColor);
-            doc.text(dayName, margins.left, yPos);
-            yPos += 6;
+            doc.setFontSize(14);
+            doc.setTextColor(...primaryColor);
+            doc.text(dayName.toUpperCase(), margins.left, yPos);
+            yPos += 8;
+            doc.setFontSize(10);
 
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(...textColor);
@@ -538,7 +540,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 doc.setTextColor(...primaryColor);
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(10);
-                doc.text(lines, 105, yPos + (boxH / 2) - 3, { align: 'center' });
+                doc.text(lines, 105, yPos + (boxH / 2) - 3, { align: 'center', baseline: 'middle' });
 
                 yPos += boxH + 2;
                 let lY = yPos, rY = yPos;
@@ -610,7 +612,7 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 doc.setTextColor(...primaryColor);
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(10);
-                doc.text(lines, 105, yPos + (boxH / 2) - 3, { align: 'center' });
+                doc.text(lines, 105, yPos + (boxH / 2) - 3, { align: 'center', baseline: 'middle' });
 
                 yPos += boxH + 2;
                 let lY = yPos, rY = yPos;
