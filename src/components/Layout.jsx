@@ -16,12 +16,15 @@ import {
     UsersRound,
     Apple,
     ChefHat,
-    FileText
+    FileText,
+    Search,
+    UtensilsCrossed
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '../utils/cn';
 import { ThemeToggle } from './ThemeToggle.jsx';
 import { useAuth } from '../context/AuthContext';
+import CommandPalette from './CommandPalette';
 
 // Sidebar Item Component
 // eslint-disable-next-line no-unused-vars
@@ -53,6 +56,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { icon: Activity, label: 'Seguimiento', path: '/tracking', adminOnly: false },
         { icon: ClipboardList, label: 'Tareas', path: '/tasks', adminOnly: false },
         { icon: FileText, label: 'Plantillas', path: '/recommendations', adminOnly: false },
+        { icon: UtensilsCrossed, label: 'Plantillas Planes', path: '/templates', adminOnly: false },
         { icon: Repeat, label: 'Renovaciones', path: '/renewals', adminOnly: true },
         { icon: Wallet, label: 'Pagos', path: '/payments', adminOnly: true },
         { icon: UsersRound, label: 'Equipo', path: '/team', adminOnly: true },
@@ -129,7 +133,20 @@ const Sidebar = ({ isOpen, onClose }) => {
 
 export default function Layout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [paletteOpen, setPaletteOpen] = useState(false);
     const { signOut } = useAuth();
+
+    // Cmd+K / Ctrl+K shortcut
+    useEffect(() => {
+        const handler = (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                setPaletteOpen(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, []);
 
     return (
         <div className="min-h-screen bg-slate-50 transition-colors duration-300 dark:bg-slate-950">
@@ -146,6 +163,14 @@ export default function Layout() {
                     </button>
 
                     <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setPaletteOpen(true)}
+                            className="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                        >
+                            <Search size={14} />
+                            <span className="hidden sm:inline">Buscar...</span>
+                            <kbd className="hidden sm:inline-flex px-1.5 py-0.5 text-[10px] font-mono bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded">⌘K</kbd>
+                        </button>
                         <ThemeToggle />
                         <div className="h-6 w-px bg-slate-200 dark:bg-slate-700" aria-hidden="true" />
                         <button
@@ -161,6 +186,8 @@ export default function Layout() {
                     <Outlet />
                 </main>
             </div>
+
+            <CommandPalette isOpen={paletteOpen} onClose={() => setPaletteOpen(false)} />
         </div>
     );
 }

@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { DataProvider } from './context/DataContext';
 import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import Login from './components/Login';
 import ResetPassword from './components/ResetPassword';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -20,44 +21,50 @@ import Team from './components/Team/Team';
 import Foods from './components/Foods/Foods';
 import Recipes from './components/Recipes/Recipes';
 import Recommendations from './components/Recommendations/Recommendations';
+import Templates from './components/Plans/Templates';
+import PatientPortal from './components/Portal/PatientPortal';
 
 function App() {
   return (
     <AuthProvider>
-      <DataProvider>
-        <Router>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+      <ToastProvider>
+        <DataProvider>
+          <Router>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/portal/:token" element={<PatientPortal />} />
 
-            <Route element={<ProtectedRoute />}>
-              <Route path="/" element={<Layout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="patients" element={<PatientList />} />
-                <Route path="patients/new" element={<PatientForm />} />
-                <Route path="patients/:id" element={<PatientDetail />} />
-                <Route path="patients/:id/edit" element={<PatientForm />} />
-                <Route path="tracking" element={<TrackingCalendar />} />
-                <Route path="tasks" element={<Tasks />} />
-                <Route path="recommendations" element={<Recommendations />} />
+              <Route element={<ProtectedRoute />}>
+                <Route path="/" element={<Layout />}>
+                  <Route index element={<Dashboard />} />
+                  <Route path="patients" element={<PatientList />} />
+                  <Route path="patients/new" element={<PatientForm />} />
+                  <Route path="patients/:id" element={<PatientDetail />} />
+                  <Route path="patients/:id/edit" element={<PatientForm />} />
+                  <Route path="tracking" element={<TrackingCalendar />} />
+                  <Route path="tasks" element={<Tasks />} />
+                  <Route path="recommendations" element={<Recommendations />} />
+                  <Route path="templates" element={<Templates />} />
 
-                {/* Admin-only routes */}
-                <Route element={<ProtectedRoute requireAdmin />}>
-                  <Route path="renewals" element={<Renewals />} />
-                  <Route path="payments" element={<Payments />} />
-                  <Route path="team" element={<Team />} />
-                  <Route path="statistics" element={<Statistics />} />
-                  <Route path="settings" element={<Settings />} />
-                  <Route path="foods" element={<Foods />} />
-                  <Route path="recipes" element={<Recipes />} />
+                  {/* Admin-only routes */}
+                  <Route element={<ProtectedRoute requireAdmin />}>
+                    <Route path="renewals" element={<Renewals />} />
+                    <Route path="payments" element={<Payments />} />
+                    <Route path="team" element={<Team />} />
+                    <Route path="statistics" element={<Statistics />} />
+                    <Route path="settings" element={<Settings />} />
+                    <Route path="foods" element={<Foods />} />
+                    <Route path="recipes" element={<Recipes />} />
+                  </Route>
+
+                  <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>
-
-                <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
-            </Route>
-          </Routes>
-        </Router>
-      </DataProvider>
+            </Routes>
+          </Router>
+        </DataProvider>
+      </ToastProvider>
     </AuthProvider>
   );
 }

@@ -1,14 +1,18 @@
 import { useState, useMemo } from 'react';
 import { Plus, UtensilsCrossed, Archive, Trash2, Copy, FileText, Pencil, CopyPlus, X } from 'lucide-react';
 import { useData } from '../../../context/DataContext';
+import { useToast } from '../../../context/ToastContext';
 import ClosedPlanEditor from '../../Plans/ClosedPlanEditor';
 import OpenPlanEditor from '../../Plans/OpenPlanEditor';
+import CopyPlanModal from '../Modals/CopyPlanModal';
 
 export default function PlansTab({ patient }) {
     const { mealPlans = [], mealPlanItems = [], addMealPlan, updateMealPlan, deleteMealPlan, saveMealPlanItems, cloneMealPlan } = useData();
+    const { showToast } = useToast();
     const [editingPlan, setEditingPlan] = useState(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [createData, setCreateData] = useState({ type: 'closed', templateId: '' });
+    const [copyPlan, setCopyPlan] = useState(null);
 
     const patientPlans = useMemo(() => {
         return mealPlans.filter(p => p.patient_id === patient.id && !p.is_template);
@@ -144,7 +148,7 @@ export default function PlansTab({ patient }) {
                                     <button onClick={() => setShowCreateModal(false)} className="btn btn-outline text-sm py-2">Cancelar</button>
                                     <button onClick={() => {
                                         if (createData.type === 'template') {
-                                            if (!createData.templateId) return alert('Selecciona una plantilla');
+                                            if (!createData.templateId) return showToast('Selecciona una plantilla', 'warning');
                                             handleFromTemplate(createData.templateId);
                                         } else {
                                             handleNewPlan(createData.type);
@@ -202,6 +206,9 @@ export default function PlansTab({ patient }) {
                                         <button onClick={() => handleSaveAsTemplate(plan.id)} className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg dark:hover:bg-purple-900/20" title="Guardar como plantilla global">
                                             <Copy size={14} />
                                         </button>
+                                        <button onClick={() => setCopyPlan(plan)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg dark:hover:bg-indigo-900/20" title="Copiar a otro paciente">
+                                            <CopyPlus size={14} className="rotate-90" />
+                                        </button>
                                         <button onClick={() => handleArchive(plan)} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg dark:hover:bg-amber-900/20" title={plan.status === 'active' ? 'Archivar' : 'Activar'}>
                                             <Archive size={14} />
                                         </button>
@@ -215,6 +222,12 @@ export default function PlansTab({ patient }) {
                     })}
                 </div>
             )}
+
+            <CopyPlanModal
+                plan={copyPlan}
+                isOpen={!!copyPlan}
+                onClose={() => setCopyPlan(null)}
+            />
         </div>
     );
 }

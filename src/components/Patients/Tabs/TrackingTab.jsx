@@ -4,9 +4,11 @@ import { safeFormat } from '../../../utils/dateUtils';
 import PdfExportModal from '../../Tracking/PdfExportModal';
 import EvolutionChart from '../../Tracking/EvolutionChart';
 import { FileDown, Plus, Activity, Edit2, Trash2, Image as ImageIcon } from 'lucide-react';
+import { useToast } from '../../../context/ToastContext';
 
 const TrackingTab = ({ patient, onAddMeasurement, onEditMeasurement, onDeleteMeasurement }) => {
     const hasHistory = patient.measurements && patient.measurements.length > 0;
+    const { showToast } = useToast();
 
     // Create refs for all charts
     const weightRef = useRef(null);
@@ -41,7 +43,7 @@ const TrackingTab = ({ patient, onAddMeasurement, onEditMeasurement, onDeleteMea
             await generateMeasurementsPDF(patient, getChartsMap(), selectedCharts);
         } catch (error) {
             console.error('Error generating PDF:', error);
-            alert('Hubo un error al generar el PDF. Por favor, inténtalo de nuevo.');
+            showToast('Hubo un error al generar el PDF. Inténtalo de nuevo.', 'error');
         }
     };
 

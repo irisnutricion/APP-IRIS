@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import useUndo from '../../hooks/useUndo';
 import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download, PieChart, GripVertical, Loader2, CheckCircle2, CalendarDays } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useToast } from '../../context/ToastContext';
 import { calcSnapshotMacros, recipeToSnapshot, checkRecipeIsSaved } from './ClosedPlanEditor';
 import InlineRecipeEditor from './InlineRecipeEditor';
 import { generatePlanPdf } from '../../utils/planPdfGenerator';
@@ -22,6 +23,7 @@ function SortableOption({ id, children }) {
 
 export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpdatePlan, onSaveAsTemplate, initialViewMode = 'meals' }) {
     const { recipes = [], addRecipe, updateRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null, nutritionists = [] } = useData();
+    const { showToast } = useToast();
     const [planName, setPlanName] = useState(plan.name);
     const [planIndications, setPlanIndications] = useState(plan.indications || '');
     const [mealNames, setMealNames] = useState(plan.meal_names || ['Desayuno', 'Almuerzo', 'Comida', 'Merienda', 'Cena']);
@@ -654,11 +656,11 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                             )}
                             <button
                                 onClick={async () => {
-                                    if (!planIndications.trim()) return alert('Las indicaciones están vacías.');
+                                    if (!planIndications.trim()) return showToast('Las indicaciones están vacías.', 'warning');
                                     const name = prompt('Nombre para esta plantilla de indicaciones:');
                                     if (name) {
                                         await addIndicationTemplate({ name, content: planIndications });
-                                        alert('Plantilla guardada correctamente.');
+                                        showToast('Plantilla guardada correctamente.', 'success');
                                     }
                                 }}
                                 className="btn btn-outline py-1.5 px-3 text-sm flex items-center gap-2"

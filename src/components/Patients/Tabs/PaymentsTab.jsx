@@ -1,10 +1,12 @@
 import { useData } from '../../../context/DataContext';
+import { useToast } from '../../../context/ToastContext';
 import { safeFormat } from '../../../utils/dateUtils';
 import { Wallet, Plus, CheckCircle, Clock, Edit2, Trash2 } from 'lucide-react';
 import { parseISO, format } from 'date-fns';
 
 const PaymentsTab = ({ patientId, onAddPayment, onEditPayment, onDeletePayment, onEditSubscription, subscriptionTerms = [], onEditExtension }) => {
     const { payments = [], paymentMethods = [], patients = [], paymentRates = [], deleteSubscription, subscriptionExtensions = [], deleteSubscriptionExtension } = useData() || {};
+    const { showToast } = useToast();
 
     // Sort payments
     const patientPayments = (payments || []).filter(p => p && p.patient_id === patientId)
@@ -200,16 +202,16 @@ const PaymentsTab = ({ patientId, onAddPayment, onEditPayment, onDeletePayment, 
                                                                 try {
                                                                     const result = await deleteSubscription(term.id);
                                                                     if (result?.success) {
-                                                                        alert('Suscripción eliminada correctamente.');
+                                                                        showToast('Suscripción eliminada correctamente.', 'success');
                                                                     } else {
                                                                         if (result?.error?.code === '23503') {
-                                                                            alert('No se puede eliminar esta suscripción porque tiene pagos asociados. Por favor, elimina primero los pagos correspondientes.');
+                                                                            showToast('No se puede eliminar esta suscripción porque tiene pagos asociados. Elimina primero los pagos.', 'warning');
                                                                         } else {
-                                                                            alert('Error al eliminar la suscripción: ' + (result?.error?.message || 'Error desconocido'));
+                                                                            showToast('Error al eliminar la suscripción: ' + (result?.error?.message || 'Error desconocido'), 'error');
                                                                         }
                                                                     }
                                                                 } catch (err) {
-                                                                    alert('Excepción al eliminar: ' + err.message);
+                                                                    showToast('Excepción al eliminar: ' + err.message, 'error');
                                                                 }
                                                             }
                                                         }}
@@ -289,7 +291,7 @@ const PaymentsTab = ({ patientId, onAddPayment, onEditPayment, onDeletePayment, 
                                                         if (window.confirm('¿Seguro que quieres eliminar esta extensión? Se restarán los días añadidos a la fecha de fin actual.')) {
                                                             const success = await deleteSubscriptionExtension(ext.id);
                                                             if (!success) {
-                                                                alert('Error al eliminar extensión');
+                                                                showToast('Error al eliminar extensión', 'error');
                                                             }
                                                         }
                                                     }}

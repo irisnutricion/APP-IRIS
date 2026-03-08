@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useData } from '../../context/DataContext';
+import { useToast } from '../../context/ToastContext';
 import { supabase } from '../../supabaseClient';
 import {
     Plus, Trash2, Edit2, Check, X, Settings as SettingsIcon, CreditCard, User, Database,
@@ -26,6 +27,7 @@ const Settings = () => {
         recipePhrases, addRecipePhrase, updateRecipePhrase, deleteRecipePhrase,
         refreshData
     } = useData();
+    const { showToast } = useToast();
 
     // Active section for accordion
     const [activeSection, setActiveSection] = useState(null);
@@ -1409,7 +1411,7 @@ const Settings = () => {
             await updateNutritionist(schemaNutritionistId, { weekly_schema: schemaMatrix });
         } catch (error) {
             console.error("Error saving schema:", error);
-            alert("Error al guardar el esquema.");
+            showToast('Error al guardar el esquema.', 'error');
         } finally {
             setIsSavingSchema(false);
         }

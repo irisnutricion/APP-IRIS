@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { X, Calendar, Save } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useToast } from '../../context/ToastContext';
 
 const EditPauseModal = ({ isOpen, onClose, pause, patientName }) => {
     const { updatePatientPause } = useData();
+    const { showToast } = useToast();
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [loading, setLoading] = useState(false);
@@ -42,7 +44,7 @@ const EditPauseModal = ({ isOpen, onClose, pause, patientName }) => {
             onClose();
         } catch (error) {
             console.error("Error updating pause:", error);
-            alert("Error al actualizar la pausa");
+            showToast('Error al actualizar la pausa', 'error');
         } finally {
             setLoading(false);
         }

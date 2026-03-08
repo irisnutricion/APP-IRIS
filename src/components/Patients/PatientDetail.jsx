@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
-import { ArrowLeft, User, Activity, Image as ImageIcon, Wallet, Play, Clock, RefreshCw, Edit2, Trash2, Calendar as CalendarIcon, Copy, UtensilsCrossed } from 'lucide-react';
+import { ArrowLeft, User, Activity, Image as ImageIcon, Wallet, Play, Clock, RefreshCw, Edit2, Trash2, Calendar as CalendarIcon, Copy, UtensilsCrossed, PenLine, ChevronDown, Loader2, CheckCircle2, Share2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { useToast } from '../../context/ToastContext';
 
 import MeasurementModal from '../Tracking/MeasurementModal';
 import PaymentModal from '../Payments/PaymentModal';
@@ -28,15 +29,22 @@ import ExtendSubscriptionModal from './Modals/ExtendSubscriptionModal';
 import ExtensionHistoryModal from './Modals/ExtensionHistoryModal';
 
 const PatientDetail = () => {
-    const { id } = useParams();
+    const { id } = useParams(); const { showToast } = useToast();
+
     const navigate = useNavigate();
-    const { patients, deleteMeasurement, extendSubscription, loading: contextLoading, deletePatient, addMeasurement, updateMeasurement, payments = [], paymentCategories = [], updateSubscriptionHistory, deletePayment, subscriptionExtensions = [], updateSubscriptionExtension } = useData() || {};
+    const { patients, deleteMeasurement, extendSubscription, loading: contextLoading, deletePatient, addMeasurement, updateMeasurement, payments = [], paymentCategories = [], updateSubscriptionHistory, deletePayment, subscriptionExtensions = [], updateSubscriptionExtension, updatePatient } = useData() || {};
 
     // Modals State
     const [isRenewalModalOpen, setIsRenewalModalOpen] = useState(false);
     const [isPlanStartModalOpen, setIsPlanStartModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('info');
     const [actionLoading, setActionLoading] = useState(false);
+
+    // Notes auto-save
+    const [notesOpen, setNotesOpen] = useState(false);
+    const [notesSaveStatus, setNotesSaveStatus] = useState('idle'); // idle | saving | saved
+    const notesTimerRef = useRef(null);
+    const notesRef = useRef(null);
 
     // Measurement Modal State
     const [isMeasurementModalOpen, setIsMeasurementModalOpen] = useState(false);
@@ -114,7 +122,7 @@ const PatientDetail = () => {
         setIsExtendModalOpen(false);
         const success = await extendSubscription(patient.id, days);
         if (!success) {
-            alert("Error al extender la suscripción");
+            showToast('Error al extender la suscripción', 'error');
         }
         setActionLoading(false);
     };
@@ -131,7 +139,7 @@ const PatientDetail = () => {
             setEditingMeasurement(null);
         } catch (error) {
             console.error('Error saving measurement:', error);
-            alert('Error al guardar la medición');
+            showToast('Error al guardar la medición', 'error');
         } finally {
             setActionLoading(false);
         }
@@ -165,6 +173,23 @@ const PatientDetail = () => {
         if (confirm('¿Seguro que deseas eliminar este cliente?')) {
             deletePatient(id);
             navigate('/patients');
+        }
+    };
+
+    const handleSharePortal = async () => {
+        try {
+            let token = patient.share_token;
+            if (!token) {
+                // Generate a random token
+                token = crypto.randomUUID().replace(/-/g, '').slice(0, 20);
+                await updatePatient(patient.id, { share_token: token });
+            }
+            const url = `${window.location.origin}/portal/${token}`;
+            await navigator.clipboard.writeText(url);
+            showToast('Enlace del portal copiado al portapapeles', 'success');
+        } catch (err) {
+            console.error('Error sharing:', err);
+            showToast('Error al generar el enlace', 'error');
         }
     };
 
@@ -252,8 +277,54 @@ const PatientDetail = () => {
                         <button onClick={handleDelete} className="btn btn-outline text-danger border-red-200 hover:bg-red-50" title="Eliminar cliente">
                             <Trash2 size={16} />
                         </button>
+
+                        <button onClick={handleSharePortal} className="btn btn-outline text-purple-600 border-purple-200 hover:bg-purple-50" title="Compartir portal del paciente">
+                            <Share2 size={16} className="md:mr-1" /> <span className="hidden md:inline">Compartir</span>
+                        </button>
                     </div>
                 </div>
+            </div>
+
+            {/* Collapsible Notes Section */}
+            <div className="mb-4 card overflow-hidden">
+                <button
+                    onClick={() => setNotesOpen(!notesOpen)}
+                    className="w-full flex items-center justify-between p-3 bg-amber-50/50 dark:bg-amber-900/10 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                >
+                    <span className="flex items-center gap-2 text-sm font-bold text-amber-700 dark:text-amber-400">
+                        <PenLine size={16} /> Notas Rápidas
+                    </span>
+                    <div className="flex items-center gap-2">
+                        {notesSaveStatus === 'saving' && (
+                            <span className="flex items-center gap-1 text-xs text-slate-400"><Loader2 size={12} className="animate-spin" /> Guardando...</span>
+                        )}
+                        {notesSaveStatus === 'saved' && (
+                            <span className="flex items-center gap-1 text-xs text-green-500"><CheckCircle2 size={12} /> Guardado</span>
+                        )}
+                        <ChevronDown size={16} className={`text-amber-500 transition-transform ${notesOpen ? 'rotate-180' : ''}`} />
+                    </div>
+                </button>
+                {notesOpen && (
+                    <textarea
+                        ref={notesRef}
+                        className="w-full min-h-[100px] p-4 text-sm text-slate-700 dark:text-slate-300 bg-transparent border-t border-amber-100 dark:border-amber-900/30 focus:ring-0 focus:bg-amber-50/30 dark:focus:bg-amber-900/20 transition-colors resize-y outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                        placeholder="Escribe aquí notas privadas sobre el seguimiento..."
+                        defaultValue={patient?.notes || ''}
+                        onChange={(e) => {
+                            setNotesSaveStatus('idle');
+                            if (notesTimerRef.current) clearTimeout(notesTimerRef.current);
+                            const value = e.target.value;
+                            notesTimerRef.current = setTimeout(async () => {
+                                if (value !== (patient?.notes || '')) {
+                                    setNotesSaveStatus('saving');
+                                    await updatePatient(patient.id, { notes: value });
+                                    setNotesSaveStatus('saved');
+                                    setTimeout(() => setNotesSaveStatus('idle'), 2000);
+                                }
+                            }, 1500);
+                        }}
+                    />
+                )}
             </div>
 
             {/* Tabs */}
@@ -380,7 +451,7 @@ const PatientDetail = () => {
                     onSave={subscriptionEditData ? async (updates) => {
                         const result = await updateSubscriptionHistory(subscriptionEditData.id, updates);
                         if (!result) {
-                            alert("Error al actualizar la suscripción");
+                            showToast('Error al actualizar la suscripción', 'error');
                         }
                     } : null}
                 />

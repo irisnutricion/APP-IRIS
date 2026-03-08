@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
+import { useToast } from '../../context/ToastContext';
 import { Save, ArrowLeft, User, Activity, Heart } from 'lucide-react';
 
 const PatientForm = ({ isOpen, onClose, initialData }) => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { patients, addPatient, updatePatient, plans, referralSources, paymentCategories, clinicalCategories, subscriptionTypes, paymentRates, nutritionists } = useData();
+    const { showToast } = useToast();
 
     // Determine if we are in edit mode (either by ID param or initialData prop)
     const isEdit = !!id || !!initialData;
@@ -116,7 +118,7 @@ const PatientForm = ({ isOpen, onClose, initialData }) => {
                     navigate(`/patients/${newPatientId}`);
                 }
             } else {
-                alert('Error al guardar el cliente. Por favor, verifica los datos e inténtalo de nuevo.');
+                showToast('Error al guardar el cliente. Verifica los datos e inténtalo de nuevo.', 'error');
             }
         }
     };
