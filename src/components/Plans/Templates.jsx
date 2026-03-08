@@ -105,7 +105,7 @@ export default function Templates() {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Buscar plantillas..."
-                        className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-primary-500"
+                        className="form-input pl-9"
                     />
                 </div>
                 <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
@@ -151,7 +151,7 @@ export default function Templates() {
                                                     value={editNameValue}
                                                     onChange={e => setEditNameValue(e.target.value)}
                                                     onKeyDown={e => e.key === 'Enter' && handleSaveName(plan.id)}
-                                                    className="flex-1 text-sm font-semibold px-2 py-1 border border-primary-300 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-1 focus:ring-primary-500"
+                                                    className="flex-1 form-input py-1 px-2 h-8 text-sm font-semibold"
                                                 />
                                                 <button onClick={() => handleSaveName(plan.id)} className="p-1 text-green-500 hover:text-green-600 dark:hover:text-green-400">✓</button>
                                                 <button onClick={() => setEditingName(null)} className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X size={14} /></button>
