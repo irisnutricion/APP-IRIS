@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, UtensilsCrossed, Archive, Trash2, Copy, FileText, Pencil, CopyPlus, X } from 'lucide-react';
+import { Plus, UtensilsCrossed, Archive, Trash2, Copy, FileText, Pencil, CopyPlus, X, Globe } from 'lucide-react';
 import { useData } from '../../../context/DataContext';
 import { useToast } from '../../../context/ToastContext';
 import ClosedPlanEditor from '../../Plans/ClosedPlanEditor';
@@ -54,6 +54,32 @@ export default function PlansTab({ patient }) {
         const name = prompt('Nombre de la plantilla:', plan.name + ' (plantilla)');
         if (!name) return;
         await cloneMealPlan(planId, { is_template: true, patient_id: null, name, template_note: `Creada desde plan de ${patient.name}` });
+    };
+
+    const handlePublish = async (plan) => {
+        const isCurrentlyPublished = !!plan.published_data;
+
+        if (isCurrentlyPublished) {
+            if (window.confirm(`¿Dejar de mostrar el plan "${plan.name}" en el portal del paciente?`)) {
+                await updateMealPlan(plan.id, { published_data: null });
+                showToast('Plan ocultado del portal', 'success');
+            }
+        } else {
+            if (window.confirm(`¿Publicar el plan "${plan.name}"? El paciente verá los datos actuales en su portal.`)) {
+                const planItems = mealPlanItems.filter(i => i.plan_id === plan.id);
+                const snapshot = {
+                    plan: {
+                        name: plan.name,
+                        type: plan.type,
+                        meal_names: plan.meal_names,
+                        indications: plan.indications
+                    },
+                    items: planItems
+                };
+                await updateMealPlan(plan.id, { published_data: snapshot });
+                showToast('Plan publicado con éxito', 'success');
+            }
+        }
     };
 
     const handleDelete = (plan) => {
@@ -180,7 +206,14 @@ export default function PlansTab({ patient }) {
                                             <FileText className={`w-4 h-4 ${plan.type === 'closed' ? 'text-blue-600 dark:text-blue-400' : 'text-green-600 dark:text-green-400'}`} />
                                         </div>
                                         <div className="min-w-0">
-                                            <h3 className="font-semibold text-slate-800 dark:text-white truncate">{plan.name}</h3>
+                                            <h3 className="font-semibold text-slate-800 dark:text-white truncate flex items-center gap-2">
+                                                {plan.name}
+                                                {plan.published_data && (
+                                                    <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">
+                                                        <Globe size={10} /> Publicado
+                                                    </span>
+                                                )}
+                                            </h3>
                                             <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
                                                 <span className={`px-2 py-0.5 rounded-full font-medium ${plan.type === 'closed' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'}`}>
                                                     {plan.type === 'closed' ? 'Cerrado' : 'Abierto'}
@@ -199,6 +232,9 @@ export default function PlansTab({ patient }) {
                                         </button>
                                         <button onClick={() => setEditingPlan({ ...plan, viewMode: 'indications' })} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg dark:hover:bg-blue-900/20" title="Ver Recomendaciones/Indicaciones">
                                             <FileText size={14} />
+                                        </button>
+                                        <button onClick={() => handlePublish(plan)} className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg dark:hover:bg-purple-900/20" title={plan.published_data ? 'Dejar de publicar' : 'Publicar en el portal'}>
+                                            <Globe size={14} className={plan.published_data ? 'text-purple-600 dark:text-purple-400' : ''} />
                                         </button>
                                         <button onClick={() => handleDuplicatePlan(plan)} className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg dark:hover:bg-teal-900/20" title="Duplicar para este paciente">
                                             <CopyPlus size={14} />

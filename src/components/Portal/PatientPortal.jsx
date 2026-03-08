@@ -10,6 +10,8 @@ const anonSupabase = createClient(
     { auth: { persistSession: false, autoRefreshToken: false } }
 );
 
+import { generatePlanPdf } from '../../utils/planPdfGenerator';
+
 export default function PatientPortal() {
     const { token } = useParams();
     const [loading, setLoading] = useState(true);
@@ -41,27 +43,19 @@ export default function PatientPortal() {
                 }
                 setPatient(patientData);
 
-                // Fetch active meal plans
+                // Fetch active meal plans that are PUBLISHED
                 const { data: plansData } = await anonSupabase
                     .from('meal_plans')
                     .select('*')
                     .eq('patient_id', patientData.id)
                     .eq('status', 'active')
                     .eq('is_template', false)
+                    .not('published_data', 'is', null)
                     .order('created_at', { ascending: false });
 
+                // We don't fetch meal_plan_items directly anymore. 
+                // The portal relies entirely on the 'published_data' JSON snapshot!
                 setPlans(plansData || []);
-
-                if (plansData && plansData.length > 0) {
-                    const planIds = plansData.map(p => p.id);
-                    const { data: itemsData } = await anonSupabase
-                        .from('meal_plan_items')
-                        .select('*')
-                        .in('plan_id', planIds)
-                        .order('day_index', { ascending: true })
-                        .order('meal_index', { ascending: true });
-                    setPlanItems(itemsData || []);
-                }
             } catch (err) {
                 console.error('Portal error:', err);
                 setError('Error al cargar los datos.');
@@ -75,6 +69,32 @@ export default function PatientPortal() {
 
     const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     const MEALS_DEFAULT = ['Desayuno', 'Almuerzo', 'Comida', 'Merienda', 'Cena'];
+
+    const handleDownloadPdf = async (plan) => {
+        try {
+            // Reconstruct full plan and items from the snapshot
+            const snapshotData = plan.published_data;
+            if (!snapshotData) return;
+
+            // The generator needs a plan object with name, type, meal_names, indications
+            const planForPdf = {
+                ...snapshotData.plan,
+                created_at: plan.created_at
+            };
+
+            const itemsForPdf = snapshotData.items || [];
+
+            // We need a dummy nutritionist obj to provide the primary color if none is set
+            // The brand color #28483a is already hardcoded in generator if nutritionist is null.
+            const nutritionistDummy = { pdf_color: '#28483a' };
+
+            await generatePlanPdf(planForPdf, itemsForPdf, nutritionistDummy, patient);
+
+        } catch (err) {
+            console.error("Error generating PDF:", err);
+            alert("No se pudo generar el plan PDF en este momento. Inténtalo de nuevo más tarde.");
+        }
+    };
 
     if (loading) {
         return (
@@ -103,16 +123,8 @@ export default function PatientPortal() {
         <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
             {/* Header */}
             <header className="bg-white/80 backdrop-blur-lg border-b border-pink-100 sticky top-0 z-10">
-                <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-gradient-to-br from-pink-500 to-purple-600 p-2 rounded-xl text-white">
-                            <ChefHat size={24} />
-                        </div>
-                        <div>
-                            <h1 className="font-bold text-slate-800 text-lg">Iris Nutrición</h1>
-                            <p className="text-xs text-slate-400">Portal del paciente</p>
-                        </div>
-                    </div>
+                <div className="max-w-4xl mx-auto px-4 py-4 gap-4 flex items-center justify-center">
+                    <img src="/covers/logo rosa.png" alt="Iris Nutrición" className="h-10 w-auto" />
                 </div>
             </header>
 
@@ -136,101 +148,48 @@ export default function PatientPortal() {
                     )}
                 </div>
 
-                {/* Plans */}
+                {/* Published Plans */}
                 {plans.length === 0 ? (
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
                         <UtensilsCrossed size={40} className="text-slate-300 mx-auto mb-3" />
-                        <p className="text-slate-500 font-medium">No hay planes activos en este momento</p>
+                        <p className="text-slate-500 font-medium">Aún no hay ningún plan publicado</p>
+                        <p className="text-slate-400 text-sm mt-1">Tu nutricionista está preparando tu plan nutritivo.</p>
                     </div>
                 ) : (
-                    plans.map(plan => {
-                        const items = planItems.filter(i => i.plan_id === plan.id);
-                        const mealNames = plan.meal_names || MEALS_DEFAULT;
+                    <div className="grid gap-6 sm:grid-cols-2">
+                        {plans.map(plan => {
+                            const snapshot = plan.published_data;
+                            if (!snapshot || !snapshot.plan) return null;
+                            const mealNames = snapshot.plan.meal_names || MEALS_DEFAULT;
 
-                        return (
-                            <div key={plan.id} className="bg-white rounded-2xl shadow-sm border border-pink-100 overflow-hidden">
-                                <div className="bg-gradient-to-r from-pink-500 to-purple-600 px-6 py-4 text-white">
-                                    <h3 className="font-bold text-lg">{plan.name}</h3>
-                                    <p className="text-pink-100 text-sm">
-                                        {plan.type === 'closed' ? 'Plan semanal' : 'Plan abierto'} • {mealNames.length} comidas/día
-                                    </p>
+                            return (
+                                <div key={plan.id} className="bg-white rounded-2xl shadow-sm border border-pink-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+                                    <div className="bg-gradient-to-r from-pink-500 to-purple-600 px-6 py-5 text-white flex-1">
+                                        <div className="flex justify-between items-start gap-4">
+                                            <div>
+                                                <h3 className="font-bold text-xl mb-1">{snapshot.plan.name}</h3>
+                                                <p className="text-pink-100 text-sm flex items-center gap-1.5 opacity-90">
+                                                    <UtensilsCrossed size={14} />
+                                                    {snapshot.plan.type === 'closed' ? 'Plan semanal cerrado' : 'Plan abierto con opciones'}
+                                                </p>
+                                                <p className="text-pink-100 text-xs mt-1.5">Publicado el {new Date(plan.created_at).toLocaleDateString()}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-5 flex justify-center bg-pink-50/30">
+                                        <button
+                                            onClick={() => handleDownloadPdf(plan)}
+                                            className="w-full py-3.5 px-4 bg-white border border-pink-200 text-pink-600 font-bold rounded-xl shadow-sm hover:shadow-md hover:border-pink-300 hover:bg-pink-50 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
+                                            Descargar Mi Plan Nutricional
+                                        </button>
+                                    </div>
                                 </div>
-
-                                {plan.type === 'closed' ? (
-                                    // Closed plan: weekly grid
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-sm">
-                                            <thead>
-                                                <tr className="border-b border-pink-100">
-                                                    <th className="text-left px-4 py-3 font-bold text-slate-500 text-xs uppercase tracking-wider bg-pink-50/50"></th>
-                                                    {DAYS.map(d => (
-                                                        <th key={d} className="text-center px-3 py-3 font-bold text-slate-600 text-xs uppercase tracking-wider bg-pink-50/50 min-w-[120px]">{d}</th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {mealNames.map((meal, mealIdx) => (
-                                                    <tr key={mealIdx} className="border-b border-slate-50 hover:bg-pink-50/30 transition-colors">
-                                                        <td className="px-4 py-3 font-bold text-pink-600 text-xs uppercase whitespace-nowrap">{meal}</td>
-                                                        {DAYS.map((_, dayIdx) => {
-                                                            const item = items.find(i => i.day_index === dayIdx && i.meal_index === mealIdx);
-                                                            return (
-                                                                <td key={dayIdx} className="px-3 py-3 text-center">
-                                                                    {item ? (
-                                                                        <div>
-                                                                            <p className="font-medium text-slate-700 text-sm">{item.food_name || item.recipe_name || '-'}</p>
-                                                                            {item.quantity && (
-                                                                                <p className="text-xs text-slate-400 mt-0.5">{item.quantity}{item.unit ? ` ${item.unit}` : ''}</p>
-                                                                            )}
-                                                                        </div>
-                                                                    ) : (
-                                                                        <span className="text-slate-300">—</span>
-                                                                    )}
-                                                                </td>
-                                                            );
-                                                        })}
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                ) : (
-                                    // Open plan: grouped by meal
-                                    <div className="p-6 space-y-6">
-                                        {mealNames.map((meal, mealIdx) => {
-                                            const mealItems = items.filter(i => i.meal_index === mealIdx);
-                                            if (mealItems.length === 0) return null;
-                                            return (
-                                                <div key={mealIdx}>
-                                                    <h4 className="font-bold text-pink-600 text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
-                                                        <UtensilsCrossed size={14} /> {meal}
-                                                    </h4>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                        {mealItems.map((item, idx) => (
-                                                            <div key={idx} className="bg-pink-50/50 rounded-xl px-4 py-3 border border-pink-100">
-                                                                <p className="font-medium text-slate-700">{item.food_name || item.recipe_name || 'Sin nombre'}</p>
-                                                                {item.quantity && (
-                                                                    <p className="text-xs text-slate-500 mt-1">{item.quantity}{item.unit ? ` ${item.unit}` : ''}</p>
-                                                                )}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-
-                                {/* Indications */}
-                                {plan.indications && (
-                                    <div className="px-6 py-4 bg-amber-50/50 border-t border-amber-100">
-                                        <h4 className="font-bold text-amber-700 text-sm mb-2">📝 Indicaciones</h4>
-                                        <p className="text-sm text-amber-800 whitespace-pre-wrap">{plan.indications}</p>
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })
+                            );
+                        })}
+                    </div>
                 )}
 
                 {/* Footer */}
