@@ -98,9 +98,9 @@ export default function PatientPortal() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 to-purple-50">
+            <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7]">
                 <div className="text-center">
-                    <Loader2 size={40} className="animate-spin text-pink-500 mx-auto mb-4" />
+                    <Loader2 size={40} className="animate-spin text-emerald-600 mx-auto mb-4" />
                     <p className="text-slate-500 font-medium">Cargando tu plan nutricional...</p>
                 </div>
             </div>
@@ -109,7 +109,7 @@ export default function PatientPortal() {
 
     if (error) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 to-purple-50 p-4">
+            <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7] p-4">
                 <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center border border-red-100">
                     <AlertCircle size={48} className="text-red-400 mx-auto mb-4" />
                     <h2 className="text-xl font-bold text-slate-800 mb-2">Enlace no disponible</h2>
@@ -120,9 +120,9 @@ export default function PatientPortal() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
+        <div className="min-h-screen bg-[#FDFBF7]">
             {/* Header */}
-            <header className="bg-white/80 backdrop-blur-lg border-b border-pink-100 sticky top-0 z-10">
+            <header className="bg-white/80 backdrop-blur-lg border-b border-emerald-100 sticky top-0 z-10">
                 <div className="max-w-4xl mx-auto px-4 py-4 gap-4 flex items-center justify-center">
                     <img src="/covers/logo rosa.png" alt="Iris Nutrición" className="h-10 w-auto" />
                 </div>
@@ -130,9 +130,9 @@ export default function PatientPortal() {
 
             <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
                 {/* Welcome */}
-                <div className="bg-white rounded-2xl shadow-sm border border-pink-100 p-6">
+                <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-6">
                     <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
                             {patient.first_name?.charAt(0)?.toUpperCase()}
                         </div>
                         <div>
@@ -141,8 +141,8 @@ export default function PatientPortal() {
                         </div>
                     </div>
                     {patient.subscription_end && (
-                        <div className="mt-4 flex items-center gap-2 text-sm text-slate-500 bg-pink-50 rounded-lg px-4 py-2">
-                            <Calendar size={16} className="text-pink-500" />
+                        <div className="mt-4 flex items-center gap-2 text-sm text-slate-500 bg-emerald-50 rounded-lg px-4 py-2">
+                            <Calendar size={16} className="text-emerald-600" />
                             Plan activo hasta: <strong className="text-slate-700">{new Date(patient.subscription_end).toLocaleDateString('es-ES', { dateStyle: 'long' })}</strong>
                         </div>
                     )}
@@ -163,24 +163,30 @@ export default function PatientPortal() {
                             const mealNames = snapshot.plan.meal_names || MEALS_DEFAULT;
 
                             return (
-                                <div key={plan.id} className="bg-white rounded-2xl shadow-sm border border-pink-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
-                                    <div className="bg-gradient-to-r from-pink-500 to-purple-600 px-6 py-5 text-white flex-1">
-                                        <div className="flex justify-between items-start gap-4">
+                                <div key={plan.id} className="bg-white rounded-2xl shadow-sm border border-emerald-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+                                    <div className="bg-[#28483a] px-6 py-5 text-white flex-1 relative overflow-hidden">
+                                        {/* Decorative pattern for header */}
+                                        <div className="absolute opacity-10 -right-6 -top-12">
+                                            <UtensilsCrossed size={120} />
+                                        </div>
+                                        <div className="flex justify-between items-start gap-4 relative z-10">
                                             <div>
-                                                <h3 className="font-bold text-xl mb-1">{snapshot.plan.name}</h3>
-                                                <p className="text-pink-100 text-sm flex items-center gap-1.5 opacity-90">
+                                                <h3 className="font-bold text-xl mb-1 text-[#e3f6ed]">{snapshot.plan.name}</h3>
+                                                <p className="text-emerald-100/80 text-sm flex items-center gap-1.5 font-medium">
                                                     <UtensilsCrossed size={14} />
                                                     {snapshot.plan.type === 'closed' ? 'Plan semanal cerrado' : 'Plan abierto con opciones'}
                                                 </p>
-                                                <p className="text-pink-100 text-xs mt-1.5">Publicado el {new Date(plan.created_at).toLocaleDateString()}</p>
+                                                <p className="text-emerald-200/60 text-xs mt-2 font-mono">
+                                                    Publicado: {new Date(plan.created_at).toLocaleDateString()}
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="p-5 flex justify-center bg-pink-50/30">
+                                    <div className="p-6 flex justify-center bg-white">
                                         <button
                                             onClick={() => handleDownloadPdf(plan)}
-                                            className="w-full py-3.5 px-4 bg-white border border-pink-200 text-pink-600 font-bold rounded-xl shadow-sm hover:shadow-md hover:border-pink-300 hover:bg-pink-50 transition-all flex items-center justify-center gap-2"
+                                            className="w-full py-4 px-4 bg-[#28483a] text-white font-bold rounded-xl shadow-[0_4px_14px_0_rgba(40,72,58,0.25)] hover:shadow-[0_6px_20px_rgba(40,72,58,0.23)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
                                             Descargar Mi Plan Nutricional
