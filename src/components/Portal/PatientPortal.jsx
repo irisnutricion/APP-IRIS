@@ -181,14 +181,27 @@ export default function PatientPortal() {
                                         </div>
                                     </div>
 
-                                    <div className="p-6 flex justify-center bg-white">
-                                        <button
-                                            onClick={() => handleDownloadPdf(plan)}
-                                            className="w-full py-4 px-4 bg-[#d09a84] text-white font-bold rounded-xl shadow-[0_4px_14px_0_rgba(208,154,132,0.3)] hover:shadow-[0_6px_20px_rgba(208,154,132,0.4)] hover:-translate-y-0.5 hover:bg-[#c28c76] transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
-                                            Descargar Mi Plan Nutricional
-                                        </button>
+
+                                    <div className="p-6 flex flex-col justify-center bg-white flex-grow">
+                                        {snapshot.plan.notes && (
+                                            <div className="mb-6 w-full">
+                                                <h4 className="text-sm font-bold text-slate-700 mb-2 border-b border-emerald-100 pb-1">
+                                                    📝 Indicaciones del Plan
+                                                </h4>
+                                                <div className="text-sm text-slate-600 whitespace-pre-wrap bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                                                    {snapshot.plan.notes}
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div className="mt-auto w-full">
+                                            <button
+                                                onClick={() => handleDownloadPdf(plan)}
+                                                className="w-full py-4 px-4 bg-[#d09a84] text-white font-bold rounded-xl shadow-[0_4px_14px_0_rgba(208,154,132,0.3)] hover:shadow-[0_6px_20px_rgba(208,154,132,0.4)] hover:-translate-y-0.5 hover:bg-[#c28c76] transition-all flex items-center justify-center gap-2"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
+                                                Descargar Mi Plan Nutricional
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             );
