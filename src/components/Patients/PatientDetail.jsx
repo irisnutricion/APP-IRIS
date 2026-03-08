@@ -179,18 +179,29 @@ const PatientDetail = () => {
     const handleSharePortal = async () => {
         try {
             let token = patient.share_token;
-            // Overwrite old 20-char random hex tokens or generate if missing
-            if (!token || /^[a-f0-9]{20}$/i.test(token)) {
+            // Overwrite old 20-char random hex tokens or 4-char suffix tokens or generate if missing
+            if (!token || /^[a-f0-9]{20}$/i.test(token) || /-[a-f0-9]{4}$/i.test(token)) {
                 const base = `${patient.first_name || ''} ${patient.last_name || ''}`.trim()
                     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                     .toLowerCase()
                     .replace(/[^a-z0-9\s-]/g, '')
                     .replace(/\s+/g, '-');
 
-                const shortId = crypto.randomUUID().split('-')[0].slice(0, 4);
-                token = base ? `${base}-${shortId}` : `paciente-${shortId}`;
+                let newToken = base || 'paciente';
 
-                await updatePatient(patient.id, { share_token: token });
+                // First try: Just the name
+                let result = await updatePatient(patient.id, { share_token: newToken });
+
+                if (!result) {
+                    // Fallback: Name + Short ID if it already exists or fails
+                    const shortId = crypto.randomUUID().split('-')[0].slice(0, 4);
+                    newToken = newToken === 'paciente' ? `paciente-${shortId}` : `${base}-${shortId}`;
+                    result = await updatePatient(patient.id, { share_token: newToken });
+                }
+
+                if (result) {
+                    token = newToken;
+                }
             }
             const url = `${window.location.origin}/portal/${token}`;
             await navigator.clipboard.writeText(url);
