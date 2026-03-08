@@ -17,6 +17,7 @@ export default function PatientPortal() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [patient, setPatient] = useState(null);
+    const [plans, setPlans] = useState([]);
     const [planItems, setPlanItems] = useState([]);
     const [reviewMessage, setReviewMessage] = useState('');
     const [isCopied, setIsCopied] = useState(false);
