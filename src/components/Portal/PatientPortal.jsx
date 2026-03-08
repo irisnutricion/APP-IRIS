@@ -201,7 +201,7 @@ export default function PatientPortal() {
                                         <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 overflow-hidden flex flex-col">
                                             <div className="bg-emerald-50/50 p-5 flex flex-col h-full border-t-4 border-t-[#d09a84]">
                                                 <h4 className="text-sm font-bold text-slate-800 mb-2 border-b border-emerald-100 pb-2 flex items-center gap-2">
-                                                    📝 Indicaciones del Nutricionista
+                                                    📝 Indicaciones
                                                 </h4>
                                                 <div className="text-sm text-slate-600 whitespace-pre-wrap flex-grow relative z-10">
                                                     {snapshot.plan.indications}
