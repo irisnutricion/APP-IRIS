@@ -121,19 +121,12 @@ export default function PatientPortal() {
 
     return (
         <div className="min-h-screen bg-[#FDFBF7]">
-            {/* Header */}
-            <header className="bg-white/80 backdrop-blur-lg border-b border-emerald-100 sticky top-0 z-10">
-                <div className="max-w-4xl mx-auto px-4 py-4 gap-4 flex items-center justify-center">
-                    <img src="/covers/logo rosa.png" alt="Iris Nutrición" className="h-10 w-auto" />
-                </div>
-            </header>
-
             <main className="max-w-4xl mx-auto px-4 py-8 space-y-8">
                 {/* Welcome */}
                 <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-6">
                     <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                            {patient.first_name?.charAt(0)?.toUpperCase()}
+                        <div className="shrink-0 flex items-center justify-center bg-pink-50/50 rounded-xl p-2 border border-pink-100">
+                            <img src="/covers/logo rosa.png" alt="Iris Nutrición" className="h-12 w-auto object-contain" />
                         </div>
                         <div>
                             <h2 className="text-2xl font-bold text-slate-800">¡Hola, {patient.first_name}!</h2>
@@ -186,7 +179,7 @@ export default function PatientPortal() {
                                     <div className="p-6 flex justify-center bg-white">
                                         <button
                                             onClick={() => handleDownloadPdf(plan)}
-                                            className="w-full py-4 px-4 bg-[#28483a] text-white font-bold rounded-xl shadow-[0_4px_14px_0_rgba(40,72,58,0.25)] hover:shadow-[0_6px_20px_rgba(40,72,58,0.23)] hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
+                                            className="w-full py-4 px-4 bg-pink-500 text-white font-bold rounded-xl shadow-[0_4px_14px_0_rgba(236,72,153,0.3)] hover:shadow-[0_6px_20px_rgba(236,72,153,0.4)] hover:-translate-y-0.5 hover:bg-pink-600 transition-all flex items-center justify-center gap-2"
                                         >
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
                                             Descargar Mi Plan Nutricional
