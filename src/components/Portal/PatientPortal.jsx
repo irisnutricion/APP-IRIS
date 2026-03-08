@@ -154,7 +154,7 @@ export default function PatientPortal() {
                         <p className="text-slate-400 text-sm mt-1">Tu nutricionista está preparando tu plan nutritivo.</p>
                     </div>
                 ) : (
-                    <div className="grid gap-6 sm:grid-cols-2">
+                    <div className="flex flex-col gap-8 w-full">
                         {plans.map(plan => {
                             const snapshot = plan.published_data;
                             if (!snapshot || !snapshot.plan) return null;
