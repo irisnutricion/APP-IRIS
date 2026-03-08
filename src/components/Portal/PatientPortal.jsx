@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
-import { UtensilsCrossed, Calendar, Loader2, AlertCircle, ChefHat } from 'lucide-react';
+import { UtensilsCrossed, Calendar, Loader2, AlertCircle, ChefHat, Copy, CheckCheck } from 'lucide-react';
 
 // Dedicated anonymous client - never sends auth headers so anon RLS policies apply
 const anonSupabase = createClient(
@@ -17,9 +17,9 @@ export default function PatientPortal() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [patient, setPatient] = useState(null);
-    const [plans, setPlans] = useState([]);
     const [planItems, setPlanItems] = useState([]);
     const [reviewMessage, setReviewMessage] = useState('');
+    const [isCopied, setIsCopied] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -111,6 +111,12 @@ export default function PatientPortal() {
         }
     };
 
+    const handleCopy = () => {
+        navigator.clipboard.writeText(reviewMessage);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7]">
@@ -160,20 +166,6 @@ export default function PatientPortal() {
                         </div>
                     )}
                 </div>
-
-                {/* Global Review Message */}
-                {reviewMessage && (
-                    <div className="bg-white rounded-2xl shadow-sm border border-[#d09a84]/30 overflow-hidden flex flex-col">
-                        <div className="bg-[#fff9f6] p-5 flex flex-col h-full border-t-4 border-t-[#d09a84]">
-                            <h4 className="text-sm font-bold text-slate-800 mb-2 border-b border-[#d09a84]/20 pb-2 flex items-center gap-2">
-                                📝 Mensaje de Revisión
-                            </h4>
-                            <div className="text-sm text-slate-600 whitespace-pre-wrap flex-grow relative z-10">
-                                {reviewMessage}
-                            </div>
-                        </div>
-                    </div>
-                )}
 
                 {/* Published Plans */}
                 {plans.length === 0 ? (
@@ -227,6 +219,28 @@ export default function PatientPortal() {
                                 </div>
                             );
                         })}
+                    </div>
+                )}
+
+                {/* Global Review Message at the bottom */}
+                {reviewMessage && (
+                    <div className="bg-white rounded-2xl shadow-sm border border-[#d09a84]/30 overflow-hidden flex flex-col">
+                        <div className="bg-[#fff9f6] p-5 flex flex-col h-full border-t-4 border-t-[#d09a84]">
+                            <div className="flex justify-between items-center border-b border-[#d09a84]/20 pb-2 mb-2">
+                                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                    📝 Mensaje de Revisión
+                                </h4>
+                                <button
+                                    onClick={handleCopy}
+                                    className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider"
+                                >
+                                    {isCopied ? <><CheckCheck size={14} /> Copiado</> : <><Copy size={14} /> Copiar texto</>}
+                                </button>
+                            </div>
+                            <div className="text-sm text-slate-600 whitespace-pre-wrap flex-grow relative z-10">
+                                {reviewMessage}
+                            </div>
+                        </div>
                     </div>
                 )}
 
