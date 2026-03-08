@@ -140,7 +140,7 @@ export default function PatientPortal() {
                                 <span>Seguimiento activo hasta: <strong className="text-slate-700">{new Date(patient.subscription_end).toLocaleDateString('es-ES', { dateStyle: 'long' })}</strong></span>
                             </div>
                             <div className="flex items-start gap-2 pt-2 border-t border-emerald-200/50 text-emerald-800 font-medium">
-                                <span>💡 Recuerda que todos los lunes debes enviarme el mensaje de revisión.</span>
+                                <span>💡 Recuerda que todos los {patient.review_day ? patient.review_day.toLowerCase() : 'lunes'} debes enviarme el mensaje de revisión.</span>
                             </div>
                         </div>
                     )}
