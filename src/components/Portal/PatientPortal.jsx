@@ -26,7 +26,7 @@ export default function PatientPortal() {
                 // Fetch patient by share_token
                 const { data: patientData, error: patientErr } = await anonSupabase
                     .from('patients')
-                    .select('id, name, share_token, subscription_end, review_day')
+                    .select('id, first_name, last_name, share_token, subscription_end, review_day')
                     .eq('share_token', token)
                     .single();
 
@@ -121,10 +121,10 @@ export default function PatientPortal() {
                 <div className="bg-white rounded-2xl shadow-sm border border-pink-100 p-6">
                     <div className="flex items-center gap-4">
                         <div className="w-14 h-14 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                            {patient.name?.charAt(0)?.toUpperCase()}
+                            {patient.first_name?.charAt(0)?.toUpperCase()}
                         </div>
                         <div>
-                            <h2 className="text-2xl font-bold text-slate-800">¡Hola, {patient.name?.split(' ')[0]}!</h2>
+                            <h2 className="text-2xl font-bold text-slate-800">¡Hola, {patient.first_name}!</h2>
                             <p className="text-slate-500 text-sm">Aquí puedes consultar tu plan nutricional</p>
                         </div>
                     </div>
