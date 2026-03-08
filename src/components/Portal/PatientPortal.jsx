@@ -161,48 +161,54 @@ export default function PatientPortal() {
                             const mealNames = snapshot.plan.meal_names || MEALS_DEFAULT;
 
                             return (
-                                <div key={plan.id} className="bg-white rounded-2xl shadow-sm border border-emerald-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
-                                    <div className="bg-[#28483a] px-6 py-5 text-white flex-1 relative overflow-hidden">
-                                        {/* Decorative pattern for header */}
-                                        <div className="absolute opacity-10 -right-6 -top-12">
-                                            <UtensilsCrossed size={120} />
+                                <div key={plan.id} className="flex flex-col gap-4">
+                                    {/* Main Plan Card */}
+                                    <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+                                        <div className="bg-[#28483a] px-6 py-5 text-white flex-1 relative overflow-hidden">
+                                            {/* Decorative pattern for header */}
+                                            <div className="absolute opacity-10 -right-6 -top-12">
+                                                <UtensilsCrossed size={120} />
+                                            </div>
+                                            <div className="flex justify-between items-start gap-4 relative z-10">
+                                                <div>
+                                                    <h3 className="font-bold text-xl mb-1 text-[#e3f6ed]">{snapshot.plan.name}</h3>
+                                                    <p className="text-emerald-100/80 text-sm flex items-center gap-1.5 font-medium">
+                                                        <UtensilsCrossed size={14} />
+                                                        {snapshot.plan.type === 'closed' ? 'Plan semanal cerrado' : 'Plan abierto con opciones'}
+                                                    </p>
+                                                    <p className="text-emerald-200/60 text-xs mt-2 font-mono">
+                                                        Publicado: {new Date(plan.created_at).toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="flex justify-between items-start gap-4 relative z-10">
-                                            <div>
-                                                <h3 className="font-bold text-xl mb-1 text-[#e3f6ed]">{snapshot.plan.name}</h3>
-                                                <p className="text-emerald-100/80 text-sm flex items-center gap-1.5 font-medium">
-                                                    <UtensilsCrossed size={14} />
-                                                    {snapshot.plan.type === 'closed' ? 'Plan semanal cerrado' : 'Plan abierto con opciones'}
-                                                </p>
-                                                <p className="text-emerald-200/60 text-xs mt-2 font-mono">
-                                                    Publicado: {new Date(plan.created_at).toLocaleDateString()}
-                                                </p>
+
+                                        <div className="p-5 flex flex-col justify-center bg-white flex-grow">
+                                            <div className="flex justify-center w-full">
+                                                <button
+                                                    onClick={() => handleDownloadPdf(plan)}
+                                                    className="w-full py-4 px-4 bg-[#d09a84] text-white font-bold rounded-xl shadow-[0_4px_14px_0_rgba(208,154,132,0.3)] hover:shadow-[0_6px_20px_rgba(208,154,132,0.4)] hover:-translate-y-0.5 hover:bg-[#c28c76] transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
+                                                    Descargar Mi Plan Nutricional
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
 
-
-                                    <div className="p-6 flex flex-col gap-5 bg-white">
-                                        {snapshot.plan.indications && (
-                                            <div className="w-full">
-                                                <h4 className="text-sm font-bold text-slate-700 mb-2 border-b border-emerald-100 pb-1">
-                                                    📝 Indicaciones del Plan
+                                    {/* Separated Indications Card */}
+                                    {snapshot.plan.indications && (
+                                        <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 overflow-hidden flex flex-col">
+                                            <div className="bg-emerald-50/50 p-5 flex flex-col h-full border-t-4 border-t-[#d09a84]">
+                                                <h4 className="text-sm font-bold text-slate-800 mb-2 border-b border-emerald-100 pb-2 flex items-center gap-2">
+                                                    📝 Indicaciones del Nutricionista
                                                 </h4>
-                                                <div className="text-sm text-slate-600 whitespace-pre-wrap bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
+                                                <div className="text-sm text-slate-600 whitespace-pre-wrap flex-grow relative z-10">
                                                     {snapshot.plan.indications}
                                                 </div>
                                             </div>
-                                        )}
-                                        <div className="flex justify-center w-full">
-                                            <button
-                                                onClick={() => handleDownloadPdf(plan)}
-                                                className="w-full py-4 px-4 bg-[#d09a84] text-white font-bold rounded-xl shadow-[0_4px_14px_0_rgba(208,154,132,0.3)] hover:shadow-[0_6px_20px_rgba(208,154,132,0.4)] hover:-translate-y-0.5 hover:bg-[#c28c76] transition-all flex items-center justify-center gap-2"
-                                            >
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
-                                                Descargar Mi Plan Nutricional
-                                            </button>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             );
                         })}
