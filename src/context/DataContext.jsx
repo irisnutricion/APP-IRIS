@@ -3,6 +3,40 @@ import { addDays, differenceInDays, parseISO, format } from 'date-fns';
 import { supabase } from '../supabaseClient';
 import { useAuth } from './AuthContext';
 
+export const calculateDynamicPatientStatus = (dbStatus, startDateStr, endDateStr, history = []) => {
+    if (['pending_payment', 'paused', 'finished'].includes(dbStatus)) {
+        return dbStatus;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = startDateStr ? parseISO(startDateStr) : null;
+    const endDate = endDateStr ? parseISO(endDateStr) : null;
+
+    if (!startDateStr || !endDateStr) return 'waiting';
+
+    const warningDate = new Date(today);
+    warningDate.setDate(today.getDate() + 7);
+
+    if (startDate > today) {
+        // Check for any currently active subscription in history
+        const activeSub = history.find(sub => {
+            const subStart = sub.start_date ? parseISO(sub.start_date) : null;
+            const subEnd = sub.end_date ? parseISO(sub.end_date) : null;
+            return sub.status === 'active' &&
+                subStart && subStart <= today &&
+                (!subEnd || subEnd >= today);
+        });
+
+        if (activeSub) return 'active';
+        return 'waiting';
+    }
+    if (endDate < today) return 'expired';
+    if (endDate <= warningDate) return 'warning';
+
+    return 'active';
+};
+
 const DataContext = createContext();
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -111,26 +145,33 @@ export const DataProvider = ({ children }) => {
                 const patientsData = patientsResult.value.data;
                 const subscriptionsHistoryData = subscriptionsHistoryResult.status === 'fulfilled' ? subscriptionsHistoryResult.value.data : [];
 
-                const hydratedPatients = patientsData.map(p => ({
-                    ...p,
-                    name: (p.first_name || p.last_name) ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : (p.name || 'Cliente'),
-                    subscriptionHistory: subscriptionsHistoryData ?
+                const hydratedPatients = patientsData.map(p => {
+                    const mappedHistory = subscriptionsHistoryData ?
                         subscriptionsHistoryData.filter(h => h.patient_id === p.id).sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
-                        : [],
-                    subscriptionPauses: [],
-                    measurements: p.measurements || [],
-                    status: p.subscription_status, // Map to top-level status for PatientList compatibility
-                    review_day: p.review_day, // Explicitly map to ensure it's available
-                    subscription: {
-                        type: p.subscription_type,
-                        startDate: p.subscription_start,
-                        endDate: p.subscription_end,
-                        status: p.subscription_status,
-                        pauseStartDate: p.pause_start_date,
-                        subscriptionTypeId: p.subscription_type_id,
-                        paymentRateId: p.payment_rate_id
-                    }
-                }));
+                        : [];
+
+                    const dynamicStatus = calculateDynamicPatientStatus(p.subscription_status, p.subscription_start, p.subscription_end, mappedHistory);
+
+                    return {
+                        ...p,
+                        name: (p.first_name || p.last_name) ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : (p.name || 'Cliente'),
+                        subscriptionHistory: mappedHistory,
+                        subscriptionPauses: [],
+                        measurements: p.measurements || [],
+                        subscription_status: dynamicStatus, // Override DB value with dynamic value
+                        status: dynamicStatus, // Map to top-level status
+                        review_day: p.review_day, // Explicitly map to ensure it's available
+                        subscription: {
+                            type: p.subscription_type,
+                            startDate: p.subscription_start,
+                            endDate: p.subscription_end,
+                            status: dynamicStatus,
+                            pauseStartDate: p.pause_start_date,
+                            subscriptionTypeId: p.subscription_type_id,
+                            paymentRateId: p.payment_rate_id
+                        }
+                    };
+                });
                 setPatients(hydratedPatients);
             } else {
                 console.error('Critical: Failed to fetch patients', patientsResult.reason);
@@ -503,27 +544,39 @@ export const DataProvider = ({ children }) => {
             return;
         }
 
-        setPatients(prev => prev.map(p => p.id === id ? {
-            ...p,
-            ...data,
-            // Explicitly ensure the new field is merged into local state (Supabase returns it in 'data' but just to be sure)
-            payment_category_id: data.payment_category_id,
-            review_day: data.review_day,
-            status: data.subscription_status, // Ensure top-level status is updated
-            subscription: {
-                // ... (keep existing)
-                type: data.subscription_type,
-                startDate: data.subscription_start,
-                endDate: data.subscription_end,
-                status: data.subscription_status,
-                pauseStartDate: data.pause_start_date,
-                // Add missing IDs for local state
-                subscriptionTypeId: data.subscription_type_id,
-                paymentRateId: data.payment_rate_id,
-            },
-            // Ensure name is updated in local state too
-            name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || data.name
-        } : p));
+        setPatients(prev => prev.map(p => {
+            if (p.id !== id) return p;
+
+            const dynamicStatus = calculateDynamicPatientStatus(
+                data.subscription_status,
+                data.subscription_start,
+                data.subscription_end,
+                p.subscriptionHistory
+            );
+
+            return {
+                ...p,
+                ...data,
+                // Explicitly ensure the new field is merged into local state (Supabase returns it in 'data' but just to be sure)
+                payment_category_id: data.payment_category_id,
+                review_day: data.review_day,
+                subscription_status: dynamicStatus, // Override DB status
+                status: dynamicStatus, // Ensure top-level status is updated
+                subscription: {
+                    // ... (keep existing)
+                    type: data.subscription_type,
+                    startDate: data.subscription_start,
+                    endDate: data.subscription_end,
+                    status: dynamicStatus,
+                    pauseStartDate: data.pause_start_date,
+                    // Add missing IDs for local state
+                    subscriptionTypeId: data.subscription_type_id,
+                    paymentRateId: data.payment_rate_id,
+                },
+                // Ensure name is updated in local state too
+                name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || data.name
+            };
+        }));
     };
 
     const deletePatient = async (id) => {
@@ -593,17 +646,30 @@ export const DataProvider = ({ children }) => {
             // Refetch pauses to get the updated ID or closed status
             const { data: updatedPauses } = await supabase.from('subscription_pauses').select('*').eq('patient_id', id).order('start_date', { ascending: false });
 
-            setPatients(prev => prev.map(p => p.id === id ? {
-                ...p, ...data,
-                subscriptionPauses: updatedPauses || [],
-                subscription: {
-                    type: data.subscription_type,
-                    startDate: data.subscription_start,
-                    endDate: data.subscription_end,
-                    status: data.subscription_status,
-                    pauseStartDate: data.pause_start_date
-                }
-            } : p));
+            setPatients(prev => prev.map(p => {
+                if (p.id !== id) return p;
+
+                const dynamicStatus = calculateDynamicPatientStatus(
+                    data.subscription_status,
+                    data.subscription_start,
+                    data.subscription_end,
+                    p.subscriptionHistory
+                );
+
+                return {
+                    ...p, ...data,
+                    subscriptionPauses: updatedPauses || [],
+                    subscription_status: dynamicStatus,
+                    status: dynamicStatus,
+                    subscription: {
+                        type: data.subscription_type,
+                        startDate: data.subscription_start,
+                        endDate: data.subscription_end,
+                        status: dynamicStatus,
+                        pauseStartDate: data.pause_start_date
+                    }
+                };
+            }));
         }
     };
 

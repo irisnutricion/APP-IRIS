@@ -145,22 +145,22 @@ export default function Templates() {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         {isEditing ? (
-                                            <div className="flex gap-1">
+                                            <div className="flex gap-1 mb-1">
                                                 <input
                                                     autoFocus
                                                     value={editNameValue}
                                                     onChange={e => setEditNameValue(e.target.value)}
                                                     onKeyDown={e => e.key === 'Enter' && handleSaveName(plan.id)}
-                                                    className="flex-1 text-sm font-semibold px-2 py-1 border border-primary-300 rounded-lg bg-transparent dark:text-white outline-none focus:ring-1 focus:ring-primary-500"
+                                                    className="flex-1 text-sm font-semibold px-2 py-1 border border-primary-300 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white outline-none focus:ring-1 focus:ring-primary-500"
                                                 />
-                                                <button onClick={() => handleSaveName(plan.id)} className="p-1 text-green-500 hover:text-green-600">✓</button>
-                                                <button onClick={() => setEditingName(null)} className="p-1 text-slate-400 hover:text-slate-600"><X size={14} /></button>
+                                                <button onClick={() => handleSaveName(plan.id)} className="p-1 text-green-500 hover:text-green-600 dark:hover:text-green-400">✓</button>
+                                                <button onClick={() => setEditingName(null)} className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X size={14} /></button>
                                             </div>
                                         ) : (
                                             <h3 className="font-semibold text-slate-800 dark:text-white truncate">{plan.name}</h3>
                                         )}
                                         <div className="flex items-center gap-2 mt-1">
-                                            <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${plan.type === 'closed' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400'}`}>
+                                            <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${plan.type === 'closed' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-green-50 text-green-600 dark:bg-green-900/40 dark:text-green-300'}`}>
                                                 {plan.type === 'closed' ? 'Cerrado' : 'Abierto'}
                                             </span>
                                             <span className="text-xs text-slate-400">{itemCount} items</span>

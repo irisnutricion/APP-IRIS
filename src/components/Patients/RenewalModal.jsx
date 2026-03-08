@@ -107,8 +107,8 @@ const RenewalModal = ({ isOpen, onClose, patient, suggestedStartDate }) => {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-fade-in">
-                <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-primary/5">
-                    <h3 className="text-lg font-bold text-primary flex items-center gap-2">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-primary/5 dark:bg-primary-900/10">
+                    <h3 className="text-lg font-bold text-primary dark:text-primary-400 flex items-center gap-2">
                         <RefreshCw size={20} /> Renovar Suscripción
                     </h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
@@ -117,7 +117,7 @@ const RenewalModal = ({ isOpen, onClose, patient, suggestedStartDate }) => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    <div className="bg-blue-50 text-blue-800 p-3 rounded-lg text-sm mb-4 border border-blue-100">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 p-3 rounded-lg text-sm mb-4 border border-blue-100 dark:border-blue-800/30">
                         Al renovar, se reiniciará el ciclo de facturación desde la fecha seleccionada.
                     </div>
 
@@ -185,7 +185,7 @@ const RenewalModal = ({ isOpen, onClose, patient, suggestedStartDate }) => {
                                             {archived.length > 0 && (
                                                 <optgroup label="Archivadas">
                                                     {archived.map(r => (
-                                                        <option key={r.id} value={r.id} className="text-gray-500">
+                                                        <option key={r.id} value={r.id} className="text-gray-500 dark:text-gray-400">
                                                             {r.label} - {r.amount}€ (Archivada)
                                                         </option>
                                                     ))}

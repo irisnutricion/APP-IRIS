@@ -47,15 +47,8 @@ const Dashboard = () => {
     const { activePatients, pendingRenewals, expiredPlans, todaysReviews } = useMemo(() => {
         const today = new Date();
         const active = patients.filter(p => p.subscription_status === 'active').length;
-        const pending = patients.filter(p => {
-            if (p.subscription_status !== 'active' || !p.subscription_end) return false;
-            const endDate = parseISO(p.subscription_end);
-            return isBefore(endDate, addDays(today, 7)) && isBefore(today, endDate);
-        }).length;
-        const expired = patients.filter(p => {
-            if (!p.subscription_end) return false;
-            return isBefore(parseISO(p.subscription_end), today) && p.subscription_status === 'active';
-        }).length;
+        const pending = patients.filter(p => p.subscription_status === 'warning').length;
+        const expired = patients.filter(p => p.subscription_status === 'expired').length;
         const reviewsThisWeek = patients.filter(p => {
             if (p.subscription_status !== 'active' || !p.subscription_start || !p.review_day) return false;
             return true;

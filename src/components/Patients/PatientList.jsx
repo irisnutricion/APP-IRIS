@@ -26,36 +26,8 @@ const PatientList = () => {
     // In the return ...
     // Status mapping logic
     const getPatientStatus = (patient) => {
-        if (['pending_payment', 'paused', 'finished'].includes(patient.status)) {
-            return patient.status;
-        }
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const endDate = patient.subscription?.endDate ? new Date(patient.subscription.endDate) : null;
-        const startDate = patient.subscription?.startDate ? new Date(patient.subscription.startDate) : null;
-
-        const warningDate = new Date(today);
-        warningDate.setDate(today.getDate() + 7);
-
-        if (!startDate || !endDate) return 'waiting';
-
-        if (startDate > today) {
-            // Check for any currently active subscription in history
-            const activeSub = patient.subscriptionHistory?.find(sub =>
-                sub.status === 'active' &&
-                new Date(sub.start_date) <= today &&
-                (!sub.end_date || new Date(sub.end_date) >= today)
-            );
-
-            if (activeSub) return 'active';
-
-            return 'waiting';
-        }
-        if (endDate < today) return 'expired';
-        if (endDate <= warningDate) return 'warning';
-
-        return 'active';
+        // DataContext now securely calculates 'waiting', 'warning', 'expired', 'active', etc. dynamically
+        return patient.status || 'waiting';
     };
 
     const columns = {
