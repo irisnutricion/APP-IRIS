@@ -1,7 +1,14 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '../../supabaseClient';
-import { UtensilsCrossed, Calendar, Download, Loader2, AlertCircle, User, ChefHat } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
+import { UtensilsCrossed, Calendar, Loader2, AlertCircle, ChefHat } from 'lucide-react';
+
+// Dedicated anonymous client - never sends auth headers so anon RLS policies apply
+const anonSupabase = createClient(
+    import.meta.env.VITE_SUPABASE_URL,
+    import.meta.env.VITE_SUPABASE_KEY,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+);
 
 export default function PatientPortal() {
     const { token } = useParams();
@@ -17,11 +24,15 @@ export default function PatientPortal() {
             setError(null);
             try {
                 // Fetch patient by share_token
-                const { data: patientData, error: patientErr } = await supabase
+                const { data: patientData, error: patientErr } = await anonSupabase
                     .from('patients')
                     .select('id, name, share_token, subscription_end, review_day')
                     .eq('share_token', token)
                     .single();
+
+                console.log('[Portal] token:', token);
+                console.log('[Portal] patientData:', patientData);
+                console.log('[Portal] patientErr:', patientErr);
 
                 if (patientErr || !patientData) {
                     setError('Enlace no válido o expirado.');
@@ -31,7 +42,7 @@ export default function PatientPortal() {
                 setPatient(patientData);
 
                 // Fetch active meal plans
-                const { data: plansData } = await supabase
+                const { data: plansData } = await anonSupabase
                     .from('meal_plans')
                     .select('*')
                     .eq('patient_id', patientData.id)
@@ -43,7 +54,7 @@ export default function PatientPortal() {
 
                 if (plansData && plansData.length > 0) {
                     const planIds = plansData.map(p => p.id);
-                    const { data: itemsData } = await supabase
+                    const { data: itemsData } = await anonSupabase
                         .from('meal_plan_items')
                         .select('*')
                         .in('plan_id', planIds)
