@@ -19,6 +19,7 @@ export default function PatientPortal() {
     const [patient, setPatient] = useState(null);
     const [plans, setPlans] = useState([]);
     const [planItems, setPlanItems] = useState([]);
+    const [reviewMessage, setReviewMessage] = useState('');
 
     useEffect(() => {
         const fetchData = async () => {
@@ -56,6 +57,20 @@ export default function PatientPortal() {
                 // We don't fetch meal_plan_items directly anymore. 
                 // The portal relies entirely on the 'published_data' JSON snapshot!
                 setPlans(plansData || []);
+
+                // Fetch global review message from user_profile
+                try {
+                    const { data: profileData } = await anonSupabase
+                        .from('user_profile')
+                        .select('review_message')
+                        .limit(1)
+                        .single();
+                    if (profileData && profileData.review_message) {
+                        setReviewMessage(profileData.review_message);
+                    }
+                } catch (e) {
+                    console.error('Error fetching review message', e);
+                }
             } catch (err) {
                 console.error('Portal error:', err);
                 setError('Error al cargar los datos.');
@@ -146,6 +161,20 @@ export default function PatientPortal() {
                     )}
                 </div>
 
+                {/* Global Review Message */}
+                {reviewMessage && (
+                    <div className="bg-white rounded-2xl shadow-sm border border-[#d09a84]/30 overflow-hidden flex flex-col">
+                        <div className="bg-[#fff9f6] p-5 flex flex-col h-full border-t-4 border-t-[#d09a84]">
+                            <h4 className="text-sm font-bold text-slate-800 mb-2 border-b border-[#d09a84]/20 pb-2 flex items-center gap-2">
+                                📝 Mensaje de Revisión
+                            </h4>
+                            <div className="text-sm text-slate-600 whitespace-pre-wrap flex-grow relative z-10">
+                                {reviewMessage}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Published Plans */}
                 {plans.length === 0 ? (
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
@@ -195,20 +224,6 @@ export default function PatientPortal() {
                                             </div>
                                         </div>
                                     </div>
-
-                                    {/* Separated Indications Card */}
-                                    {snapshot.plan.indications && (
-                                        <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 overflow-hidden flex flex-col">
-                                            <div className="bg-emerald-50/50 p-5 flex flex-col h-full border-t-4 border-t-[#d09a84]">
-                                                <h4 className="text-sm font-bold text-slate-800 mb-2 border-b border-emerald-100 pb-2 flex items-center gap-2">
-                                                    📝 Indicaciones
-                                                </h4>
-                                                <div className="text-sm text-slate-600 whitespace-pre-wrap flex-grow relative z-10">
-                                                    {snapshot.plan.indications}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
                             );
                         })}

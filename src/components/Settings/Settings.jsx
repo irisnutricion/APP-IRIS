@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useData } from '../../context/DataContext';
 import { useToast } from '../../context/ToastContext';
 import { supabase } from '../../supabaseClient';
 import {
     Plus, Trash2, Edit2, Check, X, Settings as SettingsIcon, CreditCard, User, Database,
-    Download, Upload, ArrowDown, ArrowUp, Tag, Wallet, ChevronDown, ChevronRight, Layers, Heart, Users, KeyRound, FileText, CalendarDays, Save
+    Download, Upload, ArrowDown, ArrowUp, Tag, Wallet, ChevronDown, ChevronRight, Layers, Heart, Users, KeyRound, FileText, CalendarDays, Save, MessageCircle
 } from 'lucide-react';
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -86,6 +86,17 @@ const Settings = () => {
     const [schemaMatrix, setSchemaMatrix] = useState({});
     const [isSavingSchema, setIsSavingSchema] = useState(false);
 
+    // Portal Settings
+    const [portalMessage, setPortalMessage] = useState(userProfile?.review_message || '');
+    const [isSavingPortal, setIsSavingPortal] = useState(false);
+
+    // Sync portalMessage if userProfile loads late
+    useEffect(() => {
+        if (userProfile?.review_message !== undefined) {
+            setPortalMessage(userProfile.review_message || '');
+        }
+    }, [userProfile?.review_message]);
+
     const colorOptions = [
         { label: 'Gris', value: 'bg-slate-100 text-slate-700' },
         { label: 'Rojo', value: 'bg-red-100 text-red-700' },
@@ -106,6 +117,7 @@ const Settings = () => {
         { id: 'clinical', label: 'Datos Clínicos', icon: Heart, description: 'Opciones de patologías y alimentos' },
         { id: 'recetas', label: 'Textos de Recetas', icon: FileText, description: 'Frases prediseñadas para descripciones de recetas' },
         { id: 'esquema', label: 'Esquema Semanal', icon: CalendarDays, description: 'Plantilla base de menú para PDF' },
+        { id: 'portal', label: 'Portal del Paciente', icon: MessageCircle, description: 'Configura la vista pública de los clientes' },
         { id: 'datos', label: 'Datos', icon: Database, description: 'Copias de seguridad' },
     ];
 
@@ -1546,6 +1558,49 @@ const Settings = () => {
         );
     };
 
+    const handleSavePortal = async () => {
+        setIsSavingPortal(true);
+        try {
+            await updateUserProfile({ review_message: portalMessage });
+            showToast('Mensaje de revisión guardado', 'success');
+        } catch (error) {
+            console.error(error);
+            showToast('Error al guardar el mensaje', 'error');
+        } finally {
+            setIsSavingPortal(false);
+        }
+    };
+
+    const renderPortalSection = () => (
+        <div className="space-y-6">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+                <div className="p-6">
+                    <h4 className="font-bold text-slate-800 dark:text-white mb-2 flex items-center gap-2">
+                        <MessageCircle size={18} /> Mensaje de Revisión
+                    </h4>
+                    <p className="text-sm text-slate-500 mb-4">
+                        Este mensaje aparecerá permanentemente en el portal del paciente. Es ideal para dar instrucciones globales o recordarles qué deben mandarte en su revisión (ej: "Mándame peso, medidas y fotos al WhatsApp").
+                    </p>
+                    <textarea
+                        className="form-textarea w-full h-32"
+                        value={portalMessage}
+                        onChange={(e) => setPortalMessage(e.target.value)}
+                        placeholder="Ej: Recuerda enviarme tu peso en ayunas y 2 fotos (frente y perfil) el día de tu revisión vía WhatsApp."
+                    />
+                </div>
+                <div className="bg-slate-50 dark:bg-slate-800/80 p-4 border-t border-slate-200 dark:border-slate-700 flex justify-end">
+                    <button
+                        onClick={handleSavePortal}
+                        disabled={isSavingPortal}
+                        className="btn btn-primary shadow-sm flex items-center gap-2"
+                    >
+                        {isSavingPortal ? 'Guardando...' : <><Save size={16} /> Guardar Mensaje</>}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+
     const getSectionContent = (sectionId) => {
         switch (sectionId) {
             case 'tarifas': return renderTarifasSection();
@@ -1557,6 +1612,7 @@ const Settings = () => {
             case 'clinical': return renderClinicalSection();
             case 'recetas': return renderRecetasSection();
             case 'esquema': return renderEsquemaSection();
+            case 'portal': return renderPortalSection();
             case 'datos': return renderDatosSection();
             default: return null;
         }
