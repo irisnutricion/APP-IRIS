@@ -471,7 +471,7 @@ export const DataProvider = ({ children }) => {
         if (updates.subscription_type_id) dbUpdates.subscription_type_id = updates.subscription_type_id;
         if (updates.payment_rate_id) dbUpdates.payment_rate_id = updates.payment_rate_id;
         // Spread other safe keys
-        ['email', 'phone', 'sex', 'city', 'height', 'weight', 'goals', 'allergies', 'pathologies', 'platos_que_no_pueden_faltar', 'notes'].forEach(k => {
+        ['email', 'phone', 'sex', 'city', 'height', 'weight', 'goals', 'allergies', 'pathologies', 'platos_que_no_pueden_faltar', 'notes', 'share_token'].forEach(k => {
             if (updates[k] !== undefined) dbUpdates[k] = updates[k];
         });
         // Handle birthDate -> birth_date mapping
