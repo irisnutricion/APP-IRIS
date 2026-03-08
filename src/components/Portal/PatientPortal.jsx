@@ -182,18 +182,18 @@ export default function PatientPortal() {
                                     </div>
 
 
-                                    <div className="p-6 flex flex-col justify-center bg-white flex-grow">
-                                        {snapshot.plan.notes && (
-                                            <div className="mb-6 w-full">
+                                    <div className="p-6 flex flex-col gap-5 bg-white">
+                                        {snapshot.plan.indications && (
+                                            <div className="w-full">
                                                 <h4 className="text-sm font-bold text-slate-700 mb-2 border-b border-emerald-100 pb-1">
                                                     📝 Indicaciones del Plan
                                                 </h4>
                                                 <div className="text-sm text-slate-600 whitespace-pre-wrap bg-emerald-50/50 p-4 rounded-xl border border-emerald-100">
-                                                    {snapshot.plan.notes}
+                                                    {snapshot.plan.indications}
                                                 </div>
                                             </div>
                                         )}
-                                        <div className="mt-auto w-full">
+                                        <div className="flex justify-center w-full">
                                             <button
                                                 onClick={() => handleDownloadPdf(plan)}
                                                 className="w-full py-4 px-4 bg-[#d09a84] text-white font-bold rounded-xl shadow-[0_4px_14px_0_rgba(208,154,132,0.3)] hover:shadow-[0_6px_20px_rgba(208,154,132,0.4)] hover:-translate-y-0.5 hover:bg-[#c28c76] transition-all flex items-center justify-center gap-2"
