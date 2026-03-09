@@ -26,6 +26,7 @@ const AppointmentsCalendar = () => {
     const [filterCategory, setFilterCategory] = useState('');
 
     const [form, setForm] = useState({
+        category_id: '',
         patient_id: '',
         appointment_type_id: '',
         date: format(new Date(), 'yyyy-MM-dd'),
@@ -43,19 +44,9 @@ const AppointmentsCalendar = () => {
     };
 
     const getEventColor = (appt) => {
-        if (appt.status === 'completed') return '#10b981'; // green
-        if (appt.status === 'cancelled') return '#ef4444'; // red
-        if (appt.status === 'no_show') return '#f97316'; // orange
-
-        // Use category color if available, otherwise primary
-        const type = getApptType(appt.appointment_type_id);
-        if (type && type.category_id) {
-            const cat = paymentCategories.find(c => c.id === type.category_id);
-            // Basic naive mapping from standard tailwind string if exists, for now fallback to primary blue
-            if (cat?.label?.toLowerCase().includes('online')) return '#8b5cf6'; // purple
-            return '#3b82f6'; // blue
-        }
-        return '#3b82f6'; // default scheduled
+        if (appt.status === 'completed') return '#c8e3bc';
+        if (appt.status === 'cancelled' || appt.status === 'no_show') return '#d09a84';
+        return '#28483a';
     };
 
     const calendarEvents = useMemo(() => {
@@ -85,7 +76,9 @@ const AppointmentsCalendar = () => {
     const handleOpenModal = (appt = null, initialDate = null) => {
         if (appt) {
             setEditingId(appt.id);
+            const type = getApptType(appt.appointment_type_id);
             setForm({
+                category_id: type?.category_id || '',
                 patient_id: appt.patient_id,
                 appointment_type_id: appt.appointment_type_id,
                 date: format(parseISO(appt.start_time), 'yyyy-MM-dd'),
@@ -97,6 +90,7 @@ const AppointmentsCalendar = () => {
         } else {
             setEditingId(null);
             setForm({
+                category_id: filterCategory || '',
                 patient_id: '',
                 appointment_type_id: '',
                 date: initialDate ? format(initialDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
@@ -196,7 +190,7 @@ const AppointmentsCalendar = () => {
         <div className="dashboard-container">
             <div className="dashboard-header flex justify-between items-end mb-6">
                 <div>
-                    <h1 className="page-title flex items-center gap-2"><CalendarClock className="text-primary-500" /> Calendario</h1>
+                    <h1 className="page-title flex items-center gap-2" style={{ color: '#28483a' }}><CalendarClock style={{ color: '#28483a' }} /> Calendario</h1>
                     <p className="page-subtitle">Gestiona todas tus citas presenciales y online en un solo lugar</p>
                 </div>
                 <div className="flex items-center gap-4">
@@ -210,7 +204,7 @@ const AppointmentsCalendar = () => {
                             <option key={cat.id} value={cat.id}>{cat.label}</option>
                         ))}
                     </select>
-                    <button onClick={() => handleOpenModal()} className="btn btn-primary shadow-sm flex items-center gap-2 h-[42px]">
+                    <button onClick={() => handleOpenModal()} className="btn shadow-sm flex items-center gap-2 h-[42px] text-white" style={{ backgroundColor: '#28483a', borderColor: '#28483a' }}>
                         <Plus size={18} /> Nueva Cita
                     </button>
                 </div>
@@ -239,12 +233,13 @@ const AppointmentsCalendar = () => {
                         color: #cbd5e1;
                     }
                     .fc-button-primary {
-                        background-color: var(--tw-prose-links, #db2777) !important;
-                        border-color: var(--tw-prose-links, #be185d) !important;
+                        background-color: #28483a !important;
+                        border-color: #28483a !important;
+                        color: white !important;
                     }
                     .fc-button-primary:not(:disabled):active, .fc-button-primary:not(:disabled).fc-button-active {
-                        background-color: #9d174d !important;
-                        border-color: #831843 !important;
+                        background-color: #1a2f26 !important;
+                        border-color: #1a2f26 !important;
                     }
                 `}</style>
                 <FullCalendar
@@ -279,11 +274,26 @@ const AppointmentsCalendar = () => {
                     <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
                         <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
                             <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                <CalendarClock className="text-primary-500" /> {editingId ? 'Editar Cita' : 'Agendar Cita'}
+                                <CalendarClock style={{ color: '#28483a' }} /> {editingId ? 'Editar Cita' : 'Agendar Cita'}
                             </h3>
                         </div>
 
                         <form onSubmit={handleSave} className="p-6 overflow-y-auto space-y-5">
+                            <div>
+                                <label className="form-label">Centro / Etiqueta *</label>
+                                <select
+                                    required
+                                    className="form-select"
+                                    value={form.category_id}
+                                    onChange={e => setForm({ ...form, category_id: e.target.value, patient_id: '', appointment_type_id: '' })}
+                                >
+                                    <option value="" disabled>Selecciona el centro...</option>
+                                    {paymentCategories.map(cat => (
+                                        <option key={cat.id} value={cat.id}>{cat.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
                             <div>
                                 <label className="form-label">Paciente *</label>
                                 <select
@@ -291,9 +301,10 @@ const AppointmentsCalendar = () => {
                                     className="form-select"
                                     value={form.patient_id}
                                     onChange={e => setForm({ ...form, patient_id: e.target.value })}
+                                    disabled={!form.category_id}
                                 >
                                     <option value="" disabled>Selecciona el paciente...</option>
-                                    {patients.map(p => (
+                                    {patients.filter(p => !form.category_id || p.payment_category_id === form.category_id || p.id === form.patient_id).map(p => (
                                         <option key={p.id} value={p.id}>
                                             {p.first_name || ''} {p.last_name || ''}
                                         </option>
@@ -308,9 +319,10 @@ const AppointmentsCalendar = () => {
                                     className="form-select"
                                     value={form.appointment_type_id}
                                     onChange={e => setForm({ ...form, appointment_type_id: e.target.value })}
+                                    disabled={!form.category_id}
                                 >
                                     <option value="" disabled>Selecciona el tipo de cita...</option>
-                                    {appointmentTypes.filter(t => t.is_active || t.id === form.appointment_type_id).map(t => (
+                                    {appointmentTypes.filter(t => t.category_id === form.category_id && (t.is_active || t.id === form.appointment_type_id)).map(t => (
                                         <option key={t.id} value={t.id}>
                                             {t.name} ({t.duration_minutes} min) - {t.price}€ {t.category_id ? `[${getCategoryName(t.category_id)}]` : ''}
                                         </option>
@@ -417,7 +429,8 @@ const AppointmentsCalendar = () => {
                                 <button
                                     onClick={handleSave}
                                     disabled={isSaving || !form.patient_id || !form.appointment_type_id}
-                                    className="btn btn-primary"
+                                    className="btn text-white disabled:opacity-50"
+                                    style={{ backgroundColor: '#28483a', borderColor: '#28483a' }}
                                 >
                                     {isSaving ? <><Loader2 size={16} className="animate-spin" /> Guardando...</> : (editingId ? 'Actualizar Cita' : 'Agendar')}
                                 </button>

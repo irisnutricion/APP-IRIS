@@ -15,6 +15,7 @@ const AppointmentsTab = ({ patient }) => {
     const [createPaymentRecord, setCreatePaymentRecord] = useState(false);
 
     const [form, setForm] = useState({
+        category_id: '',
         appointment_type_id: '',
         date: format(new Date(), 'yyyy-MM-dd'),
         time: '10:00',
@@ -33,7 +34,9 @@ const AppointmentsTab = ({ patient }) => {
     const handleOpenModal = (appt = null) => {
         if (appt) {
             setEditingId(appt.id);
+            const type = getApptType(appt.appointment_type_id);
             setForm({
+                category_id: type?.category_id || '',
                 appointment_type_id: appt.appointment_type_id,
                 date: format(parseISO(appt.start_time), 'yyyy-MM-dd'),
                 time: format(parseISO(appt.start_time), 'HH:mm'),
@@ -44,6 +47,7 @@ const AppointmentsTab = ({ patient }) => {
         } else {
             setEditingId(null);
             setForm({
+                category_id: patient.payment_category_id || '',
                 appointment_type_id: '',
                 date: format(new Date(), 'yyyy-MM-dd'),
                 time: '10:00',
@@ -152,14 +156,14 @@ const AppointmentsTab = ({ patient }) => {
         <div className="space-y-6">
             <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
                 <div>
-                    <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                        <CalendarClock className="text-primary" /> Citas Presenciales
+                    <h3 className="text-xl font-bold flex items-center gap-2" style={{ color: '#28483a' }}>
+                        <CalendarClock style={{ color: '#28483a' }} /> Citas Presenciales
                     </h3>
                     <p className="text-sm text-slate-500 mt-1">
                         Historial de citas y reservas en centros o en consultas propias.
                     </p>
                 </div>
-                <button onClick={() => handleOpenModal()} className="btn btn-primary shadow-sm flex items-center gap-2">
+                <button onClick={() => handleOpenModal()} className="btn shadow-sm flex items-center gap-2 text-white" style={{ backgroundColor: '#28483a', borderColor: '#28483a' }}>
                     <Plus size={18} /> Agendar Cita
                 </button>
             </div>
@@ -170,7 +174,7 @@ const AppointmentsTab = ({ patient }) => {
                         <CalendarDays size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-4" />
                         <h4 className="text-lg font-medium text-gray-700 dark:text-gray-300">Ninguna cita agendada</h4>
                         <p className="text-gray-500 max-w-sm mx-auto mt-2 text-sm">Agendando citas aquí, aparecerán vinculadas automáticamente al Historial del paciente y al Calendario global.</p>
-                        <button onClick={() => handleOpenModal()} className="btn btn-outline border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 mt-6 mt-4">
+                        <button onClick={() => handleOpenModal()} className="btn btn-outline border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 mt-6 mt-4 hover:border-[#28483a] hover:text-[#28483a]">
                             Agendar la Primera Cita
                         </button>
                     </div>
@@ -182,7 +186,7 @@ const AppointmentsTab = ({ patient }) => {
                         return (
                             <div key={appt.id} className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row gap-4 justify-between group">
                                 <div className="flex gap-4">
-                                    <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex flex-col items-center justify-center text-primary-600 dark:text-primary-400 border border-primary-100 dark:border-primary-800">
+                                    <div className="flex-shrink-0 w-16 h-16 rounded-xl flex flex-col items-center justify-center border" style={{ backgroundColor: '#c8e3bc', color: '#28483a', borderColor: '#28483a' }}>
                                         <span className="text-xs font-bold uppercase">{format(dateObj, 'MMM', { locale: es })}</span>
                                         <span className="text-xl font-black leading-none">{format(dateObj, 'dd')}</span>
                                     </div>
@@ -208,10 +212,10 @@ const AppointmentsTab = ({ patient }) => {
                                     </div>
                                 </div>
                                 <div className="flex items-center justify-start md:justify-end gap-2 border-t md:border-t-0 pt-4 md:pt-0 border-slate-100 dark:border-slate-700 opacity-100 transition-opacity">
-                                    <button onClick={() => handleOpenModal(appt)} className="p-2 text-slate-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-lg transition-colors">
+                                    <button onClick={() => handleOpenModal(appt)} className="p-2 text-slate-400 hover:text-[#28483a] rounded-lg transition-colors">
                                         <Edit2 size={18} />
                                     </button>
-                                    <button onClick={() => handleDelete(appt.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
+                                    <button onClick={() => handleDelete(appt.id)} className="p-2 text-slate-400 hover:text-[#d09a84] rounded-lg transition-colors">
                                         <Trash2 size={18} />
                                     </button>
                                 </div>
@@ -228,11 +232,26 @@ const AppointmentsTab = ({ patient }) => {
                     <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
                         <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
                             <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                <CalendarClock className="text-primary-500" /> {editingId ? 'Editar Cita' : 'Agendar Cita'}
+                                <CalendarClock style={{ color: '#28483a' }} /> {isEditingId ? 'Editar Cita' : 'Agendar Cita'}
                             </h3>
                         </div>
 
                         <form onSubmit={handleSave} className="p-6 overflow-y-auto space-y-5">
+                            <div>
+                                <label className="form-label">Centro / Etiqueta *</label>
+                                <select
+                                    required
+                                    className="form-select"
+                                    value={form.category_id}
+                                    onChange={e => setForm({ ...form, category_id: e.target.value, appointment_type_id: '' })}
+                                >
+                                    <option value="" disabled>Selecciona el centro...</option>
+                                    {paymentCategories.map(cat => (
+                                        <option key={cat.id} value={cat.id}>{cat.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
                             <div>
                                 <label className="form-label">Tipo de Servicio *</label>
                                 <select
@@ -240,9 +259,10 @@ const AppointmentsTab = ({ patient }) => {
                                     className="form-select"
                                     value={form.appointment_type_id}
                                     onChange={e => setForm({ ...form, appointment_type_id: e.target.value })}
+                                    disabled={!form.category_id}
                                 >
                                     <option value="" disabled>Selecciona el tipo de cita...</option>
-                                    {appointmentTypes.filter(t => t.is_active || t.id === form.appointment_type_id).map(t => (
+                                    {appointmentTypes.filter(t => t.category_id === form.category_id && (t.is_active || t.id === form.appointment_type_id)).map(t => (
                                         <option key={t.id} value={t.id}>
                                             {t.name} ({t.duration_minutes} min) - {t.price}€ {t.category_id ? `[${getCategoryName(t.category_id)}]` : ''}
                                         </option>
@@ -340,7 +360,8 @@ const AppointmentsTab = ({ patient }) => {
                             <button
                                 onClick={handleSave}
                                 disabled={isSaving || !form.appointment_type_id}
-                                className="btn btn-primary"
+                                className="btn text-white disabled:opacity-50"
+                                style={{ backgroundColor: '#28483a', borderColor: '#28483a' }}
                             >
                                 {isSaving ? <><Loader2 size={16} className="animate-spin" /> Guardando...</> : (isEditingId ? 'Actualizar Cita' : 'Agendar')}
                             </button>
