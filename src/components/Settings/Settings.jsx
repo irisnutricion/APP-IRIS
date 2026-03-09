@@ -15,6 +15,7 @@ const Settings = () => {
         subscriptionTypes, addSubscriptionType, updateSubscriptionType, deleteSubscriptionType,
         paymentRates, addPaymentRate, updatePaymentRate, deletePaymentRate,
         appointmentTypes, addAppointmentType, updateAppointmentType, deleteAppointmentType,
+        voucherTypes, addVoucherType, updateVoucherType, deleteVoucherType,
         exportData, importData,
         taskCategories, addTaskCategory, updateTaskCategory, deleteTaskCategory,
         taskTypes, addTaskType, updateTaskType, deleteTaskType,
@@ -41,6 +42,9 @@ const Settings = () => {
 
     const [isEditingAppointmentType, setIsEditingAppointmentType] = useState(null);
     const [appointmentTypeForm, setAppointmentTypeForm] = useState({ name: '', duration_minutes: 30, price: 0, category_id: '', is_active: true });
+
+    const [isEditingVoucherType, setIsEditingVoucherType] = useState(null);
+    const [voucherTypeForm, setVoucherTypeForm] = useState({ name: '', total_sessions: 4, duration_days: 90, price: 0, category_id: '', is_active: true });
 
     // Task Category State (Now Tags)
     const [isEditingCategory, setIsEditingCategory] = useState(null);
@@ -224,6 +228,35 @@ const Settings = () => {
         if (confirm('¿Seguro que deseas eliminar este tipo de cita?')) {
             deleteAppointmentType(id);
             showToast('Tipo de cita eliminado', 'success');
+        }
+    };
+
+    const handleSaveVoucherType = async () => {
+        if (!voucherTypeForm.name) {
+            showToast('El nombre del bono es obligatorio', 'error');
+            return;
+        }
+
+        const payload = { ...voucherTypeForm };
+        if (!payload.category_id) payload.category_id = null;
+
+        try {
+            if (isEditingVoucherType === 'new') {
+                await addVoucherType(payload);
+                showToast('Tipo de bono creado correctamente', 'success');
+            } else {
+                await updateVoucherType(isEditingVoucherType, payload);
+                showToast('Tipo de bono actualizado', 'success');
+            }
+            setIsEditingVoucherType(null);
+        } catch (error) {
+            showToast('Error al guardar el tipo de bono', 'error');
+        }
+    };
+
+    const handleDeleteVoucherType = (id) => {
+        if (confirm('¿Seguro que deseas eliminar este tipo de bono? Los pacientes que ya lo hayan adquirido podrán seguir usándolo.')) {
+            deleteVoucherType(id);
         }
     };
 
@@ -828,9 +861,183 @@ const Settings = () => {
                                         </div>
                                     </div>
                                 </div>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <input
+                                        type="checkbox"
+                                        id="newAppointmentTypeActive"
+                                        checked={appointmentTypeForm.is_active}
+                                        onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, is_active: e.target.checked })}
+                                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                    />
+                                    <label htmlFor="newAppointmentTypeActive" className="text-sm text-gray-700 dark:text-gray-300">Servicio Activo</label>
+                                </div>
                                 <div className="flex gap-2 justify-end pt-2">
                                     <button onClick={() => setIsEditingAppointmentType(null)} className="btn btn-sm btn-ghost">Cancelar</button>
                                     <button onClick={handleSaveAppointmentType} className="btn btn-sm btn-primary">Crear</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <hr className="border-slate-200 dark:border-slate-700 my-8" />
+
+            {/* Vouchers Section */}
+            <div>
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <Layers size={18} /> Tipos de Bonos
+                        </h4>
+                        <p className="text-sm text-gray-500 mt-1">Paquetes de varias sesiones para clientes presenciales con límite de caducidad.</p>
+                    </div>
+                    <button onClick={() => { setIsEditingVoucherType('new'); setVoucherTypeForm({ name: '', total_sessions: 4, duration_days: 90, price: 0, category_id: '', is_active: true }); }} className="btn btn-outline shadow-sm" disabled={isEditingVoucherType !== null}>
+                        <Plus size={18} /> Nuevo Bono
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {voucherTypes?.map(type => (
+                        <div key={type.id} className="relative p-6 rounded-2xl border border-gray-100 bg-white dark:bg-slate-800 dark:border-slate-700 hover:shadow-lg transition-all">
+                            {isEditingVoucherType === type.id ? (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Nombre del Bono</label>
+                                        <input className="form-input mt-1" value={voucherTypeForm.name} onChange={e => setVoucherTypeForm({ ...voucherTypeForm, name: e.target.value })} autoFocus />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Total Sesiones</label>
+                                            <input type="number" className="form-input mt-1" value={voucherTypeForm.total_sessions} onChange={e => setVoucherTypeForm({ ...voucherTypeForm, total_sessions: parseInt(e.target.value) || 1 })} />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Validez (Días)</label>
+                                            <input type="number" className="form-input mt-1" value={voucherTypeForm.duration_days} onChange={e => setVoucherTypeForm({ ...voucherTypeForm, duration_days: parseInt(e.target.value) || 30 })} />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Centro Limitado (Opcional)</label>
+                                            <select
+                                                className="form-select mt-1"
+                                                value={voucherTypeForm.category_id || ''}
+                                                onChange={e => setVoucherTypeForm({ ...voucherTypeForm, category_id: e.target.value || null })}
+                                            >
+                                                <option value="">-- Cualquier Centro --</option>
+                                                {paymentCategories.map(cat => (
+                                                    <option key={cat.id} value={cat.id}>{cat.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Precio Total (€)</label>
+                                            <input type="number" step="0.01" className="form-input mt-1" value={voucherTypeForm.price} onChange={e => setVoucherTypeForm({ ...voucherTypeForm, price: parseFloat(e.target.value) || 0 })} />
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <input
+                                            type="checkbox"
+                                            id={`vt-active-${type.id}`}
+                                            checked={voucherTypeForm.is_active}
+                                            onChange={e => setVoucherTypeForm({ ...voucherTypeForm, is_active: e.target.checked })}
+                                            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                        />
+                                        <label htmlFor={`vt-active-${type.id}`} className="text-sm text-gray-700 dark:text-gray-300">Bono a la venta</label>
+                                    </div>
+                                    <div className="flex gap-2 justify-end pt-2">
+                                        <button onClick={() => setIsEditingVoucherType(null)} className="btn btn-sm btn-ghost">Cancelar</button>
+                                        <button onClick={handleSaveVoucherType} className="btn btn-sm btn-primary">Guardar</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="p-2 rounded-lg bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
+                                            <Layers size={20} />
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <button onClick={() => {
+                                                setIsEditingVoucherType(type.id);
+                                                setVoucherTypeForm({
+                                                    name: type.name,
+                                                    total_sessions: type.total_sessions,
+                                                    duration_days: type.duration_days,
+                                                    price: type.price,
+                                                    category_id: type.category_id || '',
+                                                    is_active: type.is_active
+                                                });
+                                            }} className="p-1.5 text-slate-400 hover:text-primary-600 rounded-md transition-colors"><Edit2 size={16} /></button>
+                                            <button onClick={() => handleDeleteVoucherType(type.id)} className="p-1.5 text-slate-400 hover:text-red-500 rounded-md transition-colors"><Trash2 size={16} /></button>
+                                        </div>
+                                    </div>
+                                    <h4 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">{type.name}</h4>
+                                    <div className="flex flex-wrap gap-2 mt-3 text-sm font-medium">
+                                        <span className="text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-full">{type.total_sessions} Sesiones</span>
+                                        <span className="text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-2 py-0.5 rounded-full">{type.duration_days} Días Validez</span>
+                                        <span className="text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded-full">{Number(type.price)}€</span>
+                                    </div>
+                                    {type.category_id && (
+                                        <div className="mt-3 text-xs inline-block px-2 py-1 rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300">
+                                            📍 {paymentCategories.find(c => c.id === type.category_id)?.label || 'Centro desconocido'}
+                                        </div>
+                                    )}
+                                    {!type.is_active && <span className="block mt-2 text-xs text-red-500 font-bold uppercase border border-red-200 bg-red-50 px-2 py-1 rounded w-fit">Retirado</span>}
+                                </>
+                            )}
+                        </div>
+                    ))}
+
+                    {isEditingVoucherType === 'new' && (
+                        <div className="p-6 rounded-2xl border border-primary-500 bg-primary-50/20 ring-2 ring-primary-100 dark:ring-primary-900/30">
+                            <h4 className="font-bold text-primary-700 mb-4 text-sm flex items-center gap-2"><Plus size={16} /> Nuevo Bono</h4>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Nombre del Bono</label>
+                                    <input className="form-input mt-1" value={voucherTypeForm.name} onChange={e => setVoucherTypeForm({ ...voucherTypeForm, name: e.target.value })} autoFocus placeholder="Ej. Pack Inicial: Consulta + 3 Revisiones" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Nº Sesiones</label>
+                                        <input type="number" className="form-input mt-1" value={voucherTypeForm.total_sessions} onChange={e => setVoucherTypeForm({ ...voucherTypeForm, total_sessions: parseInt(e.target.value) || 1 })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Caduca a los (Días)</label>
+                                        <input type="number" className="form-input mt-1" value={voucherTypeForm.duration_days} onChange={e => setVoucherTypeForm({ ...voucherTypeForm, duration_days: parseInt(e.target.value) || 30 })} />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Limitar a Centro</label>
+                                        <select
+                                            className="form-select mt-1"
+                                            value={voucherTypeForm.category_id || ''}
+                                            onChange={e => setVoucherTypeForm({ ...voucherTypeForm, category_id: e.target.value || null })}
+                                        >
+                                            <option value="">-- Multicentro --</option>
+                                            {paymentCategories.map(cat => (
+                                                <option key={cat.id} value={cat.id}>{cat.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Precio Total €</label>
+                                        <input type="number" step="0.01" className="form-input mt-1" value={voucherTypeForm.price} onChange={e => setVoucherTypeForm({ ...voucherTypeForm, price: parseFloat(e.target.value) || 0 })} />
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <input
+                                        type="checkbox"
+                                        id="newVoucherTypeActive"
+                                        checked={voucherTypeForm.is_active}
+                                        onChange={e => setVoucherTypeForm({ ...voucherTypeForm, is_active: e.target.checked })}
+                                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                    />
+                                    <label htmlFor="newVoucherTypeActive" className="text-sm text-gray-700 dark:text-gray-300">Bono a la venta</label>
+                                </div>
+                                <div className="flex gap-2 justify-end pt-2">
+                                    <button onClick={() => setIsEditingVoucherType(null)} className="btn btn-sm btn-ghost">Cancelar</button>
+                                    <button onClick={handleSaveVoucherType} className="btn btn-sm btn-primary">Crear</button>
                                 </div>
                             </div>
                         </div>

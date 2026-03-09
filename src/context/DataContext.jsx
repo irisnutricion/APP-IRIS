@@ -63,6 +63,8 @@ export const DataProvider = ({ children }) => {
     const [paymentRates, setPaymentRates] = useState([]);
     const [appointmentTypes, setAppointmentTypes] = useState([]);
     const [appointments, setAppointments] = useState([]);
+    const [voucherTypes, setVoucherTypes] = useState([]);
+    const [patientVouchers, setPatientVouchers] = useState([]);
     const [subscriptionExtensions, setSubscriptionExtensions] = useState([]);
     const [nutritionists, setNutritionists] = useState([]);
     const [foods, setFoods] = useState([]);
@@ -105,7 +107,9 @@ export const DataProvider = ({ children }) => {
                 supabase.from('indication_templates').select('*'),
                 supabase.from('recipe_phrases').select('*').order('name', { ascending: true }),
                 supabase.from('appointment_types').select('*').order('name', { ascending: true }),
-                supabase.from('appointments').select('*').order('start_time', { ascending: true })
+                supabase.from('appointments').select('*').order('start_time', { ascending: true }),
+                supabase.from('voucher_types').select('*').order('name', { ascending: true }),
+                supabase.from('patient_vouchers').select('*').order('created_at', { ascending: false })
             ]);
 
             const [
@@ -136,7 +140,9 @@ export const DataProvider = ({ children }) => {
                 indicationTemplatesResult,
                 recipePhrasesResult,
                 appointmentTypesResult,
-                appointmentsResult
+                appointmentsResult,
+                voucherTypesResult,
+                patientVouchersResult
             ] = results;
 
             // Log errors for debugging
@@ -205,10 +211,13 @@ export const DataProvider = ({ children }) => {
             if (recipesResult.status === 'fulfilled') setRecipes(recipesResult.value.data || []);
             if (mealPlansResult.status === 'fulfilled') setMealPlans(mealPlansResult.value.data || []);
             if (mealPlanItemsResult.status === 'fulfilled') setMealPlanItems(mealPlanItemsResult.value.data || []);
-            if (indicationTemplatesResult.status === 'fulfilled') setIndicationTemplates(indicationTemplatesResult.value.data || []);
             if (recipePhrasesResult.status === 'fulfilled') setRecipePhrases(recipePhrasesResult.value.data || []);
             if (appointmentTypesResult.status === 'fulfilled') setAppointmentTypes(appointmentTypesResult.value.data || []);
             if (appointmentsResult.status === 'fulfilled') setAppointments(appointmentsResult.value.data || []);
+            if (voucherTypesResult.status === 'fulfilled') setVoucherTypes(voucherTypesResult.value.data || []);
+            if (patientVouchersResult.status === 'fulfilled') setPatientVouchers(patientVouchersResult.value.data || []);
+            if (voucherTypesResult.status === 'fulfilled') setVoucherTypes(voucherTypesResult.value.data || []);
+            if (patientVouchersResult.status === 'fulfilled') setPatientVouchers(patientVouchersResult.value.data || []);
 
             if (reviewsResult.status === 'fulfilled' && reviewsResult.value.data) {
                 const reviewsObj = reviewsResult.value.data.reduce((acc, r) => {
@@ -1628,6 +1637,154 @@ export const DataProvider = ({ children }) => {
         }
     };
 
+    // --- VOUCHERS ---
+    const addVoucherType = async (voucherType) => {
+        try {
+            const { data, error } = await supabase
+                .from('voucher_types')
+                .insert([voucherType])
+                .select()
+                .single();
+            if (error) throw error;
+            setVoucherTypes(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+            return data;
+        } catch (error) {
+            console.error('Error adding voucher type:', error);
+            throw error;
+        }
+    };
+
+    const updateVoucherType = async (id, updates) => {
+        try {
+            const { data, error } = await supabase
+                .from('voucher_types')
+                .update(updates)
+                .eq('id', id)
+                .select()
+                .single();
+            if (error) throw error;
+            setVoucherTypes(prev => prev.map(t => t.id === id ? data : t).sort((a, b) => a.name.localeCompare(b.name)));
+            return data;
+        } catch (error) {
+            console.error('Error updating voucher type:', error);
+            throw error;
+        }
+    };
+
+    const deleteVoucherType = async (id) => {
+        try {
+            const { error } = await supabase.from('voucher_types').delete().eq('id', id);
+            if (error) throw error;
+            setVoucherTypes(prev => prev.filter(t => t.id !== id));
+            return true;
+        } catch (error) {
+            console.error('Error deleting voucher type:', error);
+            throw error;
+        }
+    };
+
+    const addPatientVoucher = async (patientId, voucherTypeId) => {
+        try {
+            const type = voucherTypes.find(t => t.id === voucherTypeId);
+            if (!type) throw new Error('Tipo de bono no encontrado');
+
+            const expirationDate = addDays(new Date(), type.duration_days).toISOString();
+
+            const newVoucher = {
+                patient_id: patientId,
+                voucher_type_id: voucherTypeId,
+                used_sessions: 0,
+                is_active: true,
+                expiration_date: expirationDate
+            };
+
+            const { data, error } = await supabase
+                .from('patient_vouchers')
+                .insert([newVoucher])
+                .select()
+                .single();
+
+            if (error) throw error;
+            setPatientVouchers(prev => [data, ...prev]);
+
+            // Add payment record for the purchase as PENDING payment
+            try {
+                await addPayment({
+                    patient_id: patientId,
+                    amount: type.price,
+                    date: format(new Date(), 'yyyy-MM-dd'),
+                    payment_method_id: 'efectivo', // Default to cash or general
+                    payment_category_id: type.category_id || null, // Ensure category matches
+                    status: 'pendiente',
+                    notes: `Bono: ${type.name}`
+                });
+            } catch (err) {
+                console.error("Payment could not be generated for voucher", err);
+            }
+
+            return data;
+        } catch (error) {
+            console.error('Error adding patient voucher:', error);
+            throw error;
+        }
+    };
+
+    const updatePatientVoucher = async (id, updates) => {
+        try {
+            const { data, error } = await supabase
+                .from('patient_vouchers')
+                .update(updates)
+                .eq('id', id)
+                .select()
+                .single();
+            if (error) throw error;
+            setPatientVouchers(prev => prev.map(v => v.id === id ? data : v));
+            return data;
+        } catch (error) {
+            console.error('Error updating patient voucher:', error);
+            throw error;
+        }
+    };
+
+    const deletePatientVoucher = async (id) => {
+        try {
+            const { error } = await supabase.from('patient_vouchers').delete().eq('id', id);
+            if (error) throw error;
+            setPatientVouchers(prev => prev.filter(v => v.id !== id));
+            return true;
+        } catch (error) {
+            console.error('Error deleting patient voucher:', error);
+            throw error;
+        }
+    };
+
+    const consumeVoucher = async (voucherId, revert = false) => {
+        try {
+            const voucher = patientVouchers.find(v => v.id === voucherId);
+            if (!voucher) throw new Error('Bono no encontrado');
+
+            const type = voucherTypes.find(t => t.id === voucher.voucher_type_id);
+            if (!type) throw new Error('Tipo de bono no encontrado');
+
+            let newUsedSessions = revert ? voucher.used_sessions - 1 : voucher.used_sessions + 1;
+
+            // Safety boundaries
+            if (newUsedSessions < 0) newUsedSessions = 0;
+            if (newUsedSessions > type.total_sessions) newUsedSessions = type.total_sessions;
+
+            const isActive = newUsedSessions < type.total_sessions && new Date(voucher.expiration_date) > new Date();
+
+            return await updatePatientVoucher(voucherId, {
+                used_sessions: newUsedSessions,
+                is_active: isActive
+            });
+
+        } catch (error) {
+            console.error('Error consuming voucher:', error);
+            throw error;
+        }
+    };
+
     const normalizedTasks = useMemo(() =>
         tasks.map(t => ({ ...t, tag: t.tag_id, type: t.type_id })),
         [tasks]);
@@ -1667,6 +1824,17 @@ export const DataProvider = ({ children }) => {
             addTaskType,
             updateTaskType,
             deleteTaskType,
+
+            voucherTypes,
+            addVoucherType,
+            updateVoucherType,
+            deleteVoucherType,
+
+            patientVouchers,
+            addPatientVoucher,
+            updatePatientVoucher,
+            deletePatientVoucher,
+            consumeVoucher,
 
             payments,
             addPayment,

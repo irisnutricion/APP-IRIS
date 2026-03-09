@@ -3,10 +3,10 @@ import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useData } from '../../../context/DataContext';
 import { useToast } from '../../../context/ToastContext';
-import { CalendarClock, Plus, CalendarDays, Euro, Trash2, Edit2, MapPin, CheckCircle2, Clock } from 'lucide-react';
+import { CalendarClock, Plus, CalendarDays, Euro, Trash2, Edit2, MapPin, CheckCircle2, Clock, Layers } from 'lucide-react';
 
 const AppointmentsTab = ({ patient }) => {
-    const { appointments, appointmentTypes, paymentCategories, addAppointment, updateAppointment, deleteAppointment, addPayment } = useData();
+    const { appointments, appointmentTypes, paymentCategories, addAppointment, updateAppointment, deleteAppointment, addPayment, patientVouchers, voucherTypes, consumeVoucher } = useData();
     const { showToast } = useToast();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -21,8 +21,11 @@ const AppointmentsTab = ({ patient }) => {
         time: '10:00',
         status: 'scheduled',
         payment_status: 'pending',
+        voucher_id: '',
         notes: ''
     });
+
+    const activeVouchers = patientVouchers.filter(v => v.patient_id === patient.id && v.is_active);
 
     const patientAppointments = appointments
         .filter(a => a.patient_id === patient.id)
@@ -42,6 +45,7 @@ const AppointmentsTab = ({ patient }) => {
                 time: format(parseISO(appt.start_time), 'HH:mm'),
                 status: appt.status,
                 payment_status: appt.payment_status,
+                voucher_id: appt.voucher_id || '',
                 notes: appt.notes || ''
             });
         } else {
@@ -53,6 +57,7 @@ const AppointmentsTab = ({ patient }) => {
                 time: '10:00',
                 status: 'scheduled',
                 payment_status: 'pending',
+                voucher_id: '',
                 notes: ''
             });
         }
@@ -87,15 +92,35 @@ const AppointmentsTab = ({ patient }) => {
                 end_time: endDate.toISOString(),
                 status: form.status,
                 payment_status: form.payment_status,
+                voucher_id: form.payment_status === 'bono' ? form.voucher_id : null,
                 notes: form.notes
             };
 
+            const isNewBonoConsumption = (form.payment_status === 'bono' && form.voucher_id);
+            let prevVoucherId = null;
+
             if (isEditingId) {
+                // Determine if we need to revert a previous bono
+                const existingAppt = appointments.find(a => a.id === isEditingId);
+                if (existingAppt?.payment_status === 'bono' && existingAppt.voucher_id) {
+                    if (existingAppt.voucher_id !== form.voucher_id || form.payment_status !== 'bono') {
+                        prevVoucherId = existingAppt.voucher_id;
+                    }
+                }
+
                 await updateAppointment(isEditingId, payload);
                 showToast('Cita actualizada correctamente', 'success');
             } else {
                 await addAppointment(payload);
                 showToast('Cita agendada correctamente', 'success');
+            }
+
+            // Handle Bono transactions
+            if (prevVoucherId) {
+                await consumeVoucher(prevVoucherId, true); // revert 1 session
+            }
+            if (isNewBonoConsumption && form.voucher_id !== prevVoucherId) {
+                await consumeVoucher(form.voucher_id, false); // consume 1 session
             }
 
             if (form.payment_status === 'paid' && createPaymentRecord) {
@@ -124,6 +149,10 @@ const AppointmentsTab = ({ patient }) => {
     const handleDelete = async (id) => {
         if (confirm('¿Seguro que deseas eliminar esta cita?')) {
             try {
+                const existingAppt = appointments.find(a => a.id === id);
+                if (existingAppt?.payment_status === 'bono' && existingAppt.voucher_id) {
+                    await consumeVoucher(existingAppt.voucher_id, true); // Refund session
+                }
                 await deleteAppointment(id);
                 showToast('Cita eliminada', 'success');
             } catch (err) {
@@ -323,6 +352,36 @@ const AppointmentsTab = ({ patient }) => {
                                     </select>
                                 </div>
                             </div>
+
+                            {form.payment_status === 'bono' && (
+                                <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-xl border border-purple-100 dark:border-purple-800 space-y-3">
+                                    <label className="form-label text-purple-800 dark:text-purple-300 flex items-center gap-2">
+                                        <Layers size={16} /> Selecciona de qué bono restar la sesión
+                                    </label>
+                                    {activeVouchers.length > 0 ? (
+                                        <select
+                                            required
+                                            className="form-select border-purple-200 focus:ring-purple-500 focus:border-purple-500"
+                                            value={form.voucher_id}
+                                            onChange={e => setForm({ ...form, voucher_id: e.target.value })}
+                                        >
+                                            <option value="" disabled>Elige el bono...</option>
+                                            {activeVouchers.map(v => {
+                                                const vType = voucherTypes.find(t => t.id === v.voucher_type_id);
+                                                return (
+                                                    <option key={v.id} value={v.id}>
+                                                        {vType?.name} ({v.used_sessions}/{vType?.total_sessions} consumido)
+                                                    </option>
+                                                );
+                                            })}
+                                        </select>
+                                    ) : (
+                                        <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 p-2 rounded">
+                                            ⚠️ Este paciente no tiene bonos activos actualmente. Deberás asignarle uno primero (Sección: Bonos y Suscripciones).
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
                             {form.payment_status === 'paid' && !isEditingId && (
                                 <div className="flex items-center gap-2 mt-2 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-900/50">

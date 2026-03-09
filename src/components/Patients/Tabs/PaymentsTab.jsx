@@ -1,12 +1,17 @@
 import { useData } from '../../../context/DataContext';
 import { useToast } from '../../../context/ToastContext';
 import { safeFormat } from '../../../utils/dateUtils';
-import { Wallet, Plus, CheckCircle, Clock, Edit2, Trash2 } from 'lucide-react';
-import { parseISO, format } from 'date-fns';
+import { Wallet, Plus, CheckCircle, Clock, Edit2, Trash2, Layers } from 'lucide-react';
+import { parseISO, format, differenceInDays } from 'date-fns';
+import { useState } from 'react';
 
 const PaymentsTab = ({ patientId, onAddPayment, onEditPayment, onDeletePayment, onEditSubscription, subscriptionTerms = [], onEditExtension }) => {
-    const { payments = [], paymentMethods = [], patients = [], paymentRates = [], deleteSubscription, subscriptionExtensions = [], deleteSubscriptionExtension } = useData() || {};
+    const { payments = [], paymentMethods = [], patients = [], paymentRates = [], deleteSubscription, subscriptionExtensions = [], deleteSubscriptionExtension, patientVouchers = [], voucherTypes = [], addPatientVoucher, deletePatientVoucher } = useData() || {};
     const { showToast } = useToast();
+
+    // Voucher modal state
+    const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
+    const [selectedVoucherTypeId, setSelectedVoucherTypeId] = useState('');
 
     // Sort payments
     const patientPayments = (payments || []).filter(p => p && p.patient_id === patientId)
@@ -47,6 +52,21 @@ const PaymentsTab = ({ patientId, onAddPayment, onEditPayment, onDeletePayment, 
         );
     }
 
+    const activeVouchers = patientVouchers.filter(v => v.patient_id === patientId && v.is_active);
+
+    const handleAddVoucher = async () => {
+        if (!selectedVoucherTypeId) return;
+        try {
+            await addPatientVoucher(patientId, selectedVoucherTypeId);
+            setIsVoucherModalOpen(false);
+            setSelectedVoucherTypeId('');
+            showToast('Bono asignado correctamente', 'success');
+        } catch (error) {
+            console.error('Error adding voucher:', error);
+            showToast('Error al añadir el bono.', 'error');
+        }
+    };
+
     return (
         <div className="space-y-6">
             {/* Summary Cards */}
@@ -77,6 +97,55 @@ const PaymentsTab = ({ patientId, onAddPayment, onEditPayment, onDeletePayment, 
                     <div className="bg-slate-100 dark:bg-slate-800 p-2 rounded-full text-slate-600 dark:text-slate-400">
                         <Wallet size={20} />
                     </div>
+                </div>
+            </div>
+
+            {/* Bonos Activos Section */}
+            <div className="card overflow-hidden p-0 mb-6 border border-purple-100 dark:border-purple-900/30">
+                <div className="flex justify-between items-center card-header border-b border-purple-100 dark:border-purple-800/50 bg-purple-50 dark:bg-purple-900/20 px-4 py-3">
+                    <h3 className="card-title text-sm font-bold text-purple-800 dark:text-purple-300 flex items-center gap-2">
+                        <Layers size={16} /> Bonos de Citas Presenciales
+                    </h3>
+                    <button onClick={() => setIsVoucherModalOpen(true)} className="btn btn-sm bg-purple-600 hover:bg-purple-700 text-white border-transparent flex items-center gap-1">
+                        <Plus size={14} /> Vender Bono
+                    </button>
+                </div>
+                <div className="p-4 bg-white dark:bg-slate-800">
+                    {activeVouchers.length === 0 ? (
+                        <p className="text-sm text-slate-500 text-center py-4">No hay bonos activos actualmente para este cliente.</p>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {activeVouchers.map(v => {
+                                const type = voucherTypes.find(t => t.id === v.voucher_type_id);
+                                if (!type) return null;
+                                const isExpiringSoon = differenceInDays(new Date(v.expiration_date), new Date()) <= 7;
+
+                                return (
+                                    <div key={v.id} className="relative p-4 rounded-xl border border-purple-100 bg-purple-50/30 dark:border-purple-900/50 dark:bg-purple-900/10 flex justify-between items-start">
+                                        <div>
+                                            <h4 className="font-bold text-purple-900 dark:text-purple-100">{type.name}</h4>
+                                            <div className="flex items-center gap-2 mt-2 text-sm text-purple-700 dark:text-purple-300">
+                                                <span className="bg-purple-100 dark:bg-purple-900/50 px-2 py-0.5 rounded-md font-medium">
+                                                    Restantes: {type.total_sessions - v.used_sessions} de {type.total_sessions}
+                                                </span>
+                                            </div>
+                                            <div className="mt-2 text-xs flex items-center gap-1 text-slate-500">
+                                                <Clock size={12} /> Caduca: {format(new Date(v.expiration_date), 'dd/MM/yyyy')}
+                                                {isExpiringSoon && <span className="text-red-500 font-bold ml-1">(Pronto)</span>}
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => { if (confirm('¿Eliminar este bono asignado?')) deletePatientVoucher(v.id) }}
+                                            className="text-slate-400 hover:text-red-500 p-1"
+                                            title="Eliminar Bono"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -379,6 +448,50 @@ const PaymentsTab = ({ patientId, onAddPayment, onEditPayment, onDeletePayment, 
                     </table>
                 </div>
             </div>
+            {/* Modal Vender Bono */}
+            {isVoucherModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsVoucherModalOpen(false)}></div>
+                    <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm p-6 overflow-hidden">
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                            <Layers className="text-purple-600" /> Vender Nuevo Bono
+                        </h3>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="form-label">Selecciona el Tipo de Bono</label>
+                                <select
+                                    className="form-select border-purple-200 focus:border-purple-500 focus:ring-purple-500"
+                                    value={selectedVoucherTypeId}
+                                    onChange={(e) => setSelectedVoucherTypeId(e.target.value)}
+                                >
+                                    <option value="" disabled>-- Elige un bono --</option>
+                                    {voucherTypes.filter(v => v.is_active).map(v => (
+                                        <option key={v.id} value={v.id}>
+                                            {v.name} ({v.total_sessions} ses. / {v.price}€)
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <p className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 p-3 rounded-lg">
+                                ℹ️ Al confirmar, el bono se asignará al paciente para su uso en consultas, y se generará automáticamente en esta misma pestaña el cargo de pago pendiente en su contabilidad.
+                            </p>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button className="btn btn-ghost" onClick={() => setIsVoucherModalOpen(false)}>Cancelar</button>
+                                <button
+                                    className="btn bg-purple-600 hover:bg-purple-700 text-white border-transparent disabled:opacity-50"
+                                    disabled={!selectedVoucherTypeId}
+                                    onClick={handleAddVoucher}
+                                >
+                                    <Plus size={16} /> Asignar y Facturar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
