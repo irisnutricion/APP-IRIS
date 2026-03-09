@@ -186,8 +186,11 @@ const AppointmentsTab = ({ patient }) => {
                         return (
                             <div key={appt.id} className="bg-white dark:bg-slate-800 rounded-xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row gap-4 justify-between group">
                                 <div className="flex gap-4">
-                                    <div className="flex-shrink-0 w-16 h-16 rounded-xl flex flex-col items-center justify-center border" style={{ backgroundColor: '#c8e3bc', color: '#28483a', borderColor: '#28483a' }}>
-                                        <span className="text-xs font-bold uppercase">{format(dateObj, 'MMM', { locale: es })}</span>
+                                    <div
+                                        className="flex-shrink-0 w-16 h-16 rounded-xl flex flex-col items-center justify-center border text-white"
+                                        style={{ backgroundColor: type?.color_hex || '#28483a', borderColor: type?.color_hex || '#28483a' }}
+                                    >
+                                        <span className="text-xs font-bold uppercase mix-blend-overlay opacity-90">{format(dateObj, 'MMM', { locale: es })}</span>
                                         <span className="text-xl font-black leading-none">{format(dateObj, 'dd')}</span>
                                     </div>
                                     <div className="flex flex-col justify-center">

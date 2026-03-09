@@ -43,10 +43,22 @@ const AppointmentsCalendar = () => {
         return p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.name : 'Desconocido';
     };
 
-    const getEventColor = (appt) => {
-        if (appt.status === 'completed') return '#c8e3bc';
-        if (appt.status === 'cancelled' || appt.status === 'no_show') return '#d09a84';
-        return '#28483a';
+    const getEventStyles = (appt, type) => {
+        const baseColor = type?.color_hex || '#28483a';
+        let backgroundColor = baseColor;
+        let borderColor = baseColor;
+        let textColor = '#ffffff';
+
+        if (appt.status === 'completed') {
+            backgroundColor = `${baseColor}99`; // Add transparency (hex alpha)
+            borderColor = baseColor;
+        } else if (appt.status === 'cancelled' || appt.status === 'no_show') {
+            backgroundColor = '#f1f5f9'; // Light gray background
+            borderColor = '#cbd5e1'; // Gray border
+            textColor = '#94a3b8'; // Muted text
+        }
+
+        return { backgroundColor, borderColor, textColor };
     };
 
     const calendarEvents = useMemo(() => {
@@ -61,14 +73,17 @@ const AppointmentsCalendar = () => {
         return filteredAppts.map(appt => {
             const type = getApptType(appt.appointment_type_id);
             const patientName = getPatientName(appt.patient_id);
+            const styles = getEventStyles(appt, type);
+
             return {
                 id: appt.id,
                 title: `${patientName} - ${type?.name || 'Cita'}`,
                 start: appt.start_time,
                 end: appt.end_time,
-                backgroundColor: getEventColor(appt),
-                borderColor: getEventColor(appt),
-                extendedProps: { ...appt, typeName: type?.name, patientName }
+                backgroundColor: styles.backgroundColor,
+                borderColor: styles.borderColor,
+                textColor: styles.textColor,
+                extendedProps: { ...appt, typeName: type?.name, patientName, baseColor: type?.color_hex }
             };
         });
     }, [appointments, filterCategory, appointmentTypes, patients]);

@@ -662,7 +662,7 @@ const Settings = () => {
                         </h4>
                         <p className="text-sm text-gray-500 mt-1">Configura los servicios que ofreces, su duración y precio.</p>
                     </div>
-                    <button onClick={() => { setIsEditingAppointmentType('new'); setAppointmentTypeForm({ name: '', duration_minutes: 30, price: 0, category_id: '', is_active: true }); }} className="btn btn-outline shadow-sm" disabled={isEditingAppointmentType !== null}>
+                    <button onClick={() => { setIsEditingAppointmentType('new'); setAppointmentTypeForm({ name: '', duration_minutes: 30, price: 0, category_id: '', is_active: true, color_hex: '#28483a' }); }} className="btn btn-outline shadow-sm" disabled={isEditingAppointmentType !== null}>
                         <Plus size={18} /> Nuevo Tipo
                     </button>
                 </div>
@@ -686,18 +686,38 @@ const Settings = () => {
                                             <input type="number" step="0.01" className="form-input mt-1" value={appointmentTypeForm.price} onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, price: parseFloat(e.target.value) || 0 })} />
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Centro / Etiqueta</label>
-                                        <select
-                                            className="form-select mt-1"
-                                            value={appointmentTypeForm.category_id || ''}
-                                            onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, category_id: e.target.value || null })}
-                                        >
-                                            <option value="">-- Sin asignar --</option>
-                                            {paymentCategories.map(cat => (
-                                                <option key={cat.id} value={cat.id}>{cat.label}</option>
-                                            ))}
-                                        </select>
+                                    <div className="grid grid-cols-2 gap-4 mt-2">
+                                        <div>
+                                            <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Centro / Etiqueta</label>
+                                            <select
+                                                className="form-select mt-1"
+                                                value={appointmentTypeForm.category_id || ''}
+                                                onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, category_id: e.target.value || null })}
+                                            >
+                                                <option value="">-- Sin asignar --</option>
+                                                {paymentCategories.map(cat => (
+                                                    <option key={cat.id} value={cat.id}>{cat.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Color Calendario</label>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <input
+                                                    type="color"
+                                                    value={appointmentTypeForm.color_hex || '#28483a'}
+                                                    onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, color_hex: e.target.value })}
+                                                    className="w-10 h-10 p-1 bg-white border border-gray-200 rounded cursor-pointer"
+                                                />
+                                                <input
+                                                    type="text"
+                                                    value={appointmentTypeForm.color_hex || '#28483a'}
+                                                    onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, color_hex: e.target.value })}
+                                                    className="form-input"
+                                                    placeholder="#28483a"
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-2 mt-2">
                                         <input
@@ -728,7 +748,8 @@ const Settings = () => {
                                                     duration_minutes: type.duration_minutes,
                                                     price: type.price,
                                                     category_id: type.category_id || '',
-                                                    is_active: type.is_active
+                                                    is_active: type.is_active,
+                                                    color_hex: type.color_hex || '#28483a'
                                                 });
                                             }} className="p-1.5 text-slate-400 hover:text-primary-600 rounded-md transition-colors"><Edit2 size={16} /></button>
                                             <button onClick={() => handleDeleteAppointmentType(type.id)} className="p-1.5 text-slate-400 hover:text-red-500 rounded-md transition-colors"><Trash2 size={16} /></button>
@@ -738,6 +759,12 @@ const Settings = () => {
                                     <div className="flex items-center gap-3 mt-3 text-sm font-medium">
                                         <span className="text-slate-600 dark:text-slate-400">{type.duration_minutes} min</span>
                                         <span className="text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded">{Number(type.price)}€</span>
+                                        {type.color_hex && (
+                                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: type.color_hex }}></div>
+                                                {type.color_hex}
+                                            </div>
+                                        )}
                                     </div>
                                     {type.category_id && (
                                         <div className="mt-3 text-xs inline-block px-2 py-1 rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300">
@@ -768,18 +795,38 @@ const Settings = () => {
                                         <input type="number" step="0.01" className="form-input mt-1" value={appointmentTypeForm.price} onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, price: parseFloat(e.target.value) || 0 })} />
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Centro / Etiqueta</label>
-                                    <select
-                                        className="form-select mt-1"
-                                        value={appointmentTypeForm.category_id || ''}
-                                        onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, category_id: e.target.value || null })}
-                                    >
-                                        <option value="">-- Sin asignar --</option>
-                                        {paymentCategories.map(cat => (
-                                            <option key={cat.id} value={cat.id}>{cat.label}</option>
-                                        ))}
-                                    </select>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Centro / Etiqueta</label>
+                                        <select
+                                            className="form-select mt-1"
+                                            value={appointmentTypeForm.category_id || ''}
+                                            onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, category_id: e.target.value || null })}
+                                        >
+                                            <option value="">-- Sin asignar --</option>
+                                            {paymentCategories.map(cat => (
+                                                <option key={cat.id} value={cat.id}>{cat.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Color Calendario</label>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <input
+                                                type="color"
+                                                value={appointmentTypeForm.color_hex || '#28483a'}
+                                                onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, color_hex: e.target.value })}
+                                                className="w-10 h-10 p-1 bg-white border border-gray-200 rounded cursor-pointer"
+                                            />
+                                            <input
+                                                type="text"
+                                                value={appointmentTypeForm.color_hex || '#28483a'}
+                                                onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, color_hex: e.target.value })}
+                                                className="form-input"
+                                                placeholder="#28483a"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="flex gap-2 justify-end pt-2">
                                     <button onClick={() => setIsEditingAppointmentType(null)} className="btn btn-sm btn-ghost">Cancelar</button>
