@@ -234,15 +234,19 @@ const AppointmentsCalendar = () => {
                     .dark .fc-theme-standard td, .dark .fc-theme-standard th, .dark .fc-theme-standard .fc-scrollgrid {
                         border-color: #334155;
                     }
+                    .fc-day-today {
+                        background-color: rgba(208, 154, 132, 0.15) !important; /* d09a84 muy flojito */
+                    }
                     .fc-col-header-cell-cushion, .fc-daygrid-day-number {
                         color: #475569;
+                        font-size: 0.8rem !important;
                     }
                     .dark .fc-col-header-cell-cushion, .dark .fc-daygrid-day-number {
                         color: #94a3b8;
                     }
                     .fc-timegrid-slot-label-cushion {
                         color: #64748b;
-                        font-size: 0.8rem;
+                        font-size: 0.7rem !important;
                     }
                     .dark .fc-timegrid-slot-label-cushion {
                         color: #cbd5e1;
@@ -251,20 +255,24 @@ const AppointmentsCalendar = () => {
                         background-color: #28483a !important;
                         border-color: #28483a !important;
                         color: white !important;
+                        font-size: 0.85rem !important;
+                        padding: 0.3rem 0.6rem !important;
                     }
                     .fc-button-primary:not(:disabled):active, .fc-button-primary:not(:disabled).fc-button-active {
                         background-color: #1a2f26 !important;
                         border-color: #1a2f26 !important;
                     }
                     .fc-toolbar-title {
-                        font-size: 1.25rem !important;
+                        font-size: 1rem !important;
                     }
                     .fc-event-title {
-                        font-size: 0.75rem !important;
+                        font-size: 0.65rem !important;
                         font-weight: normal !important;
+                        line-height: 1.1;
                     }
                     .fc-event-time {
-                        font-size: 0.7rem !important;
+                        font-size: 0.6rem !important;
+                        line-height: 1;
                     }
                 `}</style>
                 <FullCalendar
@@ -283,7 +291,7 @@ const AppointmentsCalendar = () => {
                     slotMinTime="07:00:00"
                     slotMaxTime="22:00:00"
                     slotDuration="00:15:00"
-                    slotLabelInterval="01:00:00"
+                    slotLabelInterval="00:15:00"
                     expandRows={true}
                     height="75vh"
                     events={calendarEvents}
