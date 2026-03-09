@@ -241,6 +241,16 @@ const AppointmentsCalendar = () => {
                         background-color: #1a2f26 !important;
                         border-color: #1a2f26 !important;
                     }
+                    .fc-toolbar-title {
+                        font-size: 1.25rem !important;
+                    }
+                    .fc-event-title {
+                        font-size: 0.75rem !important;
+                        font-weight: normal !important;
+                    }
+                    .fc-event-time {
+                        font-size: 0.7rem !important;
+                    }
                 `}</style>
                 <FullCalendar
                     plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
@@ -257,6 +267,8 @@ const AppointmentsCalendar = () => {
                     weekends={true}
                     slotMinTime="07:00:00"
                     slotMaxTime="22:00:00"
+                    slotDuration="00:15:00"
+                    slotLabelInterval="01:00:00"
                     expandRows={true}
                     height="75vh"
                     events={calendarEvents}
