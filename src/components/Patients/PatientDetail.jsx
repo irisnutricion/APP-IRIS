@@ -4,6 +4,7 @@ import { useData } from '../../context/DataContext';
 import { ArrowLeft, User, Activity, Image as ImageIcon, Wallet, Play, Clock, RefreshCw, Edit2, Trash2, Calendar as CalendarIcon, Copy, UtensilsCrossed, PenLine, ChevronDown, Loader2, CheckCircle2, Share2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useToast } from '../../context/ToastContext';
+import { supabase } from '../../supabaseClient';
 
 import MeasurementModal from '../Tracking/MeasurementModal';
 import PaymentModal from '../Payments/PaymentModal';
@@ -178,9 +179,9 @@ const PatientDetail = () => {
 
     const handleSharePortal = async () => {
         try {
-            let token = patient.share_token;
+            let currentToken = patient.share_token;
             // Overwrite old 20-char random hex tokens or 4-char suffix tokens or generate if missing
-            if (!token || /^[a-f0-9]{20}$/i.test(token) || /-[a-f0-9]{4}$/i.test(token)) {
+            if (!currentToken || /^[a-f0-9]{20}$/i.test(currentToken) || /-[a-f0-9]{4}$/i.test(currentToken)) {
                 const base = `${patient.first_name || ''} ${patient.last_name || ''}`.trim()
                     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                     .toLowerCase()
@@ -189,21 +190,21 @@ const PatientDetail = () => {
 
                 let newToken = base || 'paciente';
 
-                // First try: Just the name
-                let result = await updatePatient(patient.id, { share_token: newToken });
+                // First try: Just the name using silent direct DB call
+                const { error } = await supabase.from('patients').update({ share_token: newToken }).eq('id', patient.id);
 
-                if (!result) {
+                if (error) {
                     // Fallback: Name + Short ID if it already exists or fails
                     const shortId = crypto.randomUUID().split('-')[0].slice(0, 4);
                     newToken = newToken === 'paciente' ? `paciente-${shortId}` : `${base}-${shortId}`;
-                    result = await updatePatient(patient.id, { share_token: newToken });
+                    await supabase.from('patients').update({ share_token: newToken }).eq('id', patient.id);
                 }
 
-                if (result) {
-                    token = newToken;
-                }
+                // Keep local Context state in sync (will just re-run the safe update and trigger setPatients)
+                await updatePatient(patient.id, { share_token: newToken });
+                currentToken = newToken;
             }
-            const url = `${window.location.origin}/portal/${token}`;
+            const url = `${window.location.origin}/portal/${currentToken}`;
             await navigator.clipboard.writeText(url);
             showToast('Enlace del portal copiado al portapapeles', 'success');
         } catch (err) {
