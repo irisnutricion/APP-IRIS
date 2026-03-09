@@ -11,6 +11,7 @@ import PatientList from './components/Patients/PatientList';
 import PatientForm from './components/Patients/PatientForm';
 import PatientDetail from './components/Patients/PatientDetail';
 import Renewals from './components/Renewals/Renewals';
+import AppointmentsCalendar from './components/Calendar/AppointmentsCalendar';
 
 import Settings from './components/Settings/Settings';
 import Statistics from './components/Settings/Statistics';
@@ -42,6 +43,7 @@ function App() {
                   <Route path="patients/new" element={<PatientForm />} />
                   <Route path="patients/:id" element={<PatientDetail />} />
                   <Route path="patients/:id/edit" element={<PatientForm />} />
+                  <Route path="calendar" element={<AppointmentsCalendar />} />
                   <Route path="tracking" element={<TrackingCalendar />} />
                   <Route path="tasks" element={<Tasks />} />
                   <Route path="recommendations" element={<Recommendations />} />

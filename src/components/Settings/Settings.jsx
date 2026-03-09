@@ -14,6 +14,7 @@ const Settings = () => {
     const {
         subscriptionTypes, addSubscriptionType, updateSubscriptionType, deleteSubscriptionType,
         paymentRates, addPaymentRate, updatePaymentRate, deletePaymentRate,
+        appointmentTypes, addAppointmentType, updateAppointmentType, deleteAppointmentType,
         exportData, importData,
         taskCategories, addTaskCategory, updateTaskCategory, deleteTaskCategory,
         taskTypes, addTaskType, updateTaskType, deleteTaskType,
@@ -37,6 +38,9 @@ const Settings = () => {
 
     const [isEditingRate, setIsEditingRate] = useState(null);
     const [rateForm, setRateForm] = useState({ label: '', amount: 0, subscription_type_id: null, is_active: true });
+
+    const [isEditingAppointmentType, setIsEditingAppointmentType] = useState(null);
+    const [appointmentTypeForm, setAppointmentTypeForm] = useState({ name: '', duration_minutes: 30, price: 0, category_id: '', is_active: true });
 
     // Task Category State (Now Tags)
     const [isEditingCategory, setIsEditingCategory] = useState(null);
@@ -110,6 +114,7 @@ const Settings = () => {
     // Section definitions
     const sections = [
         { id: 'tarifas', label: 'Tarifas y Planes', icon: CreditCard, description: 'Planes de suscripción' },
+        { id: 'citas', label: 'Citas Presenciales', icon: CalendarDays, description: 'Tipos de cita y tarifas' },
         { id: 'pagos', label: 'Pagos', icon: Wallet, description: 'Métodos y categorías de pago' },
         { id: 'equipo', label: 'Equipo', icon: Users, description: 'Nutricionistas y empleados' },
         { id: 'marketing', label: 'Captación', icon: User, description: 'Fuentes de captación de clientes' },
@@ -199,6 +204,26 @@ const Settings = () => {
     const handleDeleteRate = (id) => {
         if (confirm('¿Eliminar esta tarifa?')) {
             deletePaymentRate(id);
+        }
+    };
+
+    const handleSaveAppointmentType = () => {
+        if (!appointmentTypeForm.name) return;
+        if (isEditingAppointmentType === 'new') {
+            addAppointmentType(appointmentTypeForm);
+            showToast('Tipo de cita creado', 'success');
+        } else {
+            updateAppointmentType(isEditingAppointmentType, appointmentTypeForm);
+            showToast('Tipo de cita actualizado', 'success');
+        }
+        setIsEditingAppointmentType(null);
+        setAppointmentTypeForm({ name: '', duration_minutes: 30, price: 0, category_id: '', is_active: true });
+    };
+
+    const handleDeleteAppointmentType = (id) => {
+        if (confirm('¿Seguro que deseas eliminar este tipo de cita?')) {
+            deleteAppointmentType(id);
+            showToast('Tipo de cita eliminado', 'success');
         }
     };
 
@@ -618,6 +643,147 @@ const Settings = () => {
                                 <div className="flex gap-2 justify-end pt-2">
                                     <button onClick={() => setIsEditingRate(null)} className="btn btn-sm btn-ghost">Cancelar</button>
                                     <button onClick={handleSaveRate} className="btn btn-sm btn-primary">Crear</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderCitasSection = () => (
+        <div className="space-y-8">
+            <div>
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <h4 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <CalendarDays size={18} /> Tipos de Citas Presenciales
+                        </h4>
+                        <p className="text-sm text-gray-500 mt-1">Configura los servicios que ofreces, su duración y precio.</p>
+                    </div>
+                    <button onClick={() => { setIsEditingAppointmentType('new'); setAppointmentTypeForm({ name: '', duration_minutes: 30, price: 0, category_id: '', is_active: true }); }} className="btn btn-outline shadow-sm" disabled={isEditingAppointmentType !== null}>
+                        <Plus size={18} /> Nuevo Tipo
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {appointmentTypes?.map(type => (
+                        <div key={type.id} className="relative p-6 rounded-2xl border border-gray-100 bg-white dark:bg-slate-800 dark:border-slate-700 hover:shadow-lg transition-all">
+                            {isEditingAppointmentType === type.id ? (
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Nombre del Servicio</label>
+                                        <input className="form-input mt-1" value={appointmentTypeForm.name} onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, name: e.target.value })} autoFocus />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Duración (min)</label>
+                                            <input type="number" className="form-input mt-1" value={appointmentTypeForm.duration_minutes} onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, duration_minutes: parseInt(e.target.value) || 30 })} />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Precio (€)</label>
+                                            <input type="number" step="0.01" className="form-input mt-1" value={appointmentTypeForm.price} onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, price: parseFloat(e.target.value) || 0 })} />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Centro / Etiqueta</label>
+                                        <select
+                                            className="form-select mt-1"
+                                            value={appointmentTypeForm.category_id || ''}
+                                            onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, category_id: e.target.value || null })}
+                                        >
+                                            <option value="">-- Sin asignar --</option>
+                                            {paymentCategories.map(cat => (
+                                                <option key={cat.id} value={cat.id}>{cat.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <input
+                                            type="checkbox"
+                                            id={`active-${type.id}`}
+                                            checked={appointmentTypeForm.is_active}
+                                            onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, is_active: e.target.checked })}
+                                            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                        />
+                                        <label htmlFor={`active-${type.id}`} className="text-sm text-gray-700 dark:text-gray-300">Activo</label>
+                                    </div>
+                                    <div className="flex gap-2 justify-end pt-2">
+                                        <button onClick={() => setIsEditingAppointmentType(null)} className="btn btn-sm btn-ghost">Cancelar</button>
+                                        <button onClick={handleSaveAppointmentType} className="btn btn-sm btn-primary">Guardar</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="p-2 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                                            <CalendarDays size={20} />
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <button onClick={() => {
+                                                setIsEditingAppointmentType(type.id);
+                                                setAppointmentTypeForm({
+                                                    name: type.name,
+                                                    duration_minutes: type.duration_minutes,
+                                                    price: type.price,
+                                                    category_id: type.category_id || '',
+                                                    is_active: type.is_active
+                                                });
+                                            }} className="p-1.5 text-slate-400 hover:text-primary-600 rounded-md transition-colors"><Edit2 size={16} /></button>
+                                            <button onClick={() => handleDeleteAppointmentType(type.id)} className="p-1.5 text-slate-400 hover:text-red-500 rounded-md transition-colors"><Trash2 size={16} /></button>
+                                        </div>
+                                    </div>
+                                    <h4 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">{type.name}</h4>
+                                    <div className="flex items-center gap-3 mt-3 text-sm font-medium">
+                                        <span className="text-slate-600 dark:text-slate-400">{type.duration_minutes} min</span>
+                                        <span className="text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded">{Number(type.price)}€</span>
+                                    </div>
+                                    {type.category_id && (
+                                        <div className="mt-3 text-xs inline-block px-2 py-1 rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300">
+                                            📍 {paymentCategories.find(c => c.id === type.category_id)?.label || 'Centro desconocido'}
+                                        </div>
+                                    )}
+                                    {!type.is_active && <span className="block mt-2 text-xs text-red-500 font-bold uppercase border border-red-200 bg-red-50 px-2 py-1 rounded w-fit">Inactivo</span>}
+                                </>
+                            )}
+                        </div>
+                    ))}
+
+                    {isEditingAppointmentType === 'new' && (
+                        <div className="p-6 rounded-2xl border border-primary-500 bg-primary-50/20 ring-2 ring-primary-100 dark:ring-primary-900/30">
+                            <h4 className="font-bold text-primary-700 mb-4 text-sm flex items-center gap-2"><Plus size={16} /> Nuevo Tipo de Cita</h4>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Nombre del Servicio</label>
+                                    <input className="form-input mt-1" value={appointmentTypeForm.name} onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, name: e.target.value })} autoFocus placeholder="Ej. Revisión Online" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Mins.</label>
+                                        <input type="number" className="form-input mt-1" value={appointmentTypeForm.duration_minutes} onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, duration_minutes: parseInt(e.target.value) || 30 })} />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">€</label>
+                                        <input type="number" step="0.01" className="form-input mt-1" value={appointmentTypeForm.price} onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, price: parseFloat(e.target.value) || 0 })} />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold uppercase text-gray-400 tracking-wider">Centro / Etiqueta</label>
+                                    <select
+                                        className="form-select mt-1"
+                                        value={appointmentTypeForm.category_id || ''}
+                                        onChange={e => setAppointmentTypeForm({ ...appointmentTypeForm, category_id: e.target.value || null })}
+                                    >
+                                        <option value="">-- Sin asignar --</option>
+                                        {paymentCategories.map(cat => (
+                                            <option key={cat.id} value={cat.id}>{cat.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex gap-2 justify-end pt-2">
+                                    <button onClick={() => setIsEditingAppointmentType(null)} className="btn btn-sm btn-ghost">Cancelar</button>
+                                    <button onClick={handleSaveAppointmentType} className="btn btn-sm btn-primary">Crear</button>
                                 </div>
                             </div>
                         </div>
@@ -1604,6 +1770,7 @@ const Settings = () => {
     const getSectionContent = (sectionId) => {
         switch (sectionId) {
             case 'tarifas': return renderTarifasSection();
+            case 'citas': return renderCitasSection();
             case 'pagos': return renderPagosSection();
             case 'equipo': return renderEquipoSection();
             case 'marketing': return renderMarketingSection();

@@ -61,6 +61,8 @@ export const DataProvider = ({ children }) => {
     const [clinicalCategories, setClinicalCategories] = useState([]);
     const [subscriptionTypes, setSubscriptionTypes] = useState([]);
     const [paymentRates, setPaymentRates] = useState([]);
+    const [appointmentTypes, setAppointmentTypes] = useState([]);
+    const [appointments, setAppointments] = useState([]);
     const [subscriptionExtensions, setSubscriptionExtensions] = useState([]);
     const [nutritionists, setNutritionists] = useState([]);
     const [foods, setFoods] = useState([]);
@@ -101,7 +103,9 @@ export const DataProvider = ({ children }) => {
                 supabase.from('meal_plans').select('*').order('created_at', { ascending: false }),
                 supabase.from('meal_plan_items').select('*, recipes(*, recipe_ingredients(*, foods(*)))').order('sort_order', { ascending: true }),
                 supabase.from('indication_templates').select('*'),
-                supabase.from('recipe_phrases').select('*').order('name', { ascending: true })
+                supabase.from('recipe_phrases').select('*').order('name', { ascending: true }),
+                supabase.from('appointment_types').select('*').order('name', { ascending: true }),
+                supabase.from('appointments').select('*').order('start_time', { ascending: true })
             ]);
 
             const [
@@ -130,7 +134,9 @@ export const DataProvider = ({ children }) => {
                 mealPlansResult,
                 mealPlanItemsResult,
                 indicationTemplatesResult,
-                recipePhrasesResult
+                recipePhrasesResult,
+                appointmentTypesResult,
+                appointmentsResult
             ] = results;
 
             // Log errors for debugging
@@ -201,6 +207,8 @@ export const DataProvider = ({ children }) => {
             if (mealPlanItemsResult.status === 'fulfilled') setMealPlanItems(mealPlanItemsResult.value.data || []);
             if (indicationTemplatesResult.status === 'fulfilled') setIndicationTemplates(indicationTemplatesResult.value.data || []);
             if (recipePhrasesResult.status === 'fulfilled') setRecipePhrases(recipePhrasesResult.value.data || []);
+            if (appointmentTypesResult.status === 'fulfilled') setAppointmentTypes(appointmentTypesResult.value.data || []);
+            if (appointmentsResult.status === 'fulfilled') setAppointments(appointmentsResult.value.data || []);
 
             if (reviewsResult.status === 'fulfilled' && reviewsResult.value.data) {
                 const reviewsObj = reviewsResult.value.data.reduce((acc, r) => {
@@ -1293,6 +1301,42 @@ export const DataProvider = ({ children }) => {
         if (!error) setPaymentRates(prev => prev.filter(r => r.id !== id));
     };
 
+    // APPOINTMENT TYPES
+    const addAppointmentType = async (type) => {
+        const { data, error } = await supabase.from('appointment_types').insert([type]).select().single();
+        if (error) { console.error(error); throw error; }
+        if (data) setAppointmentTypes(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    };
+    const updateAppointmentType = async (id, updates) => {
+        const { data, error } = await supabase.from('appointment_types').update(updates).eq('id', id).select().single();
+        if (error) { console.error(error); throw error; }
+        if (data) setAppointmentTypes(prev => prev.map(t => t.id === id ? data : t).sort((a, b) => a.name.localeCompare(b.name)));
+    };
+    const deleteAppointmentType = async (id) => {
+        const { error } = await supabase.from('appointment_types').delete().eq('id', id);
+        if (error) { console.error(error); throw error; }
+        setAppointmentTypes(prev => prev.filter(t => t.id !== id));
+    };
+
+    // APPOINTMENTS
+    const addAppointment = async (appt) => {
+        const { data, error } = await supabase.from('appointments').insert([appt]).select().single();
+        if (error) { console.error(error); throw error; }
+        if (data) setAppointments(prev => [...prev, data]);
+        return data;
+    };
+    const updateAppointment = async (id, updates) => {
+        const { data, error } = await supabase.from('appointments').update(updates).eq('id', id).select().single();
+        if (error) { console.error(error); throw error; }
+        if (data) setAppointments(prev => prev.map(a => a.id === id ? data : a));
+        return data;
+    };
+    const deleteAppointment = async (id) => {
+        const { error } = await supabase.from('appointments').delete().eq('id', id);
+        if (error) { console.error(error); throw error; }
+        setAppointments(prev => prev.filter(a => a.id !== id));
+    };
+
     const extendSubscription = async (patientId, daysToAdd) => {
         try {
             const patient = patients.find(p => p.id === patientId);
@@ -1672,6 +1716,16 @@ export const DataProvider = ({ children }) => {
             updateSubscriptionExtension,
             deleteSubscriptionExtension,
             subscriptionExtensions,
+
+            appointmentTypes,
+            addAppointmentType,
+            updateAppointmentType,
+            deleteAppointmentType,
+
+            appointments,
+            addAppointment,
+            updateAppointment,
+            deleteAppointment,
 
             userProfile,
             updateUserProfile,

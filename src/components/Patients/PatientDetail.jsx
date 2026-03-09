@@ -17,6 +17,7 @@ import { calculateSubscriptionTerms } from '../../utils/subscriptionUtils';
 
 
 // Tabs
+import AppointmentsTab from './Tabs/AppointmentsTab';
 import InformationTab from './Tabs/InformationTab';
 import ReviewsTab from './Tabs/ReviewsTab';
 import TrackingTab from './Tabs/TrackingTab';
@@ -386,6 +387,12 @@ const PatientDetail = () => {
                     >
                         <div className="flex items-center gap-2"><UtensilsCrossed size={18} /> Planes</div>
                     </button>
+                    <button
+                        onClick={() => setActiveTab('appointments')}
+                        className={`pb-3 px-1 font-medium text-sm transition-all border-b-2 whitespace-nowrap ${activeTab === 'appointments' ? 'border-primary text-primary dark:text-primary-400 dark:border-primary-400' : 'border-transparent text-muted hover:text-gray-800 dark:text-slate-400 dark:hover:text-slate-200'}`}
+                    >
+                        <div className="flex items-center gap-2"><Clock size={18} /> Citas</div>
+                    </button>
                 </nav>
             </div>
 
@@ -417,6 +424,10 @@ const PatientDetail = () => {
 
                 <div style={{ display: activeTab === 'plans' ? 'block' : 'none' }}>
                     <PlansTab patient={patient} />
+                </div>
+
+                <div style={{ display: activeTab === 'appointments' ? 'block' : 'none' }}>
+                    <AppointmentsTab patient={patient} />
                 </div>
 
                 <div style={{ display: activeTab === 'payments' ? 'block' : 'none' }}>

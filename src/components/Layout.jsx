@@ -52,6 +52,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     // Navigation Items — roles control visibility
     const allNavItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/', adminOnly: false },
+        { icon: CalendarDays, label: 'Calendario', path: '/calendar', adminOnly: false },
         { icon: Users, label: 'Clientes', path: '/patients', adminOnly: false },
         { icon: Activity, label: 'Seguimiento', path: '/tracking', adminOnly: false },
         { icon: ClipboardList, label: 'Tareas', path: '/tasks', adminOnly: false },
