@@ -11,10 +11,10 @@ import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import esLocale from '@fullcalendar/core/locales/es';
 
-import { CalendarClock, Plus, CalendarDays, Euro, Trash2, Edit2, MapPin, User, Loader2, Layers } from 'lucide-react';
+import { CalendarClock, Plus, CalendarDays, Euro, Trash2, Edit2, MapPin, User, Loader2, Layers, Clock } from 'lucide-react';
 
 const AppointmentsCalendar = () => {
-    const { appointments, appointmentTypes, paymentCategories, patients, addAppointment, updateAppointment, deleteAppointment, addPayment, patientVouchers, voucherTypes, consumeVoucher } = useData();
+    const { appointments, appointmentTypes, paymentCategories, patients, addAppointment, updateAppointment, deleteAppointment, addPayment, patientVouchers, voucherTypes, consumeVoucher, addPatientVoucher } = useData();
     const { showToast } = useToast();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
