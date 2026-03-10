@@ -6,7 +6,7 @@ import { useToast } from '../../../context/ToastContext';
 import { CalendarClock, Plus, CalendarDays, Euro, Trash2, Edit2, MapPin, CheckCircle2, Clock, Layers } from 'lucide-react';
 
 const AppointmentsTab = ({ patient }) => {
-    const { appointments, appointmentTypes, paymentCategories, addAppointment, updateAppointment, deleteAppointment, addPayment, patientVouchers, voucherTypes, consumeVoucher } = useData();
+    const { appointments, appointmentTypes, paymentCategories, addAppointment, updateAppointment, deleteAppointment, addPayment, patientVouchers, voucherTypes, consumeVoucher, addPatientVoucher } = useData();
     const { showToast } = useToast();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -20,8 +20,9 @@ const AppointmentsTab = ({ patient }) => {
         date: format(new Date(), 'yyyy-MM-dd'),
         time: '10:00',
         status: 'scheduled',
-        payment_status: 'pending',
+        payment_status: 'unresolved',
         voucher_id: '',
+        new_voucher_type_id: '',
         notes: ''
     });
 
@@ -51,7 +52,7 @@ const AppointmentsTab = ({ patient }) => {
         } else {
             setEditingId(null);
 
-            let initialPaymentStatus = 'pending';
+            let initialPaymentStatus = 'unresolved';
             let initialVoucherId = '';
 
             if (activeVouchers?.length > 0) {
@@ -67,6 +68,7 @@ const AppointmentsTab = ({ patient }) => {
                 status: 'scheduled',
                 payment_status: initialPaymentStatus,
                 voucher_id: initialVoucherId,
+                new_voucher_type_id: '',
                 notes: ''
             });
         }
@@ -94,6 +96,19 @@ const AppointmentsTab = ({ patient }) => {
             const startDate = parseISO(startTimeString);
             const endDate = new Date(startDate.getTime() + type.duration_minutes * 60000);
 
+            if (form.status === 'completed' && form.payment_status === 'unresolved') {
+                showToast('Debes seleccionar cómo se ha cobrado la cita (Bono o Suelta) antes de marcarla como Completada.', 'error');
+                setIsSaving(false);
+                return;
+            }
+
+            // Inline Voucher Selling
+            let finalVoucherId = form.voucher_id;
+            if (form.payment_status === 'bono' && !finalVoucherId && form.new_voucher_type_id) {
+                const newVoucher = await addPatientVoucher(patient.id, form.new_voucher_type_id);
+                finalVoucherId = newVoucher.id;
+            }
+
             const payload = {
                 patient_id: patient.id,
                 appointment_type_id: form.appointment_type_id,
@@ -101,18 +116,18 @@ const AppointmentsTab = ({ patient }) => {
                 end_time: endDate.toISOString(),
                 status: form.status,
                 payment_status: form.payment_status,
-                voucher_id: form.payment_status === 'bono' ? form.voucher_id : null,
+                voucher_id: form.payment_status === 'bono' ? finalVoucherId : null,
                 notes: form.notes
             };
 
-            const isNewBonoConsumption = (form.payment_status === 'bono' && form.voucher_id);
+            const isNewBonoConsumption = (form.payment_status === 'bono' && finalVoucherId);
             let prevVoucherId = null;
 
             if (isEditingId) {
                 // Determine if we need to revert a previous bono
                 const existingAppt = appointments.find(a => a.id === isEditingId);
                 if (existingAppt?.payment_status === 'bono' && existingAppt.voucher_id) {
-                    if (existingAppt.voucher_id !== form.voucher_id || form.payment_status !== 'bono') {
+                    if (existingAppt.voucher_id !== finalVoucherId || form.payment_status !== 'bono') {
                         prevVoucherId = existingAppt.voucher_id;
                     }
                 }
@@ -128,8 +143,8 @@ const AppointmentsTab = ({ patient }) => {
             if (prevVoucherId) {
                 await consumeVoucher(prevVoucherId, true); // revert 1 session
             }
-            if (isNewBonoConsumption && form.voucher_id !== prevVoucherId) {
-                await consumeVoucher(form.voucher_id, false); // consume 1 session
+            if (isNewBonoConsumption && finalVoucherId !== prevVoucherId) {
+                await consumeVoucher(finalVoucherId, false); // consume 1 session
             }
 
             if (form.payment_status === 'paid' && createPaymentRecord) {
@@ -183,7 +198,8 @@ const AppointmentsTab = ({ patient }) => {
 
     const getPaymentBadge = (status) => {
         switch (status) {
-            case 'pending': return <span className="badge bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700">Ptde. Pago</span>;
+            case 'unresolved': return <span className="badge bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700">A Decidir</span>;
+            case 'pending': return <span className="badge bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800">Ptde. Pago</span>;
             case 'paid': return <span className="badge bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">Pagado</span>;
             case 'bono': return <span className="badge bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400 border border-purple-200 dark:border-purple-800">Bono Consumido</span>;
             default: return null;
@@ -352,14 +368,28 @@ const AppointmentsTab = ({ patient }) => {
 
                             <div className="space-y-3 mt-6 border-t border-slate-100 dark:border-slate-800 pt-6">
                                 <label className="form-label text-sm font-bold text-slate-800 dark:text-slate-200">Método de Cobro (Liquidación) *</label>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                                {form.status === 'completed' && form.payment_status === 'unresolved' && (
+                                    <div className="bg-red-50 text-red-600 p-2 rounded text-sm border border-red-200 dark:bg-red-900/20 dark:border-red-800">
+                                        ⚠️ Si la cita está "Completada", debes decidir cómo se ha cobrado.
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <div
-                                        onClick={() => setForm({ ...form, payment_status: form.payment_status === 'bono' ? 'pending' : form.payment_status })}
-                                        className={`cursor-pointer rounded-xl border-2 p-4 transition-all flex flex-col items-center justify-center text-center gap-2 ${form.payment_status !== 'bono' ? 'border-[#28483a] bg-[#28483a]/5 dark:bg-[#28483a]/20 text-[#28483a] dark:text-[#a3c4b5]' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:border-[#28483a]/50'}`}
+                                        onClick={() => setForm({ ...form, payment_status: 'unresolved' })}
+                                        className={`cursor-pointer rounded-xl border-2 p-3 transition-all flex flex-col items-center justify-center text-center gap-2 ${form.payment_status === 'unresolved' ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:border-amber-300'}`}
                                     >
-                                        <Euro size={24} className={form.payment_status !== 'bono' ? 'text-[#28483a] dark:text-[#a3c4b5]' : 'text-slate-400'} />
-                                        <div className="font-semibold">Consulta Suelta</div>
-                                        <div className="text-xs opacity-80">Pago directo por la sesión</div>
+                                        <Clock size={20} className={form.payment_status === 'unresolved' ? 'text-amber-500' : 'text-slate-400'} />
+                                        <div className="font-semibold text-sm">A Decidir / Pendiente</div>
+                                    </div>
+
+                                    <div
+                                        onClick={() => setForm({ ...form, payment_status: (form.payment_status === 'pending' || form.payment_status === 'paid') ? form.payment_status : 'pending' })}
+                                        className={`cursor-pointer rounded-xl border-2 p-3 transition-all flex flex-col items-center justify-center text-center gap-2 ${(form.payment_status === 'pending' || form.payment_status === 'paid') ? 'border-[#28483a] bg-[#28483a]/5 dark:bg-[#28483a]/20 text-[#28483a] dark:text-[#a3c4b5]' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:border-[#28483a]/50'}`}
+                                    >
+                                        <Euro size={20} className={(form.payment_status === 'pending' || form.payment_status === 'paid') ? 'text-[#28483a] dark:text-[#a3c4b5]' : 'text-slate-400'} />
+                                        <div className="font-semibold text-sm">Consulta Suelta</div>
                                     </div>
 
                                     <div
@@ -367,16 +397,15 @@ const AppointmentsTab = ({ patient }) => {
                                             const vId = form.voucher_id || (activeVouchers?.length > 0 ? activeVouchers[0].id : '');
                                             setForm({ ...form, payment_status: 'bono', voucher_id: vId });
                                         }}
-                                        className={`cursor-pointer rounded-xl border-2 p-4 transition-all flex flex-col items-center justify-center text-center gap-2 ${form.payment_status === 'bono' ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:border-purple-300'}`}
+                                        className={`cursor-pointer rounded-xl border-2 p-3 transition-all flex flex-col items-center justify-center text-center gap-2 ${form.payment_status === 'bono' ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:border-purple-300'}`}
                                     >
-                                        <Layers size={24} className={form.payment_status === 'bono' ? 'text-purple-600' : 'text-slate-400'} />
-                                        <div className="font-semibold">Usar Bono</div>
-                                        <div className="text-xs opacity-80">Descuenta 1 sesión del bono</div>
+                                        <Layers size={20} className={form.payment_status === 'bono' ? 'text-purple-600' : 'text-slate-400'} />
+                                        <div className="font-semibold text-sm">Usar Bono</div>
                                     </div>
                                 </div>
                             </div>
 
-                            {form.payment_status !== 'bono' && (
+                            {(form.payment_status === 'pending' || form.payment_status === 'paid') && (
                                 <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700 space-y-3 mt-2">
                                     <label className="form-label text-slate-700 dark:text-slate-300 flex items-center gap-2">
                                         <Euro size={16} /> Estado del pago de la consulta
@@ -403,7 +432,7 @@ const AppointmentsTab = ({ patient }) => {
                                             required
                                             className="form-select border-purple-200 focus:ring-purple-500 focus:border-purple-500"
                                             value={form.voucher_id}
-                                            onChange={e => setForm({ ...form, voucher_id: e.target.value })}
+                                            onChange={e => setForm({ ...form, voucher_id: e.target.value, new_voucher_type_id: '' })}
                                         >
                                             <option value="" disabled>Elige el bono...</option>
                                             {activeVouchers.map(v => {
@@ -416,9 +445,25 @@ const AppointmentsTab = ({ patient }) => {
                                             })}
                                         </select>
                                     ) : (
-                                        <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 p-2 rounded">
-                                            ⚠️ Este paciente no tiene bonos activos actualmente. Deberás asignarle uno primero (Sección: Bonos y Suscripciones).
-                                        </p>
+                                        <div className="bg-white/50 dark:bg-slate-900/30 p-3 rounded-lg space-y-3">
+                                            <p className="text-sm text-purple-800 dark:text-purple-300">
+                                                No hay bonos activos. Puedes venderle uno ahora:
+                                            </p>
+                                            <select
+                                                required
+                                                className="form-select border-purple-200 focus:ring-purple-500 focus:border-purple-500"
+                                                value={form.new_voucher_type_id}
+                                                onChange={e => setForm({ ...form, new_voucher_type_id: e.target.value })}
+                                            >
+                                                <option value="">-- Elige el bono a vender --</option>
+                                                {voucherTypes.filter(t => t.is_active).map(t => (
+                                                    <option key={t.id} value={t.id}>{t.name} ({t.price}€)</option>
+                                                ))}
+                                            </select>
+                                            <div className="text-xs text-purple-600 dark:text-purple-400">
+                                                Al Guardar Cita, se cobrará automáticamente el bono y gastará esta sesión.
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                             )}
