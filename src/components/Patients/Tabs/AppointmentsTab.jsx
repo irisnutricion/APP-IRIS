@@ -50,14 +50,23 @@ const AppointmentsTab = ({ patient }) => {
             });
         } else {
             setEditingId(null);
+
+            let initialPaymentStatus = 'pending';
+            let initialVoucherId = '';
+
+            if (activeVouchers?.length > 0) {
+                initialPaymentStatus = 'bono';
+                initialVoucherId = activeVouchers[0].id;
+            }
+
             setForm({
                 category_id: patient.payment_category_id || '',
                 appointment_type_id: '',
                 date: format(new Date(), 'yyyy-MM-dd'),
                 time: '10:00',
                 status: 'scheduled',
-                payment_status: 'pending',
-                voucher_id: '',
+                payment_status: initialPaymentStatus,
+                voucher_id: initialVoucherId,
                 notes: ''
             });
         }
@@ -325,7 +334,7 @@ const AppointmentsTab = ({ patient }) => {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4">
                                 <div>
                                     <label className="form-label">Estado de Cita</label>
                                     <select
@@ -339,19 +348,50 @@ const AppointmentsTab = ({ patient }) => {
                                         <option value="no_show">No Show</option>
                                     </select>
                                 </div>
-                                <div>
-                                    <label className="form-label">Estado de Pago</label>
-                                    <select
-                                        className="form-select"
-                                        value={form.payment_status}
-                                        onChange={e => setForm({ ...form, payment_status: e.target.value })}
+                            </div>
+
+                            <div className="space-y-3 mt-6 border-t border-slate-100 dark:border-slate-800 pt-6">
+                                <label className="form-label text-sm font-bold text-slate-800 dark:text-slate-200">Método de Cobro (Liquidación) *</label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div
+                                        onClick={() => setForm({ ...form, payment_status: form.payment_status === 'bono' ? 'pending' : form.payment_status })}
+                                        className={`cursor-pointer rounded-xl border-2 p-4 transition-all flex flex-col items-center justify-center text-center gap-2 ${form.payment_status !== 'bono' ? 'border-[#28483a] bg-[#28483a]/5 dark:bg-[#28483a]/20 text-[#28483a] dark:text-[#a3c4b5]' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:border-[#28483a]/50'}`}
                                     >
-                                        <option value="pending">Ptde. Pago</option>
-                                        <option value="paid">Pagado</option>
-                                        <option value="bono">Bono Consumido</option>
-                                    </select>
+                                        <Euro size={24} className={form.payment_status !== 'bono' ? 'text-[#28483a] dark:text-[#a3c4b5]' : 'text-slate-400'} />
+                                        <div className="font-semibold">Consulta Suelta</div>
+                                        <div className="text-xs opacity-80">Pago directo por la sesión</div>
+                                    </div>
+
+                                    <div
+                                        onClick={() => {
+                                            const vId = form.voucher_id || (activeVouchers?.length > 0 ? activeVouchers[0].id : '');
+                                            setForm({ ...form, payment_status: 'bono', voucher_id: vId });
+                                        }}
+                                        className={`cursor-pointer rounded-xl border-2 p-4 transition-all flex flex-col items-center justify-center text-center gap-2 ${form.payment_status === 'bono' ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:border-purple-300'}`}
+                                    >
+                                        <Layers size={24} className={form.payment_status === 'bono' ? 'text-purple-600' : 'text-slate-400'} />
+                                        <div className="font-semibold">Usar Bono</div>
+                                        <div className="text-xs opacity-80">Descuenta 1 sesión del bono</div>
+                                    </div>
                                 </div>
                             </div>
+
+                            {form.payment_status !== 'bono' && (
+                                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700 space-y-3 mt-2">
+                                    <label className="form-label text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                        <Euro size={16} /> Estado del pago de la consulta
+                                    </label>
+                                    <select
+                                        className="form-select border-slate-300 dark:border-slate-600 focus:ring-[#28483a] focus:border-[#28483a]"
+                                        value={form.payment_status}
+                                        onChange={e => setForm({ ...form, payment_status: e.target.value })}
+                                        required
+                                    >
+                                        <option value="pending">Pendiente de Pago</option>
+                                        <option value="paid">Pagada / Cobrada</option>
+                                    </select>
+                                </div>
+                            )}
 
                             {form.payment_status === 'bono' && (
                                 <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-xl border border-purple-100 dark:border-purple-800 space-y-3">

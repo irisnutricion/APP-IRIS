@@ -11,10 +11,10 @@ import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import esLocale from '@fullcalendar/core/locales/es';
 
-import { CalendarClock, Plus, CalendarDays, Euro, Trash2, Edit2, MapPin, User, Loader2 } from 'lucide-react';
+import { CalendarClock, Plus, CalendarDays, Euro, Trash2, Edit2, MapPin, User, Loader2, Layers } from 'lucide-react';
 
 const AppointmentsCalendar = () => {
-    const { appointments, appointmentTypes, paymentCategories, patients, addAppointment, updateAppointment, deleteAppointment, addPayment } = useData();
+    const { appointments, appointmentTypes, paymentCategories, patients, addAppointment, updateAppointment, deleteAppointment, addPayment, patientVouchers, voucherTypes, consumeVoucher } = useData();
     const { showToast } = useToast();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,8 +33,18 @@ const AppointmentsCalendar = () => {
         time: '10:00',
         status: 'scheduled',
         payment_status: 'pending',
+        voucher_id: '',
         notes: ''
     });
+
+    const activeVouchers = useMemo(() => {
+        if (!form.patient_id) return [];
+        return patientVouchers.filter(v => {
+            const type = voucherTypes.find(t => t.id === v.voucher_type_id);
+            if (!type) return false;
+            return v.patient_id === form.patient_id && v.is_active && v.used_sessions < type.total_sessions;
+        });
+    }, [patientVouchers, voucherTypes, form.patient_id]);
 
     const getApptType = (id) => appointmentTypes.find(t => t.id === id);
     const getCategoryName = (catId) => paymentCategories.find(c => c.id === catId)?.label || '';
@@ -100,6 +110,7 @@ const AppointmentsCalendar = () => {
                 time: format(parseISO(appt.start_time), 'HH:mm'),
                 status: appt.status,
                 payment_status: appt.payment_status,
+                voucher_id: appt.voucher_id || '',
                 notes: appt.notes || ''
             });
         } else {
@@ -112,6 +123,7 @@ const AppointmentsCalendar = () => {
                 time: initialDate ? format(initialDate, 'HH:mm') : '10:00',
                 status: 'scheduled',
                 payment_status: 'pending',
+                voucher_id: '',
                 notes: ''
             });
         }
@@ -154,15 +166,34 @@ const AppointmentsCalendar = () => {
                 end_time: endDate.toISOString(),
                 status: form.status,
                 payment_status: form.payment_status,
+                voucher_id: form.payment_status === 'bono' ? form.voucher_id : null,
                 notes: form.notes
             };
 
+            const isNewBonoConsumption = (form.payment_status === 'bono' && form.voucher_id);
+            let prevVoucherId = null;
+
             if (editingId) {
+                const existingAppt = appointments.find(a => a.id === editingId);
+                if (existingAppt?.payment_status === 'bono' && existingAppt.voucher_id) {
+                    if (existingAppt.voucher_id !== form.voucher_id || form.payment_status !== 'bono') {
+                        prevVoucherId = existingAppt.voucher_id;
+                    }
+                }
+
                 await updateAppointment(editingId, payload);
                 showToast('Cita actualizada correctamente', 'success');
             } else {
                 await addAppointment(payload);
                 showToast('Cita agendada correctamente', 'success');
+            }
+
+            // Handle Bono transactions
+            if (prevVoucherId) {
+                await consumeVoucher(prevVoucherId, true); // revert 1 session
+            }
+            if (isNewBonoConsumption && form.voucher_id !== prevVoucherId) {
+                await consumeVoucher(form.voucher_id, false); // consume 1 session
             }
 
             if (form.payment_status === 'paid' && createPaymentRecord) {
@@ -191,6 +222,10 @@ const AppointmentsCalendar = () => {
     const handleDelete = async (id) => {
         if (confirm('¿Seguro que deseas eliminar esta cita?')) {
             try {
+                const existingAppt = appointments.find(a => a.id === id);
+                if (existingAppt?.payment_status === 'bono' && existingAppt.voucher_id) {
+                    await consumeVoucher(existingAppt.voucher_id, true); // Refund session
+                }
                 await deleteAppointment(id);
                 showToast('Cita eliminada', 'success');
                 setIsModalOpen(false);
@@ -388,7 +423,7 @@ const AppointmentsCalendar = () => {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4">
                                 <div>
                                     <label className="form-label">Estado de Cita</label>
                                     <select
@@ -402,19 +437,80 @@ const AppointmentsCalendar = () => {
                                         <option value="no_show">No Show</option>
                                     </select>
                                 </div>
-                                <div>
-                                    <label className="form-label">Estado de Pago</label>
-                                    <select
-                                        className="form-select"
-                                        value={form.payment_status}
-                                        onChange={e => setForm({ ...form, payment_status: e.target.value })}
+                            </div>
+
+                            <div className="space-y-3 mt-6 border-t border-slate-100 dark:border-slate-800 pt-6">
+                                <label className="form-label text-sm font-bold text-slate-800 dark:text-slate-200">Método de Cobro (Liquidación) *</label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div
+                                        onClick={() => setForm({ ...form, payment_status: form.payment_status === 'bono' ? 'pending' : form.payment_status })}
+                                        className={`cursor-pointer rounded-xl border-2 p-4 transition-all flex flex-col items-center justify-center text-center gap-2 ${form.payment_status !== 'bono' ? 'border-[#28483a] bg-[#28483a]/5 dark:bg-[#28483a]/20 text-[#28483a] dark:text-[#a3c4b5]' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:border-[#28483a]/50'}`}
                                     >
-                                        <option value="pending">Ptde. Pago</option>
-                                        <option value="paid">Pagado</option>
-                                        <option value="bono">Bono Consumido</option>
-                                    </select>
+                                        <Euro size={24} className={form.payment_status !== 'bono' ? 'text-[#28483a] dark:text-[#a3c4b5]' : 'text-slate-400'} />
+                                        <div className="font-semibold">Consulta Suelta</div>
+                                        <div className="text-xs opacity-80">Pago directo por la sesión</div>
+                                    </div>
+
+                                    <div
+                                        onClick={() => {
+                                            const vId = form.voucher_id || (activeVouchers?.length > 0 ? activeVouchers[0].id : '');
+                                            setForm({ ...form, payment_status: 'bono', voucher_id: vId });
+                                        }}
+                                        className={`cursor-pointer rounded-xl border-2 p-4 transition-all flex flex-col items-center justify-center text-center gap-2 ${form.payment_status === 'bono' ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:border-purple-300'}`}
+                                    >
+                                        <Layers size={24} className={form.payment_status === 'bono' ? 'text-purple-600' : 'text-slate-400'} />
+                                        <div className="font-semibold">Usar Bono</div>
+                                        <div className="text-xs opacity-80">Descuenta 1 sesión del bono</div>
+                                    </div>
                                 </div>
                             </div>
+
+                            {form.payment_status !== 'bono' && (
+                                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700 space-y-3 mt-2">
+                                    <label className="form-label text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                                        <Euro size={16} /> Estado del pago de la consulta
+                                    </label>
+                                    <select
+                                        className="form-select border-slate-300 dark:border-slate-600 focus:ring-[#28483a] focus:border-[#28483a]"
+                                        value={form.payment_status}
+                                        onChange={e => setForm({ ...form, payment_status: e.target.value })}
+                                        required
+                                    >
+                                        <option value="pending">Pendiente de Pago</option>
+                                        <option value="paid">Pagada / Cobrada</option>
+                                    </select>
+                                </div>
+                            )}
+
+                            {form.payment_status === 'bono' && form.patient_id && (
+                                <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-xl border border-purple-100 dark:border-purple-800 space-y-3">
+                                    <label className="form-label text-purple-800 dark:text-purple-300 flex items-center gap-2">
+                                        <Layers size={16} /> Selecciona de qué bono restar la sesión
+                                    </label>
+                                    {activeVouchers.length > 0 ? (
+                                        <select
+                                            required
+                                            className="form-select border-purple-200 focus:ring-purple-500 focus:border-purple-500"
+                                            value={form.voucher_id}
+                                            onChange={e => setForm({ ...form, voucher_id: e.target.value })}
+                                        >
+                                            <option value="" disabled>Elige el bono...</option>
+                                            {activeVouchers.map(v => {
+                                                const vType = voucherTypes.find(t => t.id === v.voucher_type_id);
+                                                return (
+                                                    <option key={v.id} value={v.id}>
+                                                        {vType?.name} ({v.used_sessions}/{vType?.total_sessions} consumido)
+                                                    </option>
+                                                );
+                                            })}
+                                        </select>
+                                    ) : (
+                                        <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 p-2 rounded">
+                                            ⚠️ Este paciente no tiene bonos activos actualmente. Ve a su ficha para asignarle uno.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
                             {form.payment_status === 'paid' && !editingId && (
                                 <div className="flex items-center gap-2 mt-2 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-900/50">
