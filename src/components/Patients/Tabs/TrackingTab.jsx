@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { generateMeasurementsPDF } from '../../../utils/measurementsPdfGenerator';
 import { safeFormat } from '../../../utils/dateUtils';
 import PdfExportModal from '../../Tracking/PdfExportModal';
@@ -45,6 +45,30 @@ const TrackingTab = ({ patient, onAddMeasurement, onEditMeasurement, onDeleteMea
             console.error('Error generating PDF:', error);
             showToast('Hubo un error al generar el PDF. Inténtalo de nuevo.', 'error');
         }
+    };
+
+    const sortedMeasurements = useMemo(() => {
+        if (!patient?.measurements) return [];
+        return [...patient.measurements].sort((a, b) => new Date(b.date) - new Date(a.date));
+    }, [patient?.measurements]);
+
+    const renderDiff = (current, previous) => {
+        if (current === undefined || current === null || current === '' || previous === undefined || previous === null || previous === '') return null;
+        const currentVal = parseFloat(current.toString().replace(',', '.'));
+        const previousVal = parseFloat(previous.toString().replace(',', '.'));
+        if (isNaN(currentVal) || isNaN(previousVal)) return null;
+        const diff = parseFloat((currentVal - previousVal).toFixed(2));
+        if (diff === 0) return null;
+
+        const isNegative = diff < 0;
+        const colorClass = isNegative ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400';
+        const sign = isNegative ? '' : '+';
+
+        return (
+            <span className={`text-[10px] ml-1 font-semibold ${colorClass}`} title="Diferencia con revisión anterior">
+                ({sign}{diff})
+            </span>
+        );
     };
 
     return (
@@ -201,40 +225,49 @@ const TrackingTab = ({ patient, onAddMeasurement, onEditMeasurement, onDeleteMea
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                    {patient.measurements.sort((a, b) => new Date(b.date) - new Date(a.date)).map((m) => (
-                                        <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 text-xs">
-                                            <td className="py-2 px-3 text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">{safeFormat(m.date)}</td>
-                                            <td className="py-2 px-2 text-center font-bold text-slate-800 dark:text-white">{m.weight} kg</td>
-                                            <td className="py-2 px-2 text-center text-slate-600 dark:text-slate-400">{m.pecho || '-'}</td>
-                                            <td className="py-2 px-2 text-center text-slate-600 dark:text-slate-400">
-                                                <span className="text-slate-500">I:</span> {m.brazo_izq || '-'} <span className="text-slate-300 mx-1">|</span> <span className="text-slate-500">D:</span> {m.brazo_der || '-'}
-                                            </td>
-                                            <td className="py-2 px-2 text-center text-slate-600 dark:text-slate-400">
-                                                {m.sobre_ombligo || '-'} <span className="text-slate-300 mx-1">|</span> {m.ombligo || '-'} <span className="text-slate-300 mx-1">|</span> {m.bajo_ombligo || '-'}
-                                            </td>
-                                            <td className="py-2 px-2 text-center text-slate-600 dark:text-slate-400">{m.cadera || '-'}</td>
-                                            <td className="py-2 px-2 text-center text-slate-600 dark:text-slate-400">
-                                                <span className="text-slate-500">I:</span> {m.muslo_izq || '-'} <span className="text-slate-300 mx-1">|</span> <span className="text-slate-500">D:</span> {m.muslo_der || '-'}
-                                            </td>
-                                            <td className="py-2 px-2 text-center">{m.photo ? <ImageIcon size={14} className="text-primary inline" /> : '-'}</td>
-                                            <td className="py-2 px-3 flex justify-end gap-1">
-                                                <button
-                                                    onClick={() => onEditMeasurement(m)}
-                                                    className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors text-slate-500 hover:text-primary"
-                                                    title="Editar medición"
-                                                >
-                                                    <Edit2 size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => onDeleteMeasurement(m.id)}
-                                                    className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors text-slate-400 hover:text-red-500"
-                                                    title="Eliminar medición"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {sortedMeasurements.map((m, index) => {
+                                        const prev = sortedMeasurements[index + 1];
+                                        return (
+                                            <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 text-xs">
+                                                <td className="py-2 px-3 text-slate-700 dark:text-slate-300 font-medium whitespace-nowrap">{safeFormat(m.date)}</td>
+                                                <td className="py-2 px-2 text-center font-bold text-slate-800 dark:text-white whitespace-nowrap">
+                                                    {m.weight} kg {renderDiff(m.weight, prev?.weight)}
+                                                </td>
+                                                <td className="py-2 px-2 text-center text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                                                    {m.pecho || '-'} {renderDiff(m.pecho, prev?.pecho)}
+                                                </td>
+                                                <td className="py-2 px-2 text-center text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                                                    <span className="text-slate-500">I:</span> {m.brazo_izq || '-'} {renderDiff(m.brazo_izq, prev?.brazo_izq)} <span className="text-slate-300 mx-1">|</span> <span className="text-slate-500">D:</span> {m.brazo_der || '-'} {renderDiff(m.brazo_der, prev?.brazo_der)}
+                                                </td>
+                                                <td className="py-2 px-2 text-center text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                                                    {m.sobre_ombligo || '-'} {renderDiff(m.sobre_ombligo, prev?.sobre_ombligo)} <span className="text-slate-300 mx-1">|</span> {m.ombligo || '-'} {renderDiff(m.ombligo, prev?.ombligo)} <span className="text-slate-300 mx-1">|</span> {m.bajo_ombligo || '-'} {renderDiff(m.bajo_ombligo, prev?.bajo_ombligo)}
+                                                </td>
+                                                <td className="py-2 px-2 text-center text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                                                    {m.cadera || '-'} {renderDiff(m.cadera, prev?.cadera)}
+                                                </td>
+                                                <td className="py-2 px-2 text-center text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                                                    <span className="text-slate-500">I:</span> {m.muslo_izq || '-'} {renderDiff(m.muslo_izq, prev?.muslo_izq)} <span className="text-slate-300 mx-1">|</span> <span className="text-slate-500">D:</span> {m.muslo_der || '-'} {renderDiff(m.muslo_der, prev?.muslo_der)}
+                                                </td>
+                                                <td className="py-2 px-2 text-center">{m.photo ? <ImageIcon size={14} className="text-primary inline" /> : '-'}</td>
+                                                <td className="py-2 px-3 flex justify-end gap-1">
+                                                    <button
+                                                        onClick={() => onEditMeasurement(m)}
+                                                        className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors text-slate-500 hover:text-primary"
+                                                        title="Editar medición"
+                                                    >
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => onDeleteMeasurement(m.id)}
+                                                        className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors text-slate-400 hover:text-red-500"
+                                                        title="Eliminar medición"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
