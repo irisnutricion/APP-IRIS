@@ -7,7 +7,7 @@ import { format, parseISO } from 'date-fns';
 import PlanStartModal from './PlanStartModal';
 
 const PatientList = () => {
-    const { patients, updatePatient } = useData();
+    const { patients, updatePatient, paymentCategories } = useData();
     const { isAdmin, nutritionistId } = useAuth();
     const navigate = useNavigate(); // Hook initialized
     const [searchTerm, setSearchTerm] = useState('');
@@ -15,7 +15,7 @@ const PatientList = () => {
     const [viewMode, setViewMode] = useState('board'); // 'list' or 'board'
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterScope, setFilterScope] = useState('all'); // 'all' (everyone) or 'mine' (only my cases)
-
+    const [filterCategory, setFilterCategory] = useState('all'); // filtering by tag/category
 
     const [planStartModalOpen, setPlanStartModalOpen] = useState(false);
     const [selectedPatientId, setSelectedPatientId] = useState(null);
@@ -60,6 +60,9 @@ const PatientList = () => {
             // Scope Filter
             if (!filterByScope(p)) return;
 
+            // Category Filter
+            if (filterCategory !== 'all' && p.payment_category_id !== filterCategory) return;
+
             // Search Filter
             if (searchTerm && !p.name.toLowerCase().includes(searchTerm.toLowerCase())) return;
 
@@ -75,6 +78,9 @@ const PatientList = () => {
     const filteredListPatients = useMemo(() => {
         let result = patients.filter(p => {
             if (!filterByScope(p)) return false;
+
+            // Category Filter
+            if (filterCategory !== 'all' && p.payment_category_id !== filterCategory) return false;
 
             const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 p.email?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -128,14 +134,27 @@ const PatientList = () => {
 
                 {/* Toolbar: Search Left, Buttons Right */}
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div className="flex items-center px-3 py-2 bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 rounded-lg w-full md:w-auto focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-primary-500 transition-all" style={{ minWidth: '320px' }}>
-                        <Search className="text-slate-400 mr-2" size={18} />
-                        <input
-                            className="bg-transparent border-none outline-none text-sm text-slate-700 dark:text-slate-200 w-full placeholder-slate-400"
-                            placeholder="Buscar..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+                    <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
+                        <div className="flex items-center px-3 py-2 bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 rounded-lg w-full md:w-64 focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-primary-500 transition-all">
+                            <Search className="text-slate-400 mr-2" size={18} />
+                            <input
+                                className="bg-transparent border-none outline-none text-sm text-slate-700 dark:text-slate-200 w-full placeholder-slate-400"
+                                placeholder="Buscar..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+
+                        <select
+                            className="form-select text-sm py-2 shadow-sm border-slate-200 dark:border-slate-700 w-full md:w-48 bg-white dark:bg-slate-800"
+                            value={filterCategory}
+                            onChange={(e) => setFilterCategory(e.target.value)}
+                        >
+                            <option value="all">Todas las etiquetas</option>
+                            {paymentCategories?.map(cat => (
+                                <option key={cat.id} value={cat.id}>{cat.label}</option>
+                            ))}
+                        </select>
                     </div>
 
                     <div className="flex items-center gap-3 w-full md:w-auto justify-end">
@@ -246,8 +265,18 @@ const PatientList = () => {
                                                 )}
 
                                                 {/* Card Details */}
-                                                <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-0.5">
-                                                    <div className="flex justify-between">
+                                                <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-0.5 mt-1">
+                                                    {(() => {
+                                                        const cat = paymentCategories?.find(c => c.id === patient.payment_category_id);
+                                                        return cat && (
+                                                            <div className="flex">
+                                                                <span className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600">
+                                                                    {cat.label}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                    <div className="flex justify-between items-center mt-0.5 mt-1">
                                                         <span className="capitalize font-medium text-slate-600 dark:text-slate-400">{patient.subscription?.type || '-'}</span>
                                                         {patient.subscription?.endDate && (
                                                             <span className={`${getPatientStatus(patient) === 'warning' ? 'text-amber-600 font-bold' : ''}`}>
@@ -302,6 +331,7 @@ const PatientList = () => {
                             <thead>
                                 <tr>
                                     <th>Cliente</th>
+                                    <th>Etiqueta</th>
                                     <th>Estado</th>
                                     <th>Plan</th>
                                     <th>Renovación</th>
@@ -326,6 +356,16 @@ const PatientList = () => {
                                                         <div className="text-xs text-muted">{p.email}</div>
                                                     </div>
                                                 </div>
+                                            </td>
+                                            <td>
+                                                {(() => {
+                                                    const cat = paymentCategories?.find(c => c.id === p.payment_category_id);
+                                                    return cat ? (
+                                                        <span className="text-xs font-semibold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
+                                                            {cat.label}
+                                                        </span>
+                                                    ) : <span className="text-muted">-</span>;
+                                                })()}
                                             </td>
                                             <td>
                                                 <span className={`badge badge-${getPatientStatus(p) === 'active' ? 'success' : 'warning'}`}>
