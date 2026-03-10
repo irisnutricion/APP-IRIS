@@ -1758,15 +1758,25 @@ export const DataProvider = ({ children }) => {
         }
     };
 
-    const consumeVoucher = async (voucherId, revert = false) => {
+    const consumeVoucher = async (voucherId, isRevert = false) => {
         try {
-            const voucher = patientVouchers.find(v => v.id === voucherId);
-            if (!voucher) throw new Error('Bono no encontrado');
+            let voucher = patientVouchers.find(v => v.id === voucherId);
+
+            // If not found in local state (e.g. just created in the same render cycle), fetch from DB
+            if (!voucher) {
+                const { data: dbVoucher, error: dbError } = await supabase
+                    .from('patient_vouchers')
+                    .select('*')
+                    .eq('id', voucherId)
+                    .single();
+                if (dbError || !dbVoucher) throw new Error('Bono no encontrado en la base de datos');
+                voucher = dbVoucher;
+            }
 
             const type = voucherTypes.find(t => t.id === voucher.voucher_type_id);
             if (!type) throw new Error('Tipo de bono no encontrado');
 
-            let newUsedSessions = revert ? voucher.used_sessions - 1 : voucher.used_sessions + 1;
+            let newUsedSessions = isRevert ? voucher.used_sessions - 1 : voucher.used_sessions + 1;
 
             // Safety boundaries
             if (newUsedSessions < 0) newUsedSessions = 0;
