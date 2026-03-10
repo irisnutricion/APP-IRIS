@@ -1341,8 +1341,21 @@ export const DataProvider = ({ children }) => {
         return data;
     };
     const deleteAppointment = async (id) => {
+        // Find existing appointment locally before deleting from DB
+        const existingAppt = appointments.find(a => a.id === id);
+
         const { error } = await supabase.from('appointments').delete().eq('id', id);
         if (error) { console.error(error); throw error; }
+
+        // Revert voucher consumption if it was paid with a bono
+        if (existingAppt?.payment_status === 'bono' && existingAppt.voucher_id) {
+            try {
+                await consumeVoucher(existingAppt.voucher_id, true);
+            } catch (err) {
+                console.error("Error reverting voucher session on centralized appointment deletion:", err);
+            }
+        }
+
         setAppointments(prev => prev.filter(a => a.id !== id));
     };
 

@@ -2,12 +2,12 @@ import { useState, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
-import { Search, Plus, Filter, Trash2, CheckCircle, LayoutGrid, List, ChevronRight, Play } from 'lucide-react';
+import { Search, Plus, Filter, Trash2, CheckCircle, LayoutGrid, List, ChevronRight, Play, Layers } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import PlanStartModal from './PlanStartModal';
 
 const PatientList = () => {
-    const { patients, updatePatient, paymentCategories } = useData();
+    const { patients, updatePatient, paymentCategories, patientVouchers, voucherTypes } = useData();
     const { isAdmin, nutritionistId } = useAuth();
     const navigate = useNavigate(); // Hook initialized
     const [searchTerm, setSearchTerm] = useState('');
@@ -268,11 +268,21 @@ const PatientList = () => {
                                                 <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-0.5 mt-1">
                                                     {(() => {
                                                         const cat = paymentCategories?.find(c => c.id === patient.payment_category_id);
-                                                        return cat && (
-                                                            <div className="flex">
-                                                                <span className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600">
-                                                                    {cat.label}
-                                                                </span>
+                                                        const activeVouchers = patientVouchers?.filter(v => v.patient_id === patient.id && v.is_active) || [];
+
+                                                        return (
+                                                            <div className="flex gap-1 flex-wrap">
+                                                                {cat && (
+                                                                    <span className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-600">
+                                                                        {cat.label}
+                                                                    </span>
+                                                                )}
+                                                                {activeVouchers.length > 0 && (
+                                                                    <span className="text-[10px] font-semibold bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800 flex items-center gap-0.5">
+                                                                        <Layers size={10} />
+                                                                        {activeVouchers.length} Bono{activeVouchers.length > 1 ? 's' : ''}
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         );
                                                     })()}
@@ -360,11 +370,22 @@ const PatientList = () => {
                                             <td>
                                                 {(() => {
                                                     const cat = paymentCategories?.find(c => c.id === p.payment_category_id);
-                                                    return cat ? (
-                                                        <span className="text-xs font-semibold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
-                                                            {cat.label}
-                                                        </span>
-                                                    ) : <span className="text-muted">-</span>;
+                                                    const activeVouchers = patientVouchers?.filter(v => v.patient_id === p.id && v.is_active) || [];
+                                                    return (
+                                                        <div className="flex flex-col gap-1 items-start">
+                                                            {cat ? (
+                                                                <span className="text-xs font-semibold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-600">
+                                                                    {cat.label}
+                                                                </span>
+                                                            ) : <span className="text-muted">-</span>}
+                                                            {activeVouchers.length > 0 && (
+                                                                <span className="text-[10px] font-semibold bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800 flex items-center gap-1 w-fit">
+                                                                    <Layers size={10} />
+                                                                    {activeVouchers.length} Bono{activeVouchers.length > 1 ? 's' : ''}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    );
                                                 })()}
                                             </td>
                                             <td>
