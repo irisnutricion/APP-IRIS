@@ -10,6 +10,7 @@ import { generateSchemaPdf } from '../../utils/schemaPdfGenerator';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { supabase } from '../../supabaseClient';
 
 function SortableOption({ id, children }) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
@@ -22,7 +23,7 @@ function SortableOption({ id, children }) {
 }
 
 export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpdatePlan, onSaveAsTemplate, initialViewMode = 'meals' }) {
-    const { recipes = [], addRecipe, updateRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null, nutritionists = [] } = useData();
+    const { recipes = [], addRecipe, updateRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null, nutritionists = [], updatePatient } = useData();
     const { showToast } = useToast();
     const [planName, setPlanName] = useState(plan.name);
     const [planIndications, setPlanIndications] = useState(plan.indications || '');
@@ -339,6 +340,44 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [activeSearch]);
 
+    const handleSharePortal = async () => {
+        const patient = patients.find(p => p.id === plan.patient_id);
+        if (!patient) {
+            showToast('Paciente no encontrado', 'error');
+            return;
+        }
+        try {
+            let currentToken = patient.share_token;
+            if (!currentToken || /^[a-f0-9]{20}$/i.test(currentToken) || /-[a-f0-9]{4}$/i.test(currentToken)) {
+                const base = `${patient.first_name || ''} ${patient.last_name || ''}`.trim()
+                    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                    .toLowerCase()
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .replace(/\s+/g, '-');
+
+                let newToken = base || 'paciente';
+                const { error } = await supabase.from('patients').update({ share_token: newToken }).eq('id', patient.id);
+
+                if (error) {
+                    const shortId = crypto.randomUUID().split('-')[0].slice(0, 4);
+                    newToken = newToken === 'paciente' ? `paciente-${shortId}` : `${base}-${shortId}`;
+                    await supabase.from('patients').update({ share_token: newToken }).eq('id', patient.id);
+                }
+
+                if (updatePatient) {
+                    await updatePatient(patient.id, { share_token: newToken });
+                }
+                currentToken = newToken;
+            }
+            const url = `${window.location.origin}/portal/${currentToken}`;
+            await navigator.clipboard.writeText(url);
+            showToast('Enlace del portal copiado al portapapeles', 'success');
+        } catch (err) {
+            console.error('Error sharing:', err);
+            showToast('Error al generar el enlace', 'error');
+        }
+    };
+
     const handleKeyDown = (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
             const tag = e.target.tagName?.toLowerCase();
@@ -427,6 +466,9 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                         title="Descargar Esquema Base"
                     >
                         {isGeneratingSchema ? <Loader2 className="animate-spin" size={18} /> : <CalendarDays size={18} />}
+                    </button>
+                    <button onClick={handleSharePortal} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg dark:hover:bg-purple-900/20" title="Copiar enlace del portal">
+                        <ClipboardCopy size={18} />
                     </button>
                     {/* Guardar manual */}
                     <button onClick={() => performSave(sectionsRef.current)} disabled={saving} className="p-2 text-white bg-primary-600 hover:bg-primary-700 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors disabled:opacity-50 shadow-sm" title="Guardar cambios">
@@ -604,7 +646,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                             {dailyAvgMacros && (
                                 <div className="text-right">
                                     <span className="block text-xs text-slate-500 dark:text-slate-400 font-semibold mb-1 uppercase">Media Diaria Estimada</span>
-                                    <div className="flex gap-3 text-sm font-bold bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
+                                    <div className="flex gap-4 text-base font-bold bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-lg border border-slate-100 dark:border-slate-700">
                                         <span className="text-orange-600">{Math.round(dailyAvgMacros.kcal)} kcal</span>
                                         <span className="text-amber-600">{dailyAvgMacros.carbs.toFixed(1)}g HC</span>
                                         <span className="text-blue-600">{dailyAvgMacros.protein.toFixed(1)}g P</span>
@@ -622,7 +664,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                     <div className="bg-slate-50/50 dark:bg-slate-800/30 p-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                                         <span className="font-bold text-slate-700 dark:text-slate-300">{meal}</span>
                                         {avgMacros && (
-                                            <div className="flex gap-3 text-xs font-bold">
+                                            <div className="flex gap-4 text-sm font-bold">
                                                 <span className="text-orange-600">Media: {Math.round(avgMacros.kcal)} kcal</span>
                                                 <span className="text-amber-600">{avgMacros.carbs.toFixed(1)}g HC</span>
                                                 <span className="text-blue-600">{avgMacros.protein.toFixed(1)}g P</span>

@@ -7,6 +7,7 @@ import { calcRecipeMacros } from '../Recipes/Recipes';
 import InlineRecipeEditor from './InlineRecipeEditor';
 import { generatePlanPdf } from '../../utils/planPdfGenerator';
 import { generateSchemaPdf } from '../../utils/schemaPdfGenerator';
+import { supabase } from '../../supabaseClient';
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
@@ -84,7 +85,7 @@ export { calcSnapshotMacros, recipeToSnapshot, checkRecipeIsSaved };
 
 export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onUpdatePlan, onSaveAsTemplate, initialViewMode = 'grid' }) {
     // Form state
-    const { recipes = [], addRecipe, updateRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null, nutritionists = [] } = useData();
+    const { recipes = [], addRecipe, updateRecipe, indicationTemplates = [], addIndicationTemplate, patients = [], userProfile = null, nutritionists = [], updatePatient } = useData();
     const { showToast } = useToast();
     const [planName, setPlanName] = useState(plan.name);
     const [planIndications, setPlanIndications] = useState(plan.indications || '');
@@ -264,6 +265,44 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                 custom_recipe_data: snapshot,
             },
         }));
+    };
+
+    const handleSharePortal = async () => {
+        const patient = patients.find(p => p.id === plan.patient_id);
+        if (!patient) {
+            showToast('Paciente no encontrado', 'error');
+            return;
+        }
+        try {
+            let currentToken = patient.share_token;
+            if (!currentToken || /^[a-f0-9]{20}$/i.test(currentToken) || /-[a-f0-9]{4}$/i.test(currentToken)) {
+                const base = `${patient.first_name || ''} ${patient.last_name || ''}`.trim()
+                    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                    .toLowerCase()
+                    .replace(/[^a-z0-9\s-]/g, '')
+                    .replace(/\s+/g, '-');
+
+                let newToken = base || 'paciente';
+                const { error } = await supabase.from('patients').update({ share_token: newToken }).eq('id', patient.id);
+
+                if (error) {
+                    const shortId = crypto.randomUUID().split('-')[0].slice(0, 4);
+                    newToken = newToken === 'paciente' ? `paciente-${shortId}` : `${base}-${shortId}`;
+                    await supabase.from('patients').update({ share_token: newToken }).eq('id', patient.id);
+                }
+
+                if (updatePatient) {
+                    await updatePatient(patient.id, { share_token: newToken });
+                }
+                currentToken = newToken;
+            }
+            const url = `${window.location.origin}/portal/${currentToken}`;
+            await navigator.clipboard.writeText(url);
+            showToast('Enlace del portal copiado al portapapeles', 'success');
+        } catch (err) {
+            console.error('Error sharing:', err);
+            showToast('Error al generar el enlace', 'error');
+        }
     };
 
     const handleInlineSaveAsRecipe = async (cellKey, snapshot) => {
@@ -456,6 +495,9 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                         title="Descargar Esquema Base"
                     >
                         {isGeneratingSchema ? <Loader2 className="animate-spin" size={18} /> : <CalendarDays size={18} />}
+                    </button>
+                    <button onClick={handleSharePortal} className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg dark:hover:bg-purple-900/20" title="Copiar enlace del portal">
+                        <ClipboardCopy size={18} />
                     </button>
                     <button onClick={() => performSave(gridRef.current)} disabled={saving} className="p-2 text-white bg-primary-600 hover:bg-primary-700 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors disabled:opacity-50 shadow-sm" title="Guardar cambios">
                         {saving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} <span className="hidden sm:inline">Guardar Plan</span>
@@ -776,7 +818,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                     <div className="flex flex-col gap-2">
                                         <div className="flex items-center justify-between md:justify-end gap-4">
                                             <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase">Media Diaria</span>
-                                            <div className="flex gap-3 text-sm font-bold bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700 min-w-[280px] justify-between">
+                                            <div className="flex gap-4 text-base font-bold bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-lg border border-slate-100 dark:border-slate-700 min-w-[280px] justify-between">
                                                 <span className="text-orange-600">{Math.round(totalKcal / 7)} kcal</span>
                                                 <span className="text-amber-600">{(totalCarbs / 7).toFixed(1)}g HC</span>
                                                 <span className="text-blue-600">{(totalProtein / 7).toFixed(1)}g P</span>
@@ -822,7 +864,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                 <div key={day} className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm ${!isVisible ? 'hidden' : ''}`}>
                                     <div className="p-4 bg-slate-50 dark:bg-slate-800 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
                                         <h3 className="text-lg font-bold text-slate-700 dark:text-slate-200">{day}</h3>
-                                        <div className="flex gap-4 text-sm font-semibold">
+                                        <div className="flex gap-4 text-base font-semibold">
                                             <span className="text-orange-600">{Math.round(macros.kcal)} kcal</span>
                                             <span className="text-amber-600">{macros.carbs.toFixed(1)}g HC</span>
                                             <span className="text-blue-600">{macros.protein.toFixed(1)}g P</span>
@@ -845,7 +887,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{getCellName(cell)}</span>
                                                         </div>
                                                         {cellMacros && (
-                                                            <div className="flex gap-3 text-xs font-medium bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
+                                                            <div className="flex gap-4 text-sm font-medium bg-slate-50 dark:bg-slate-900/50 px-4 py-2 rounded-lg border border-slate-100 dark:border-slate-700">
                                                                 <span className="text-orange-500">{Math.round(cellMacros.kcal)} kcal</span>
                                                                 <span className="text-amber-500">{cellMacros.carbs.toFixed(1)}g HC</span>
                                                                 <span className="text-blue-500">{cellMacros.protein.toFixed(1)}g P</span>

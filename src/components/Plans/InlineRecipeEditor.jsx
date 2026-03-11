@@ -402,7 +402,7 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
                                                     ) : (
                                                         <span
                                                             tabIndex={0}
-                                                            className="text-sm text-slate-700 dark:text-slate-300 font-medium truncate block cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors focus:outline-none focus:text-primary-600"
+                                                            className={`text-sm font-medium truncate block cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors focus:outline-none focus:text-primary-600 ${ing.kcal_per_100g === 0 ? 'text-red-500' : 'text-slate-700 dark:text-slate-300'}`}
                                                             onClick={() => {
                                                                 setEditingIngredientIdx(idx);
                                                                 setFoodSearch('');
@@ -420,7 +420,7 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
                                                         </span>
                                                     )}
                                                     <div className="flex gap-2 text-[10px] text-slate-400 mt-0.5">
-                                                        <span className="text-orange-500">{Math.round(m.kcal)} kcal</span>
+                                                        <span className={ing.kcal_per_100g === 0 ? "text-red-500 font-bold" : "text-orange-500"}>{Math.round(m.kcal)} kcal</span>
                                                         <span className="text-amber-500">{m.carbs.toFixed(1)}g HC</span>
                                                         <span className="text-blue-500">{m.protein.toFixed(1)}g P</span>
                                                         <span className="text-rose-500">{m.fat.toFixed(1)}g G</span>
