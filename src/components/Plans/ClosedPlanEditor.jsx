@@ -435,9 +435,10 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                 }
             }}
         >
-            {/* Header */}
-            <div className="sticky top-0 z-30 bg-slate-50/90 dark:bg-slate-800/90 backdrop-blur-md py-2 -mx-2 px-2 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-3">
+            {/* Unified Sticky Header */}
+            <div className="sticky top-0 z-30 flex flex-col -mx-2">
+                <div className="bg-slate-50/90 dark:bg-slate-800/90 backdrop-blur-md py-2 px-2 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-3">
                     <button onClick={handleClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl dark:hover:bg-slate-800">
                         <ArrowLeft size={20} />
                     </button>
@@ -511,6 +512,27 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                         ) : null}
                     </div>
                 </div>
+                </div>
+                {/* Conditionally rendered Sticky Tabs Navigation inside the unified header */}
+                {(viewMode === 'days' || viewMode === 'summary') && (
+                    <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md py-3 px-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 overflow-x-auto no-scrollbar shadow-sm">
+                        <button
+                            onClick={() => handleDetailDayClick('all')}
+                            className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-full transition-colors ${activeDetailDay === 'all' ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
+                        >
+                            Ver todos
+                        </button>
+                        {DAYS.map((day, idx) => (
+                            <button
+                                key={day}
+                                onClick={() => handleDetailDayClick(idx + 1)}
+                                className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-full transition-colors ${activeDetailDay === idx + 1 ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
+                            >
+                                {day}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Grid View */}
@@ -633,25 +655,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
 
             {/* Days View (Editor Semanal) */}
             {viewMode === 'days' && (
-                <div className="space-y-4">
-                    {/* Navigation for Days */}
-                    <div className="sticky top-16 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md py-3 -mx-2 px-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 overflow-x-auto no-scrollbar shadow-sm">
-                        <button
-                            onClick={() => handleDetailDayClick('all')}
-                            className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-full transition-colors ${activeDetailDay === 'all' ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
-                        >
-                            Ver todos
-                        </button>
-                        {DAYS.map((day, idx) => (
-                            <button
-                                key={day}
-                                onClick={() => handleDetailDayClick(idx + 1)}
-                                className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-full transition-colors ${activeDetailDay === idx + 1 ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
-                            >
-                                {day}
-                            </button>
-                        ))}
-                    </div>
+                <div className="space-y-4 pt-2">
 
                     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
                         <div className="p-4 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
@@ -831,24 +835,6 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                         </div>
                     </div>
 
-                    {/* Navigation for Days */}
-                    <div className="sticky top-16 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md py-3 -mx-2 px-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 overflow-x-auto no-scrollbar shadow-sm">
-                        <button
-                            onClick={() => handleDetailDayClick('all')}
-                            className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-full transition-colors ${activeDetailDay === 'all' ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
-                        >
-                            Ver todos
-                        </button>
-                        {DAYS.map((day, idx) => (
-                            <button
-                                key={day}
-                                onClick={() => handleDetailDayClick(idx + 1)}
-                                className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-full transition-colors ${activeDetailDay === idx + 1 ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
-                            >
-                                {day}
-                            </button>
-                        ))}
-                    </div>
 
                     {/* Resumen Diario */}
                     <div className="space-y-4">
