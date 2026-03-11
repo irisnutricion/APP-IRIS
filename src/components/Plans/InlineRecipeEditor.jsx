@@ -83,7 +83,7 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
             });
         } else if (e.key === 'Enter') {
             e.preventDefault();
-            const selectedFood = foodNavIndex >= 0 && foodNavIndex < foodResults.length ? foodResults[foodNavIndex] : null;
+            const selectedFood = foodNavIndex >= 0 && foodNavIndex < foodResults.length ? foodResults[foodNavIndex] : (foodResults.length > 0 ? foodResults[0] : null);
             
             const handleNext = () => {
                 if (isReplace) {
@@ -97,6 +97,7 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
                         setTimeout(() => document.getElementById('new-ingredient-search')?.focus(), 50);
                     }
                 } else {
+                    setFoodSearch('');
                     setShowFoodSearch(true);
                     setTimeout(() => document.getElementById('new-ingredient-search')?.focus(), 50);
                 }
