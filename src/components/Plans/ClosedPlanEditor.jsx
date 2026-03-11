@@ -113,7 +113,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             window.scrollTo({ top: scrollPositions.current[nextKey] || 0, behavior: 'instant' });
         }, 0);
     };
-    const [copyMenuCell, setCopyMenuCell] = useState(null); // key of cell showing copy-to menu
+    const [copyModalInfo, setCopyModalInfo] = useState(null); // { cell }
     const [grid, setGrid] = useState({}); // Stores cell data as { "day_meal": { recipe_id, free_text, ... } }
 
     // Auto-save debounce refs
@@ -155,23 +155,38 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
         setRecipeSearch('');
     };
 
-    // Copy a cell's recipe to another meal in the same day
-    const copyCellToMeal = (dayIdx, fromMeal, toMeal) => {
-        const fromKey = `${dayIdx}_${fromMeal}`;
-        const cell = grid[fromKey];
-        if (!cell) return;
-        const toKey = `${dayIdx}_${toMeal}`;
-        const clonedData = cell.custom_recipe_data ? JSON.parse(JSON.stringify(cell.custom_recipe_data)) : null;
-        setGrid(prev => ({
-            ...prev,
-            [toKey]: {
-                recipe_id: cell.recipe_id,
-                free_text: cell.free_text,
-                recipes: cell.recipes,
-                custom_recipe_data: clonedData,
-            }
-        }));
-        setCopyMenuCell(null);
+    // Unified advanced copy function
+    const handleAdvancedCopy = () => {
+        if (!copyModalInfo) return;
+        const { cell, targetDay, targetMeal } = copyModalInfo;
+        
+        if (!targetDay || !targetMeal) {
+            showToast('Por favor, selecciona un día y una comida de destino', 'warning');
+            return;
+        }
+
+        const daysToApply = targetDay === 'all' ? DAYS.map((_, i) => i + 1) : [parseInt(targetDay)];
+        const mealsToApply = targetMeal === 'all' ? mealNames : [targetMeal];
+
+        setGrid(prev => {
+            const next = { ...prev };
+            daysToApply.forEach(d => {
+                mealsToApply.forEach(m => {
+                    const key = `${d}_${m}`;
+                    const clonedData = cell.custom_recipe_data ? JSON.parse(JSON.stringify(cell.custom_recipe_data)) : null;
+                    next[key] = {
+                        recipe_id: cell.recipe_id,
+                        free_text: cell.free_text,
+                        recipes: cell.recipes,
+                        custom_recipe_data: clonedData
+                    };
+                });
+            });
+            return next;
+        });
+
+        setCopyModalInfo(null);
+        showToast('Receta copiada correctamente', 'success');
     };
 
     const setCellText = (dayIdx, mealName, text) => {
@@ -491,7 +506,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                     <span className="text-slate-700 dark:text-slate-300">{getCellName(cell)}</span>
                                                                 </div>
                                                                 <div className="absolute top-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover/cell:opacity-100 transition-opacity">
-                                                                    <button onClick={(e) => { e.stopPropagation(); setCopyMenuCell(copyMenuCell === key ? null : key); }} className="p-0.5 text-slate-300 hover:text-emerald-500" title="Copiar a otra comida">
+                                                                    <button onClick={(e) => { e.stopPropagation(); setCopyModalInfo({ cell, targetDay: (dayIdx + 1).toString(), targetMeal: '' }); }} className="p-0.5 text-slate-300 hover:text-emerald-500" title="Copiar a otra parte">
                                                                         <ClipboardCopy size={11} />
                                                                     </button>
                                                                     <button onClick={(e) => { e.stopPropagation(); toggleGridEditor(key); }} className="p-0.5 text-slate-300 hover:text-primary-500">
@@ -501,20 +516,6 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                         <X size={11} />
                                                                     </button>
                                                                 </div>
-                                                                {copyMenuCell === key && (
-                                                                    <div className="absolute z-30 top-full right-0 mt-1 w-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-1">
-                                                                        <div className="px-2 py-1 text-[10px] font-semibold text-slate-400 uppercase">Copiar a...</div>
-                                                                        {mealNames.filter(m => m !== meal).map(targetMeal => (
-                                                                            <button
-                                                                                key={targetMeal}
-                                                                                onClick={(e) => { e.stopPropagation(); copyCellToMeal(dayIdx + 1, meal, targetMeal); }}
-                                                                                className="w-full text-left px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
-                                                                            >
-                                                                                {targetMeal}
-                                                                            </button>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
                                                             </div>
                                                             {expandedCells.has(key) && (
                                                                 <div className="w-[500px] z-20">
@@ -680,6 +681,9 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                                 <>
                                                                                     <button onClick={() => toggleDayEditor(key)} className={`p-2 rounded-lg transition-colors ${!collapsedCells.has(key) ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-400' : 'text-slate-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-slate-700'}`} title={!collapsedCells.has(key) ? "Ocultar editor" : "Editar opción"}>
                                                                                         <Pencil size={16} />
+                                                                                    </button>
+                                                                                    <button onClick={() => setCopyModalInfo({ cell, targetDay: (dayIdx + 1).toString(), targetMeal: '' })} className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Copiar receta a otra comida o día">
+                                                                                        <ClipboardCopy size={16} />
                                                                                     </button>
                                                                                     <button onClick={() => clearCell(dayIdx + 1, meal)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Eliminar opción">
                                                                                         <Trash2 size={16} />
@@ -918,6 +922,62 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                 </div>
             )}
 
+            {/* Modal for Copying Recipes */}
+            {copyModalInfo && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-md overflow-hidden">
+                        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+                            <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                <Copy size={18} className="text-primary-500" />
+                                Copiar Receta
+                            </h3>
+                            <button onClick={() => setCopyModalInfo(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg text-sm border border-slate-100 dark:border-slate-700">
+                                <span className="font-semibold text-slate-700 dark:text-slate-300">Origen:</span> {getCellName(copyModalInfo.cell)}
+                            </div>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-xs font-semibold text-slate-500 uppercase">Día de destino</label>
+                                    <select
+                                        className="w-full mt-1 p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                                        onChange={(e) => setCopyModalInfo(prev => ({ ...prev, targetDay: e.target.value }))}
+                                        value={copyModalInfo.targetDay}
+                                    >
+                                        <option value="" disabled>-- Selecciona un día --</option>
+                                        <option value="all">Todos los días</option>
+                                        {DAYS.map((day, idx) => <option key={day} value={idx + 1}>{day}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-slate-500 uppercase">Comida de destino</label>
+                                    <select
+                                        className="w-full mt-1 p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                                        onChange={(e) => setCopyModalInfo(prev => ({ ...prev, targetMeal: e.target.value }))}
+                                        value={copyModalInfo.targetMeal}
+                                    >
+                                        <option value="" disabled>-- Selecciona una comida --</option>
+                                        <option value="all">Todas las comidas</option>
+                                        {mealNames.map(meal => <option key={meal} value={meal}>{meal}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
+                            <button onClick={() => setCopyModalInfo(null)} className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">Cancelar</button>
+                            <button
+                                onClick={handleAdvancedCopy}
+                                className="px-4 py-2 text-sm text-white bg-primary-600 hover:bg-primary-700 rounded-lg font-medium transition-colors"
+                            >
+                                Pegar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

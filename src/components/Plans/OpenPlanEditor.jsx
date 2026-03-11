@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import useUndo from '../../hooks/useUndo';
-import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download, PieChart, GripVertical, Loader2, CheckCircle2, CalendarDays } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download, PieChart, GripVertical, Loader2, CheckCircle2, CalendarDays, ClipboardCopy } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useToast } from '../../context/ToastContext';
 import { calcSnapshotMacros, recipeToSnapshot, checkRecipeIsSaved } from './ClosedPlanEditor';
@@ -98,6 +98,32 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
         const q = recipeSearch.toLowerCase();
         return recipes.filter(r => r.is_active && r.name.toLowerCase().includes(q)).slice(0, 10);
     }, [recipeSearch, recipes]);
+
+    const [copyModalInfo, setCopyModalInfo] = useState(null); // { opt, targetMeal: 'all' }
+
+    // Unified advanced copy function for OpenPlanEditor
+    const handleAdvancedCopy = () => {
+        if (!copyModalInfo) return;
+        const { opt, targetMeal } = copyModalInfo;
+        if (!targetMeal) { showToast('Por favor, selecciona una comida de destino', 'warning'); return; }
+
+        const mealsToApply = targetMeal === 'all' ? mealNames : [targetMeal];
+
+        setSections(prev => {
+            const next = { ...prev };
+            mealsToApply.forEach(mName => {
+                const newOpt = { ...opt, local_id: crypto.randomUUID() };
+                if (opt.custom_recipe_data) {
+                    newOpt.custom_recipe_data = JSON.parse(JSON.stringify(opt.custom_recipe_data));
+                }
+                next[mName] = [...(next[mName] || []), newOpt];
+            });
+            return next;
+        });
+
+        setCopyModalInfo(null);
+        showToast('Receta copiada correctamente');
+    };
 
     const addOption = (mealName, recipe) => {
         const snapshot = recipeToSnapshot(recipe);
@@ -491,7 +517,10 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                                                 <button onClick={(e) => { e.stopPropagation(); (opt.custom_recipe_data || opt.recipes) && toggleEditor(meal, idx); }} className="p-1 text-slate-300 hover:text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                     <Pencil size={14} />
                                                                 </button>
-                                                                <button onClick={(e) => { e.stopPropagation(); duplicateOption(meal, opt, idx); }} className="p-1 text-slate-300 hover:text-green-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicar opción">
+                                                                <button onClick={(e) => { e.stopPropagation(); setCopyModalInfo({ opt, targetMeal: '' }); }} className="p-1 text-slate-300 hover:text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Copiar receta a otra comida">
+                                                                    <ClipboardCopy size={14} />
+                                                                </button>
+                                                                <button onClick={(e) => { e.stopPropagation(); duplicateOption(meal, opt, idx); }} className="p-1 text-slate-300 hover:text-green-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicar en esta misma comida">
                                                                     <Copy size={14} />
                                                                 </button>
                                                                 <button onClick={(e) => { e.stopPropagation(); removeOption(meal, idx); }} className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Eliminar opción">
@@ -692,6 +721,50 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                         placeholder="Escribe aquí las pautas, preparación, reemplazos o cualquier indicación adicional para este plan..."
                         className="w-full h-96 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none resize-y text-sm text-slate-700 dark:text-slate-300"
                     />
+                </div>
+            )}
+            {/* Modal for Copying Recipes */}
+            {copyModalInfo && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-md overflow-hidden">
+                        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+                            <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                <Copy size={18} className="text-primary-500" />
+                                Copiar Receta
+                            </h3>
+                            <button onClick={() => setCopyModalInfo(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg text-sm border border-slate-100 dark:border-slate-700">
+                                <span className="font-semibold text-slate-700 dark:text-slate-300">Origen:</span> {getOptName(copyModalInfo.opt)}
+                            </div>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-xs font-semibold text-slate-500 uppercase">Comida de destino</label>
+                                    <select
+                                        className="w-full mt-1 p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                                        onChange={(e) => setCopyModalInfo(prev => ({ ...prev, targetMeal: e.target.value }))}
+                                        value={copyModalInfo.targetMeal}
+                                    >
+                                        <option value="" disabled>-- Selecciona una comida --</option>
+                                        <option value="all">Todas las comidas</option>
+                                        {mealNames.map(meal => <option key={meal} value={meal}>{meal}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
+                            <button onClick={() => setCopyModalInfo(null)} className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">Cancelar</button>
+                            <button
+                                onClick={handleAdvancedCopy}
+                                className="px-4 py-2 text-sm text-white bg-primary-600 hover:bg-primary-700 rounded-lg font-medium transition-colors"
+                            >
+                                Pegar
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
