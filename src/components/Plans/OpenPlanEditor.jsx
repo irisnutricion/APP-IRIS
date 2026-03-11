@@ -369,7 +369,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             }}
         >
             {/* Header */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="sticky top-0 z-30 bg-slate-50/90 dark:bg-slate-800/90 backdrop-blur-md py-2 -mx-2 px-2 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
                     <button onClick={handleClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl dark:hover:bg-slate-800">
                         <ArrowLeft size={20} />
@@ -427,6 +427,10 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                         title="Descargar Esquema Base"
                     >
                         {isGeneratingSchema ? <Loader2 className="animate-spin" size={18} /> : <CalendarDays size={18} />}
+                    </button>
+                    {/* Guardar manual */}
+                    <button onClick={() => performSave(sectionsRef.current)} disabled={saving} className="p-2 text-white bg-primary-600 hover:bg-primary-700 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors disabled:opacity-50 shadow-sm" title="Guardar cambios">
+                        {saving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} <span className="hidden sm:inline">Guardar Plan</span>
                     </button>
                     {/* Auto-save status indicator */}
                     <div className="flex justify-end min-w-[100px] text-xs font-semibold">
