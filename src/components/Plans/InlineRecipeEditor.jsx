@@ -147,14 +147,41 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
         ingredients,
     }), [name, description, ingredients, initial.source_recipe_id]);
 
+    // Keep a ref to the latest snapshot builder + onChange so we can flush on unmount
+    const onChangeRef = useRef(onChange);
+    onChangeRef.current = onChange;
+    const buildSnapshotRef = useRef(buildSnapshot);
+    buildSnapshotRef.current = buildSnapshot;
+    const hasPendingChange = useRef(false);
+
     // Auto-sync with parent (debounced)
     useEffect(() => {
         if (!onChange) return;
+        hasPendingChange.current = true;
         const timer = setTimeout(() => {
             onChange(buildSnapshot());
+            hasPendingChange.current = false;
         }, 500);
         return () => clearTimeout(timer);
     }, [name, description, ingredients, onChange, buildSnapshot]);
+
+    // Flush pending changes on unmount OR when user switches browser tab
+    useEffect(() => {
+        const flushIfPending = () => {
+            if (hasPendingChange.current && onChangeRef.current) {
+                onChangeRef.current(buildSnapshotRef.current());
+                hasPendingChange.current = false;
+            }
+        };
+        const handleVisibility = () => {
+            if (document.hidden) flushIfPending();
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibility);
+            flushIfPending();
+        };
+    }, []);
 
     const handleSaveAsRecipe = () => {
         onSaveAsRecipe(buildSnapshot());

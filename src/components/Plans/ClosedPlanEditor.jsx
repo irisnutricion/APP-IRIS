@@ -327,12 +327,15 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
         }
     };
 
-    // Auto-save on unmount
+    // Auto-save on unmount or when user switches browser tab
     useEffect(() => {
+        const handleVisibility = () => {
+            if (document.hidden && flushSaveRef.current) flushSaveRef.current();
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
         return () => {
-            if (flushSaveRef.current) {
-                flushSaveRef.current();
-            }
+            document.removeEventListener('visibilitychange', handleVisibility);
+            if (flushSaveRef.current) flushSaveRef.current();
         };
     }, []);
 
