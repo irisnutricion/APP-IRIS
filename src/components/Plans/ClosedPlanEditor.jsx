@@ -252,7 +252,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     };
 
     const handleInlineSaveAsRecipe = async (cellKey, snapshot) => {
-        await addRecipe({
+        const newRec = await addRecipe({
             name: snapshot.name,
             description: snapshot.description,
             is_active: true,
@@ -261,6 +261,9 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             food_id: ing.food_id,
             quantity_grams: ing.quantity_grams,
         })));
+        if (newRec) {
+            snapshot.source_recipe_id = newRec.id;
+        }
         handleInlineAccept(cellKey, snapshot);
     };
 

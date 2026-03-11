@@ -210,14 +210,18 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     };
 
     const handleInlineSaveAsRecipe = async (mealName, idx, snapshot) => {
-        await addRecipe({
+        const newRec = await addRecipe({
             name: snapshot.name,
+            description: snapshot.description,
             is_active: true,
             tags: [],
         }, snapshot.ingredients.map(ing => ({
             food_id: ing.food_id,
             quantity_grams: ing.quantity_grams,
         })));
+        if (newRec) {
+            snapshot.source_recipe_id = newRec.id;
+        }
         handleInlineAccept(mealName, idx, snapshot);
     };
 

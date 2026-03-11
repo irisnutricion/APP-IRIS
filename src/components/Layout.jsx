@@ -183,7 +183,7 @@ export default function Layout() {
                         </button>
                     </div>
                 </header>
-                <main className="flex-1 p-4 md:p-8 overflow-x-hidden">
+                <main className="flex-1 p-4 md:p-8 overflow-x-clip">
                     <Outlet />
                 </main>
             </div>

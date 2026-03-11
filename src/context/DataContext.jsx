@@ -1033,6 +1033,21 @@ export const DataProvider = ({ children }) => {
         if (ingredients.length > 0) {
             await supabase.from('recipe_ingredients').insert(ingredients.map(ing => ({ recipe_id: data.id, food_id: ing.food_id, quantity_grams: ing.quantity_grams })));
         }
+        
+        // Optimistic update
+        const optimisticRecipe = {
+            ...data,
+            recipe_category_links: categoryIds.map(cid => ({ category_id: cid })),
+            recipe_ingredients: ingredients.map(ing => ({
+                recipe_id: data.id,
+                food_id: ing.food_id,
+                quantity_grams: ing.quantity_grams,
+                foods: foods.find(f => f.id === ing.food_id) || null
+            })),
+            is_active: true
+        };
+        setRecipes(prev => [...prev, optimisticRecipe].sort((a,b) => a.name.localeCompare(b.name)));
+
         await fetchData(true); // Refetch to get joined data silently
         return data;
     };
