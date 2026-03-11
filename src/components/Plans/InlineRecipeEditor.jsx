@@ -62,11 +62,12 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
         return foods.filter(f => f.name.toLowerCase().includes(q)).slice(0, 12);
     }, [foodSearch, foods]);
 
-    const handleFoodSearchKeyDown = (e, isReplace = false, ingId = null) => {
-        if (!foodResults.length) return;
+    const handleFoodSearchKeyDown = (e, isReplace = false, ingId = null, currentIdx = -1) => {
+        if (!foodResults.length && !foodSearch.trim() && e.key !== 'Escape') return;
         
         if (e.key === 'ArrowDown') {
             e.preventDefault();
+            if (!foodResults.length) return;
             setFoodNavIndex(prev => {
                 const next = prev < foodResults.length - 1 ? prev + 1 : prev;
                 setTimeout(() => document.getElementById('food-search-item-' + next)?.scrollIntoView({ block: 'nearest' }), 0);
@@ -74,6 +75,7 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
             });
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
+            if (!foodResults.length) return;
             setFoodNavIndex(prev => {
                 const next = prev > 0 ? prev - 1 : 0;
                 setTimeout(() => document.getElementById('food-search-item-' + next)?.scrollIntoView({ block: 'nearest' }), 0);
@@ -81,13 +83,47 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
             });
         } else if (e.key === 'Enter') {
             e.preventDefault();
-            const selectedFood = foodNavIndex >= 0 && foodNavIndex < foodResults.length ? foodResults[foodNavIndex] : foodResults[0];
+            const selectedFood = foodNavIndex >= 0 && foodNavIndex < foodResults.length ? foodResults[foodNavIndex] : null;
+            
+            const handleNext = () => {
+                if (isReplace) {
+                    if (currentIdx !== -1 && currentIdx < ingredients.length - 1) {
+                        setEditingIngredientIdx(currentIdx + 1);
+                        setFoodSearch('');
+                    } else {
+                        setEditingIngredientIdx(null);
+                        setFoodSearch('');
+                        setShowFoodSearch(true);
+                        setTimeout(() => document.getElementById('new-ingredient-search')?.focus(), 50);
+                    }
+                } else {
+                    setShowFoodSearch(true);
+                    setTimeout(() => document.getElementById('new-ingredient-search')?.focus(), 50);
+                }
+            };
+
             if (selectedFood) {
                 if (isReplace) {
-                    replaceIngredientFood(ingId, selectedFood);
+                    replaceIngredientFood(ingId, selectedFood, false);
                 } else {
-                    addIngredient(selectedFood);
+                    addIngredient(selectedFood, false);
                 }
+                handleNext();
+            } else if (foodSearch.trim()) {
+                const customFood = {
+                    id: `custom_${crypto.randomUUID()}`,
+                    name: foodSearch.trim(),
+                    kcal_per_100g: 0,
+                    carbs_per_100g: 0,
+                    protein_per_100g: 0,
+                    fat_per_100g: 0,
+                };
+                if (isReplace) {
+                    replaceIngredientFood(ingId, customFood, false);
+                } else {
+                    addIngredient(customFood, false);
+                }
+                handleNext();
             }
         } else if (e.key === 'Escape') {
             if (isReplace) {
@@ -100,7 +136,7 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
         }
     };
 
-    const addIngredient = (food) => {
+    const addIngredient = (food, closeUI = true) => {
         setIngredients(prev => [...prev, {
             unique_id: crypto.randomUUID(),
             food_id: food.id,
@@ -111,8 +147,10 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
             protein: food.protein_per_100g || 0,
             fat: food.fat_per_100g || 0,
         }]);
-        setFoodSearch('');
-        setShowFoodSearch(false);
+        if (closeUI) {
+            setFoodSearch('');
+            setShowFoodSearch(false);
+        }
     };
 
     // Phrase search results
@@ -126,7 +164,7 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
         setIngredients(prev => prev.map(ing => ing.unique_id === id ? { ...ing, quantity_grams: qty } : ing));
     };
 
-    const replaceIngredientFood = (id, newFood) => {
+    const replaceIngredientFood = (id, newFood, closeUI = true) => {
         setIngredients(prev => prev.map(ing => ing.unique_id === id ? {
             ...ing,
             food_id: newFood.id,
@@ -136,8 +174,10 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
             protein: newFood.protein_per_100g,
             fat: newFood.fat_per_100g
         } : ing));
-        setEditingIngredientIdx(null);
-        setFoodSearch('');
+        if (closeUI) {
+            setEditingIngredientIdx(null);
+            setFoodSearch('');
+        }
     };
 
     const removeIngredient = (id) => {
@@ -318,7 +358,7 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
                                                                     type="text"
                                                                     value={foodSearch}
                                                                     onChange={e => setFoodSearch(e.target.value)}
-                                                                    onKeyDown={e => handleFoodSearchKeyDown(e, true, ing.unique_id)}
+                                                                    onKeyDown={e => handleFoodSearchKeyDown(e, true, ing.unique_id, idx)}
                                                                     placeholder="Buscar nuevo alimento..."
                                                                     className="w-full pl-6 pr-6 py-1 text-xs border border-primary-300 rounded-md dark:bg-slate-700 dark:border-primary-600 dark:text-white outline-none focus:ring-1 focus:ring-primary-500"
                                                                     autoFocus
@@ -340,7 +380,19 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
                                                                             {f.name}
                                                                         </button>
                                                                     ))}
-                                                                    {foodResults.length === 0 && (
+                                                                    {foodResults.length === 0 && foodSearch.trim() && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                const customFood = { id: `custom_${crypto.randomUUID()}`, name: foodSearch.trim(), kcal_per_100g: 0, carbs_per_100g: 0, protein_per_100g: 0, fat_per_100g: 0 };
+                                                                                replaceIngredientFood(ing.unique_id, customFood);
+                                                                            }}
+                                                                            className="w-full text-left px-2 py-1.5 text-xs text-primary-600 dark:text-primary-400 block truncate hover:bg-slate-50 dark:hover:bg-slate-700 font-medium"
+                                                                        >
+                                                                            + Usar "{foodSearch}" como nuevo
+                                                                        </button>
+                                                                    )}
+                                                                    {foodResults.length === 0 && !foodSearch.trim() && (
                                                                         <div className="px-2 py-1.5 text-xs text-slate-500">Sin resultados</div>
                                                                     )}
                                                                 </div>
@@ -348,10 +400,18 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
                                                         </div>
                                                     ) : (
                                                         <span
-                                                            className="text-sm text-slate-700 dark:text-slate-300 font-medium truncate block cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                                                            tabIndex={0}
+                                                            className="text-sm text-slate-700 dark:text-slate-300 font-medium truncate block cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors focus:outline-none focus:text-primary-600"
                                                             onClick={() => {
                                                                 setEditingIngredientIdx(idx);
                                                                 setFoodSearch('');
+                                                            }}
+                                                            onKeyDown={e => {
+                                                                if (e.key === 'Enter') {
+                                                                    e.preventDefault();
+                                                                    setEditingIngredientIdx(idx);
+                                                                    setFoodSearch('');
+                                                                }
                                                             }}
                                                             title="Haz clic para cambiar este alimento"
                                                         >
@@ -370,7 +430,20 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
                                                         type="number"
                                                         value={ing.quantity_grams}
                                                         onChange={e => updateQty(ing.unique_id, e.target.value)}
-                                                        className="w-14 text-center text-sm border border-slate-200 rounded-lg py-1 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                e.preventDefault();
+                                                                const inputs = Array.from(document.querySelectorAll('.ingredient-qty-input'));
+                                                                const currentIndex = inputs.indexOf(e.target);
+                                                                if (currentIndex >= 0 && currentIndex < inputs.length - 1) {
+                                                                    inputs[currentIndex + 1].focus();
+                                                                } else {
+                                                                    setShowFoodSearch(true);
+                                                                    setTimeout(() => document.getElementById('new-ingredient-search')?.focus(), 50);
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="ingredient-qty-input w-14 text-center text-sm border border-slate-200 rounded-lg py-1 dark:bg-slate-700 dark:border-slate-600 dark:text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none outline-none focus:border-primary-500"
                                                         min="0"
                                                         step="0.1"
                                                     />
@@ -393,12 +466,13 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
                                     <div className="relative">
                                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                                         <input
+                                            id="new-ingredient-search"
                                             type="text"
                                             value={foodSearch}
                                             onChange={e => setFoodSearch(e.target.value)}
-                                            onKeyDown={e => handleFoodSearchKeyDown(e, false)}
+                                            onKeyDown={e => handleFoodSearchKeyDown(e, false, null, -1)}
                                             placeholder="Buscar alimento..."
-                                            className="w-full pl-7 pr-8 py-1.5 text-sm border border-slate-200 rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                            className="w-full pl-7 pr-8 py-1.5 text-sm border border-slate-200 rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white outline-none focus:border-primary-500"
                                             autoFocus
                                         />
                                         <button onClick={() => { setShowFoodSearch(false); setFoodSearch(''); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
@@ -418,7 +492,19 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
                                             <span className="text-[10px] text-orange-400">{f.kcal_per_100g} kcal/100g</span>
                                         </button>
                                     ))}
-                                    {foodResults.length === 0 && (
+                                    {foodResults.length === 0 && foodSearch.trim() && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const customFood = { id: `custom_${crypto.randomUUID()}`, name: foodSearch.trim(), kcal_per_100g: 0, carbs_per_100g: 0, protein_per_100g: 0, fat_per_100g: 0 };
+                                                addIngredient(customFood);
+                                            }}
+                                            className="w-full text-left px-3 py-3 text-sm text-primary-600 dark:text-primary-400 font-medium hover:bg-slate-50 dark:hover:bg-slate-700"
+                                        >
+                                            + Añadir "{foodSearch}" como nuevo
+                                        </button>
+                                    )}
+                                    {foodResults.length === 0 && !foodSearch.trim() && (
                                         <div className="px-3 py-4 text-center text-sm text-slate-400">Sin resultados</div>
                                     )}
                                 </div>
