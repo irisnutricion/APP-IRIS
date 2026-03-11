@@ -45,6 +45,11 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
     const [editingIngredientIdx, setEditingIngredientIdx] = useState(null);
     const dndId = useId();
     const [statusMsg, setStatusMsg] = useState('');
+    const [foodNavIndex, setFoodNavIndex] = useState(-1);
+
+    useEffect(() => {
+        setFoodNavIndex(-1);
+    }, [foodSearch, showFoodSearch, editingIngredientIdx]);
 
     const showSuccessMessage = (msg) => {
         setStatusMsg(msg);
@@ -56,6 +61,44 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
         const q = foodSearch.toLowerCase();
         return foods.filter(f => f.name.toLowerCase().includes(q)).slice(0, 12);
     }, [foodSearch, foods]);
+
+    const handleFoodSearchKeyDown = (e, isReplace = false, ingId = null) => {
+        if (!foodResults.length) return;
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setFoodNavIndex(prev => {
+                const next = prev < foodResults.length - 1 ? prev + 1 : prev;
+                setTimeout(() => document.getElementById('food-search-item-' + next)?.scrollIntoView({ block: 'nearest' }), 0);
+                return next;
+            });
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setFoodNavIndex(prev => {
+                const next = prev > 0 ? prev - 1 : 0;
+                setTimeout(() => document.getElementById('food-search-item-' + next)?.scrollIntoView({ block: 'nearest' }), 0);
+                return next;
+            });
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            const selectedFood = foodNavIndex >= 0 && foodNavIndex < foodResults.length ? foodResults[foodNavIndex] : foodResults[0];
+            if (selectedFood) {
+                if (isReplace) {
+                    replaceIngredientFood(ingId, selectedFood);
+                } else {
+                    addIngredient(selectedFood);
+                }
+            }
+        } else if (e.key === 'Escape') {
+            if (isReplace) {
+                setEditingIngredientIdx(null);
+                setFoodSearch('');
+            } else {
+                setShowFoodSearch(false);
+                setFoodSearch('');
+            }
+        }
+    };
 
     const addIngredient = (food) => {
         setIngredients(prev => [...prev, {
@@ -275,6 +318,7 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
                                                                     type="text"
                                                                     value={foodSearch}
                                                                     onChange={e => setFoodSearch(e.target.value)}
+                                                                    onKeyDown={e => handleFoodSearchKeyDown(e, true, ing.unique_id)}
                                                                     placeholder="Buscar nuevo alimento..."
                                                                     className="w-full pl-6 pr-6 py-1 text-xs border border-primary-300 rounded-md dark:bg-slate-700 dark:border-primary-600 dark:text-white outline-none focus:ring-1 focus:ring-primary-500"
                                                                     autoFocus
@@ -285,12 +329,13 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
                                                             </div>
                                                             {foodSearch.trim() && (
                                                                 <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                                                                    {foodResults.map(f => (
+                                                                    {foodResults.map((f, i) => (
                                                                         <button
                                                                             key={f.id}
+                                                                            id={`food-search-item-${i}`}
                                                                             type="button"
                                                                             onClick={() => replaceIngredientFood(ing.unique_id, f)}
-                                                                            className="w-full text-left px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs text-slate-700 dark:text-slate-300 block truncate"
+                                                                            className={`w-full text-left px-2 py-1.5 text-xs text-slate-700 dark:text-slate-300 block truncate ${foodNavIndex === i ? 'bg-slate-100 dark:bg-slate-600' : 'hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                                                                         >
                                                                             {f.name}
                                                                         </button>
@@ -351,6 +396,7 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
                                             type="text"
                                             value={foodSearch}
                                             onChange={e => setFoodSearch(e.target.value)}
+                                            onKeyDown={e => handleFoodSearchKeyDown(e, false)}
                                             placeholder="Buscar alimento..."
                                             className="w-full pl-7 pr-8 py-1.5 text-sm border border-slate-200 rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                                             autoFocus
@@ -361,11 +407,12 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
                                     </div>
                                 </div>
                                 <div className="max-h-36 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700">
-                                    {foodResults.map(f => (
+                                    {foodResults.map((f, i) => (
                                         <button
                                             key={f.id}
+                                            id={`food-search-item-${i}`}
                                             onClick={() => addIngredient(f)}
-                                            className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-300 flex items-center justify-between"
+                                            className={`w-full text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-300 flex items-center justify-between ${foodNavIndex === i ? 'bg-slate-100 dark:bg-slate-600' : 'hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                                         >
                                             <span>{f.name}</span>
                                             <span className="text-[10px] text-orange-400">{f.kcal_per_100g} kcal/100g</span>

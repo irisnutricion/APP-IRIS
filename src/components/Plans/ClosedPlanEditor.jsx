@@ -101,6 +101,18 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     const [showTemplateMenu, setShowTemplateMenu] = useState(false);
     const [activeDetailDay, setActiveDetailDay] = useState('all');
     const [expandedDays, setExpandedDays] = useState(new Set([1])); // default to day 1 open
+
+    const scrollPositions = useRef({});
+    const handleDetailDayClick = (tab) => {
+        // Use a composite key because Days and Summary views might have different scroll heights
+        const key = `${viewMode}_${activeDetailDay}`;
+        scrollPositions.current[key] = window.scrollY;
+        setActiveDetailDay(tab);
+        setTimeout(() => {
+            const nextKey = `${viewMode}_${tab}`;
+            window.scrollTo({ top: scrollPositions.current[nextKey] || 0, behavior: 'instant' });
+        }, 0);
+    };
     const [copyMenuCell, setCopyMenuCell] = useState(null); // key of cell showing copy-to menu
     const [grid, setGrid] = useState({}); // Stores cell data as { "day_meal": { recipe_id, free_text, ... } }
 
@@ -382,7 +394,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                             { mode: 'summary', icon: PieChart, label: 'Resumen' },
                             { mode: 'indications', icon: FileText, label: 'Indicaciones' },
                         ].map(({ mode, icon: Icon, label }) => (
-                            <button key={mode} onClick={() => setViewMode(mode)} className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1 ${viewMode === mode ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'}`}>
+                            <button key={mode} onClick={() => { window.scrollTo(0,0); setViewMode(mode); }} className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1 ${viewMode === mode ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'}`}>
                                 <Icon size={14} /> {label}
                             </button>
                         ))}
@@ -574,9 +586,9 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             {viewMode === 'days' && (
                 <div className="space-y-4">
                     {/* Navigation for Days */}
-                    <div className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md py-3 -mx-2 px-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 overflow-x-auto no-scrollbar shadow-sm">
+                    <div className="sticky top-16 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md py-3 -mx-2 px-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 overflow-x-auto no-scrollbar shadow-sm">
                         <button
-                            onClick={() => setActiveDetailDay('all')}
+                            onClick={() => handleDetailDayClick('all')}
                             className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-full transition-colors ${activeDetailDay === 'all' ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
                         >
                             Ver todos
@@ -584,7 +596,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                         {DAYS.map((day, idx) => (
                             <button
                                 key={day}
-                                onClick={() => setActiveDetailDay(idx + 1)}
+                                onClick={() => handleDetailDayClick(idx + 1)}
                                 className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-full transition-colors ${activeDetailDay === idx + 1 ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
                             >
                                 {day}
@@ -598,12 +610,13 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                             <span className="text-xs text-slate-500">Haz clic en un día para desplegar sus comidas</span>
                         </div>
                         <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {(activeDetailDay === 'all' ? DAYS : [DAYS[activeDetailDay - 1]]).map((day, mapIdx) => {
-                                const dayIdx = activeDetailDay === 'all' ? mapIdx : (activeDetailDay - 1);
+                            {DAYS.map((day, idx) => {
+                                const isVisible = activeDetailDay === 'all' || activeDetailDay === idx + 1;
+                                const dayIdx = idx;
                                 const macros = getDayMacros(dayIdx + 1);
                                 const isExpanded = expandedDays.has(dayIdx + 1);
                                 return (
-                                    <div key={day} className="flex flex-col">
+                                    <div key={day} className={`flex flex-col ${!isVisible ? 'hidden' : ''}`}>
                                         <div
                                             className="p-4 bg-white dark:bg-slate-900 flex items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors"
                                             onClick={() => toggleDay(dayIdx + 1)}
@@ -767,9 +780,9 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                     </div>
 
                     {/* Navigation for Days */}
-                    <div className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md py-3 -mx-2 px-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 overflow-x-auto no-scrollbar shadow-sm">
+                    <div className="sticky top-16 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md py-3 -mx-2 px-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 overflow-x-auto no-scrollbar shadow-sm">
                         <button
-                            onClick={() => setActiveDetailDay('all')}
+                            onClick={() => handleDetailDayClick('all')}
                             className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-full transition-colors ${activeDetailDay === 'all' ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
                         >
                             Ver todos
@@ -777,7 +790,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                         {DAYS.map((day, idx) => (
                             <button
                                 key={day}
-                                onClick={() => setActiveDetailDay(idx + 1)}
+                                onClick={() => handleDetailDayClick(idx + 1)}
                                 className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-full transition-colors ${activeDetailDay === idx + 1 ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
                             >
                                 {day}
@@ -787,15 +800,16 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
 
                     {/* Resumen Diario */}
                     <div className="space-y-4">
-                        {(activeDetailDay === 'all' ? DAYS : [DAYS[activeDetailDay - 1]]).map((day, mapIdx) => {
-                            const dayIdx = activeDetailDay === 'all' ? mapIdx : (activeDetailDay - 1);
+                        {DAYS.map((day, idx) => {
+                            const isVisible = activeDetailDay === 'all' || activeDetailDay === idx + 1;
+                            const dayIdx = idx;
                             const macros = getDayMacros(dayIdx + 1);
 
                             const hasMeals = mealNames.some(meal => grid[`${dayIdx + 1}_${meal}`]);
                             if (!hasMeals && activeDetailDay === 'all') return null;
 
                             return (
-                                <div key={day} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+                                <div key={day} className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm ${!isVisible ? 'hidden' : ''}`}>
                                     <div className="p-4 bg-slate-50 dark:bg-slate-800 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
                                         <h3 className="text-lg font-bold text-slate-700 dark:text-slate-200">{day}</h3>
                                         <div className="flex gap-4 text-sm font-semibold">

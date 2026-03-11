@@ -39,6 +39,15 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     const [showTemplateMenu, setShowTemplateMenu] = useState(false);
     const [activeMealTab, setActiveMealTab] = useState('all'); // 'all' or specific meal name
 
+    const scrollPositions = useRef({});
+    const handleMealTabClick = (tab) => {
+        scrollPositions.current[activeMealTab] = window.scrollY;
+        setActiveMealTab(tab);
+        setTimeout(() => {
+            window.scrollTo({ top: scrollPositions.current[tab] || 0, behavior: 'instant' });
+        }, 0);
+    };
+
     // Auto-save debounce refs
     const debounceTimer = useRef(null);
     const isInitialLoad = useRef(true);
@@ -404,9 +413,9 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             {viewMode === 'meals' && (
                 <div className="space-y-6">
                     {/* Sticky Tabs Navigation */}
-                    <div className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md py-3 -mx-2 px-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                    <div className="sticky top-16 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md py-3 -mx-2 px-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 overflow-x-auto no-scrollbar">
                         <button
-                            onClick={() => setActiveMealTab('all')}
+                            onClick={() => handleMealTabClick('all')}
                             className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-full transition-colors ${activeMealTab === 'all' ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
                         >
                             Ver todas
@@ -414,7 +423,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                         {mealNames.map(meal => (
                             <button
                                 key={meal}
-                                onClick={() => setActiveMealTab(meal)}
+                                onClick={() => handleMealTabClick(meal)}
                                 className={`flex-shrink-0 px-4 py-2 text-sm font-medium rounded-full transition-colors ${activeMealTab === meal ? 'bg-slate-800 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
                             >
                                 {meal}
@@ -423,12 +432,13 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                     </div>
 
                     <div className="space-y-4">
-                        {(activeMealTab === 'all' ? mealNames : [activeMealTab]).map(meal => {
+                        {mealNames.map(meal => {
                             if (!mealNames.includes(meal)) return null; // Safety check
+                            const isVisible = activeMealTab === 'all' || activeMealTab === meal;
                             const opts = sections[meal] || [];
                             const avgMacros = getMealAvgMacros(meal);
                             return (
-                                <div key={meal} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                                <div key={meal} className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden ${!isVisible ? 'hidden' : ''}`}>
                                     <div className="p-4 bg-slate-50 dark:bg-slate-800 flex items-center justify-between">
                                         <h3 className="font-bold text-slate-700 dark:text-slate-200">{meal}</h3>
                                         <div className="flex items-center gap-4">
