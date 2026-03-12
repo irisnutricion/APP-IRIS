@@ -365,6 +365,8 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             }
             // Always save planning_notes (they might have changed independently)
             planUpdate.planning_notes = planningNotesRef.current;
+            planUpdate.calculator_data = calculatorData;
+            
             if (Object.keys(planUpdate).length > 0) {
                 await onUpdatePlan(planUpdate);
             }
@@ -955,6 +957,61 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+
+                    {/* Resumen Diario Detallado */}
+                    <div className="space-y-4">
+                        {DAYS.map((day, idx) => {
+                            const dayIdx = idx;
+                            const macros = getDayMacros(dayIdx + 1);
+
+                            const hasMeals = mealNames.some(meal => grid[`${dayIdx + 1}_${meal}`]);
+                            if (!hasMeals) return null;
+
+                            return (
+                                <div key={day} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+                                    <div className="p-4 bg-slate-50 dark:bg-slate-800 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+                                        <h3 className="text-lg font-bold text-slate-700 dark:text-slate-200">{day}</h3>
+                                        <div className="flex gap-4 text-base font-semibold">
+                                            <span className="text-orange-600 dark:text-orange-400">{Math.round(macros.kcal)} kcal</span>
+                                            <span className="text-amber-600 dark:text-amber-400">{macros.carbs.toFixed(1)}g HC</span>
+                                            <span className="text-blue-600 dark:text-blue-400">{macros.protein.toFixed(1)}g P</span>
+                                            <span className="text-rose-600 dark:text-rose-400">{macros.fat.toFixed(1)}g G</span>
+                                        </div>
+                                    </div>
+                                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                                        {mealNames.map(meal => {
+                                            const key = `${dayIdx + 1}_${meal}`;
+                                            const cell = grid[key];
+                                            if (!cell) return null;
+
+                                            const cellMacros = getCellMacros(cell);
+                                            return (
+                                                <div key={meal} className="p-4 bg-white dark:bg-slate-900 transition-colors">
+                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase w-20 shrink-0">{meal}</span>
+                                                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{getCellName(cell)}</span>
+                                                        </div>
+                                                        {cellMacros && (
+                                                            <div className="flex gap-4 text-sm font-medium bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-lg border border-slate-100 dark:border-slate-700">
+                                                                <span className="text-orange-500">{Math.round(cellMacros.kcal)} kcal</span>
+                                                                <span className="text-amber-500">{cellMacros.carbs.toFixed(1)}g HC</span>
+                                                                <span className="text-blue-500">{cellMacros.protein.toFixed(1)}g P</span>
+                                                                <span className="text-rose-500">{cellMacros.fat.toFixed(1)}g G</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        {!hasMeals && (
+                                            <div className="p-8 text-center text-slate-400 italic">No hay comidas programadas para este día</div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}
