@@ -608,7 +608,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                                         </button>
                                                     </div>
                                                 </div>
-                                                <div className="max-h-40 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700">
+                                                <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-700">
                                                     {recipeResults.map(r => (
                                                         <button key={r.id} onClick={() => addOption(meal, r)} className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm text-slate-700 dark:text-slate-300">
                                                             {r.name}

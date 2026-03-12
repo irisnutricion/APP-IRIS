@@ -663,7 +663,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                     <input type="text" value={recipeSearch} onChange={e => setRecipeSearch(e.target.value)} placeholder="Buscar receta..." className="w-full pl-7 pr-2 py-1.5 text-xs border border-slate-200 rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white" autoFocus />
                                                                 </div>
                                                             </div>
-                                                            <div className="max-h-40 overflow-y-auto">
+                                                            <div className="max-h-80 overflow-y-auto">
                                                                 {recipeResults.map(r => (
                                                                     <button key={r.id} onClick={() => setCellRecipe(dayIdx + 1, meal, r)} className="w-full text-left px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs text-slate-700 dark:text-slate-300">
                                                                         {r.name}
@@ -763,7 +763,10 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                             )}
                                                             <div className="flex flex-col gap-3">
                                                                 <div className="flex items-center justify-between flex-wrap gap-2">
-                                                                    <div className="flex items-center gap-3 flex-1 min-w-[200px]">
+                                                                    <div 
+                                                                        className="flex items-center gap-3 flex-1 min-w-[200px] cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 -ml-2 px-2 py-1 rounded-lg transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                                                                        onClick={() => { if (cell) toggleDayEditor(key); }}
+                                                                    >
                                                                         <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase w-20 shrink-0">{meal}</span>
                                                                         {cell ? (
                                                                             <div className="flex items-center gap-2">
@@ -815,7 +818,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                                                                             <input type="text" value={recipeSearch} onChange={e => setRecipeSearch(e.target.value)} placeholder="Buscar receta por nombre..." className="w-full pl-10 pr-3 py-2 text-sm bg-transparent outline-none dark:text-white" autoFocus />
                                                                         </div>
-                                                                        <div className="max-h-48 overflow-y-auto bg-white dark:bg-slate-900">
+                                                                        <div className="max-h-80 overflow-y-auto bg-white dark:bg-slate-900">
                                                                             {recipeResults.length === 0 ? (
                                                                                 <div className="p-6 text-center text-sm text-slate-400">No hay recetas que coincidan</div>
                                                                             ) : (

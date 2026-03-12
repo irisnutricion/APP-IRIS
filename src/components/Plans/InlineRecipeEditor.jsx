@@ -536,8 +536,10 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
                                     className="text-xs py-0.5 px-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg w-36 focus:ring-1 focus:ring-primary-500 dark:text-white"
                                 />
                                 {showPhraseSearch && phraseResults.length > 0 && (
-                                    <div className="absolute right-0 z-20 mt-1 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                                        {phraseResults.map(phrase => (
+                                    <>
+                                        <div className="fixed inset-0 z-10" onClick={() => setShowPhraseSearch(false)} />
+                                        <div className="absolute right-0 z-20 mt-1 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                                            {phraseResults.map(phrase => (
                                             <button
                                                 key={phrase.id}
                                                 type="button"
@@ -551,7 +553,8 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
                                                 {phrase.name}
                                             </button>
                                         ))}
-                                    </div>
+                                        </div>
+                                    </>
                                 )}
                             </div>
                         )}
