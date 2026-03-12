@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { DataProvider } from './context/DataContext';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
@@ -25,6 +25,13 @@ import Recommendations from './components/Recommendations/Recommendations';
 import Templates from './components/Plans/Templates';
 import PatientPortal from './components/Portal/PatientPortal';
 
+// Wrapper that forces a full remount of PatientDetail when the patient ID changes.
+// This prevents stale plan state from leaking when navigating between patients via Ctrl+K.
+function PatientDetailKeyed() {
+  const { id } = useParams();
+  return <PatientDetail key={id} />;
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -41,7 +48,7 @@ function App() {
                   <Route index element={<Dashboard />} />
                   <Route path="patients" element={<PatientList />} />
                   <Route path="patients/new" element={<PatientForm />} />
-                  <Route path="patients/:id" element={<PatientDetail />} />
+                  <Route path="patients/:id" element={<PatientDetailKeyed />} />
                   <Route path="patients/:id/edit" element={<PatientForm />} />
                   <Route path="calendar" element={<AppointmentsCalendar />} />
                   <Route path="tracking" element={<TrackingCalendar />} />
