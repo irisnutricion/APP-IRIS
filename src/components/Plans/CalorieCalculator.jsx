@@ -18,9 +18,27 @@ const DEFAULT_DISTRIBUTION = [
 ];
 
 export default function CalorieCalculator({ patient, mealNames }) {
-    // Use patient data as defaults when available
-    const [gender, setGender] = useState(() => patient?.gender || 'male');
-    const [age, setAge]       = useState(() => patient?.age    || '');
+    // Derive gender from patient.sex field (check common Spanish/English values)
+    const patientGender = (() => {
+        const s = (patient?.sex || '').toLowerCase();
+        if (s === 'mujer' || s === 'female' || s === 'f') return 'female';
+        if (s === 'hombre' || s === 'male' || s === 'm') return 'male';
+        return 'male'; // default
+    })();
+
+    // Derive age from birth_date
+    const patientAge = (() => {
+        if (!patient?.birth_date) return '';
+        const birth = new Date(patient.birth_date);
+        const today = new Date();
+        let age = today.getFullYear() - birth.getFullYear();
+        const m = today.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+        return age > 0 ? age : '';
+    })();
+
+    const [gender, setGender] = useState(patientGender);
+    const [age, setAge]       = useState(patientAge);
     const [height, setHeight] = useState(() => patient?.height || '');
     const [weight, setWeight] = useState(() => patient?.weight || '');
     const [activity, setActivity] = useState(1.55);
