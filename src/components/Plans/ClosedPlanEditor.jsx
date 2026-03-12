@@ -128,6 +128,8 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     const gridRef = useRef(grid);
     gridRef.current = grid;
 
+    const [calculatorData, setCalculatorData] = useState(() => plan?.calculator_data || null);
+
     // Initialize grid from items
     useEffect(() => {
         if (!isInitialLoad.current) return;
@@ -870,95 +872,89 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             {/* Summary View */}
             {viewMode === 'summary' && (
                 <div className="space-y-6">
-                    {/* Resumen General */}
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-4 shadow-sm">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 gap-4">
-                            <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                                <PieChart className="text-primary-500" />
-                                Resumen del Plan
-                            </h3>
-                            {(() => {
-                                let totalKcal = 0, totalCarbs = 0, totalProtein = 0, totalFat = 0;
-                                for (let i = 1; i <= 7; i++) {
-                                    const m = getDayMacros(i);
-                                    totalKcal += m.kcal;
-                                    totalCarbs += m.carbs;
-                                    totalProtein += m.protein;
-                                    totalFat += m.fat;
-                                }
-                                return (
-                                    <div className="flex flex-col gap-2">
-                                        <div className="flex items-center justify-between md:justify-end gap-4">
-                                            <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase">Media Diaria</span>
-                                            <div className="flex gap-4 text-base font-bold bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-lg border border-slate-100 dark:border-slate-700 min-w-[280px] justify-between">
-                                                <span className="text-orange-600">{Math.round(totalKcal / 7)} kcal</span>
-                                                <span className="text-amber-600">{(totalCarbs / 7).toFixed(1)}g HC</span>
-                                                <span className="text-blue-600">{(totalProtein / 7).toFixed(1)}g P</span>
-                                                <span className="text-rose-600">{(totalFat / 7).toFixed(1)}g G</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
+                    {/* Media Diaria (lunes a sábado, ignorando domingo) */}
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+                        <div className="flex items-center gap-2">
+                            <PieChart className="text-primary-500" />
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-white">Resumen Nutricional Semanal</h3>
                         </div>
-                    </div>
-
-
-                    {/* Resumen Diario */}
-                    <div className="space-y-4">
-                        {DAYS.map((day, idx) => {
-                            const isVisible = activeDetailDay === 'all' || activeDetailDay === idx + 1;
-                            const dayIdx = idx;
-                            const macros = getDayMacros(dayIdx + 1);
-
-                            const hasMeals = mealNames.some(meal => grid[`${dayIdx + 1}_${meal}`]);
-                            if (!hasMeals && activeDetailDay === 'all') return null;
-
+                        {(() => {
+                            let totalKcal = 0, totalCarbs = 0, totalProtein = 0, totalFat = 0;
+                            // Calcular solo de Lunes a Sábado (días 1 al 6)
+                            for (let i = 1; i <= 6; i++) {
+                                const m = getDayMacros(i);
+                                totalKcal += m.kcal;
+                                totalCarbs += m.carbs;
+                                totalProtein += m.protein;
+                                totalFat += m.fat;
+                            }
                             return (
-                                <div key={day} className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm ${!isVisible ? 'hidden' : ''}`}>
-                                    <div className="p-4 bg-slate-50 dark:bg-slate-800 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
-                                        <h3 className="text-lg font-bold text-slate-700 dark:text-slate-200">{day}</h3>
-                                        <div className="flex gap-4 text-base font-semibold">
-                                            <span className="text-orange-600">{Math.round(macros.kcal)} kcal</span>
-                                            <span className="text-amber-600">{macros.carbs.toFixed(1)}g HC</span>
-                                            <span className="text-blue-600">{macros.protein.toFixed(1)}g P</span>
-                                            <span className="text-rose-600">{macros.fat.toFixed(1)}g G</span>
-                                        </div>
-                                    </div>
-                                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                                        {mealNames.map(meal => {
-                                            const key = `${dayIdx + 1}_${meal}`;
-                                            const cell = grid[key];
-                                            if (!cell) return null;
-
-                                            const cellMacros = getCellMacros(cell);
-
-                                            return (
-                                                <div key={meal} className="p-4 bg-white dark:bg-slate-800 transition-colors">
-                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                                        <div className="flex items-center gap-3">
-                                                            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase w-20 shrink-0">{meal}</span>
-                                                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{getCellName(cell)}</span>
-                                                        </div>
-                                                        {cellMacros && (
-                                                            <div className="flex gap-4 text-sm font-medium bg-slate-50 dark:bg-slate-900/50 px-4 py-2 rounded-lg border border-slate-100 dark:border-slate-700">
-                                                                <span className="text-orange-500">{Math.round(cellMacros.kcal)} kcal</span>
-                                                                <span className="text-amber-500">{cellMacros.carbs.toFixed(1)}g HC</span>
-                                                                <span className="text-blue-500">{cellMacros.protein.toFixed(1)}g P</span>
-                                                                <span className="text-rose-500">{cellMacros.fat.toFixed(1)}g G</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                        {!hasMeals && (
-                                            <div className="p-8 text-center text-slate-400 italic">No hay comidas programadas para este día</div>
-                                        )}
+                                <div className="flex flex-col gap-1 items-end">
+                                    <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase">Media Diaria (Lunes a Sábado)</span>
+                                    <div className="flex gap-4 text-sm md:text-base font-bold bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-lg border border-slate-100 dark:border-slate-700 min-w-[280px] justify-between shadow-inner">
+                                        <span className="text-orange-600 dark:text-orange-400">{Math.round(totalKcal / 6)} kcal</span>
+                                        <span className="text-amber-600 dark:text-amber-400">{(totalCarbs / 6).toFixed(1)}g HC</span>
+                                        <span className="text-blue-600 dark:text-blue-400">{(totalProtein / 6).toFixed(1)}g P</span>
+                                        <span className="text-rose-600 dark:text-rose-400">{(totalFat / 6).toFixed(1)}g G</span>
                                     </div>
                                 </div>
                             );
-                        })}
+                        })()}
+                    </div>
+
+                    {/* Tabla Resumen */}
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">Kcal por comida y día</h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm text-center">
+                                <thead>
+                                    <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                                        <th className="p-3 text-left font-semibold text-slate-500 dark:text-slate-400 border-r border-slate-100 dark:border-slate-800">Comidas</th>
+                                        {DAYS.map(day => (
+                                            <th key={day} className="p-3 font-semibold text-slate-600 dark:text-slate-300">
+                                                {day}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {mealNames.map(meal => (
+                                        <tr key={meal} className="border-b border-slate-50 dark:border-slate-800/50 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                                            <td className="p-3 text-left font-medium text-slate-700 dark:text-slate-300 border-r border-slate-100 dark:border-slate-800">
+                                                {meal}
+                                            </td>
+                                            {DAYS.map((_, dayIdx) => {
+                                                const key = `${dayIdx + 1}_${meal}`;
+                                                const cell = grid[key];
+                                                const macros = cell ? getCellMacros(cell) : null;
+                                                return (
+                                                    <td key={dayIdx} className="p-3 text-slate-600 dark:text-slate-400">
+                                                        {macros && macros.kcal > 0 ? (
+                                                            <span className="font-semibold text-orange-600 dark:text-orange-400">{Math.round(macros.kcal)} kcal</span>
+                                                        ) : (
+                                                            <span className="text-slate-300 dark:text-slate-600 font-medium italic">—</span>
+                                                        )}
+                                                    </td>
+                                                );
+                                            })}
+                                        </tr>
+                                    ))}
+                                    <tr className="bg-slate-50/50 dark:bg-slate-800/80 border-t-2 border-slate-200 dark:border-slate-700">
+                                        <td className="p-3 text-left font-bold text-slate-700 dark:text-slate-200 border-r border-slate-200 dark:border-slate-700">Totales Diarios</td>
+                                        {DAYS.map((_, dayIdx) => {
+                                            const m = getDayMacros(dayIdx + 1);
+                                            return (
+                                                <td key={dayIdx} className="p-3 font-bold text-orange-600 dark:text-orange-400">
+                                                    {Math.round(m.kcal)} kcal
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )}
@@ -1080,10 +1076,14 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
 
             {/* Calculator View */}
             {viewMode === 'calculator' && (
-                <CalorieCalculator
-                    patient={patients.find(p => p.id === plan.patient_id)}
-                    mealNames={mealNames}
-                />
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
+                    <CalorieCalculator
+                        patient={patients?.find(p => p.id === plan.patient_id)}
+                        mealNames={mealNames}
+                        initialData={calculatorData}
+                        onChange={setCalculatorData}
+                    />
+                </div>
             )}
         </div>
     );

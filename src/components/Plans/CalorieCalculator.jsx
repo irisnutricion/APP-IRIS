@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Calculator, User, Activity, Utensils } from 'lucide-react';
 
 const ACTIVITY_PRESETS = [
@@ -17,7 +17,7 @@ const DEFAULT_DISTRIBUTION = [
     { meal: 'Cena',      pct: 25 },
 ];
 
-export default function CalorieCalculator({ patient, mealNames }) {
+export default function CalorieCalculator({ patient, mealNames, initialData, onChange }) {
     // Derive gender from patient.sex field (check common Spanish/English values)
     const patientGender = (() => {
         const s = (patient?.sex || '').toLowerCase();
@@ -46,6 +46,7 @@ export default function CalorieCalculator({ patient, mealNames }) {
 
     // Build distribution rows from plan mealNames if provided, else use defaults
     const initialDist = useMemo(() => {
+        if (initialData?.distribution?.length > 0) return initialData.distribution;
         if (!mealNames || mealNames.length === 0) return DEFAULT_DISTRIBUTION;
         const totalDefault = DEFAULT_DISTRIBUTION.length;
         return mealNames.map((meal, i) => {
@@ -54,9 +55,10 @@ export default function CalorieCalculator({ patient, mealNames }) {
             // Distribute remaining equally
             return { meal, pct: Math.round(100 / mealNames.length) };
         });
-    }, [mealNames]);
+    }, [mealNames, initialData]);
 
     const [distribution, setDistribution] = useState(initialDist);
+    const [targetKcal, setTargetKcal] = useState(() => initialData?.targetKcal || '');
 
     const effectiveActivity = parseFloat(customActivity) >= 1 && parseFloat(customActivity) <= 2
         ? parseFloat(customActivity)
@@ -75,6 +77,16 @@ export default function CalorieCalculator({ patient, mealNames }) {
     }, [gender, weight, height, age]);
 
     const tdee = bmr !== null ? Math.round(bmr * effectiveActivity) : null;
+    const effectiveTdee = targetKcal ? parseInt(targetKcal, 10) : tdee;
+
+    useEffect(() => {
+        if (onChange) {
+            onChange({
+                targetKcal: effectiveTdee,
+                distribution: distribution.map(d => ({ ...d, pct: parseFloat(d.pct) || 0 }))
+            });
+        }
+    }, [effectiveTdee, distribution]);
 
     const totalPct = distribution.reduce((s, d) => s + (parseFloat(d.pct) || 0), 0);
 
@@ -195,6 +207,23 @@ export default function CalorieCalculator({ patient, mealNames }) {
                         ) : (
                             <div className="text-xl font-bold opacity-50 mt-2">Completa los datos</div>
                         )}
+                        
+                        <div className="mt-5 pt-5 border-t border-white/20">
+                            <label className="block text-xs font-semibold uppercase tracking-wide opacity-90 mb-2">Kcal objetivo (manual)</label>
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    value={targetKcal}
+                                    onChange={e => setTargetKcal(e.target.value)}
+                                    placeholder={tdee !== null ? tdee.toString() : "Ej: 2000"}
+                                    className="w-full px-3 py-2.5 pr-12 text-lg font-bold bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/40 outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium opacity-70 pointer-events-none">kcal</span>
+                            </div>
+                            <p className="text-[10px] opacity-70 mt-1.5 leading-tight">
+                                Si introduces un valor aquí, se usará este como total para calcular el reparto de macronutrientes por comida en lugar del TDEE.
+                            </p>
+                        </div>
                     </div>
 
                     {/* Distribución por comida */}
@@ -211,7 +240,7 @@ export default function CalorieCalculator({ patient, mealNames }) {
 
                         <div className="space-y-2">
                             {distribution.map((d, idx) => {
-                                const kcal = tdee !== null ? Math.round(tdee * (parseFloat(d.pct) || 0) / 100) : null;
+                                const kcal = effectiveTdee !== null && effectiveTdee > 0 ? Math.round(effectiveTdee * (parseFloat(d.pct) || 0) / 100) : null;
                                 return (
                                     <div key={d.meal} className="flex items-center gap-3">
                                         <span className="text-sm font-medium text-slate-700 dark:text-slate-300 w-24 shrink-0">{d.meal}</span>
@@ -234,7 +263,7 @@ export default function CalorieCalculator({ patient, mealNames }) {
                         </div>
 
                         {/* Visual bar */}
-                        {tdee !== null && (
+                        {effectiveTdee !== null && effectiveTdee > 0 && (
                             <div className="mt-4 flex rounded-full overflow-hidden h-3 gap-0.5">
                                 {distribution.map((d, idx) => {
                                     const COLORS = ['bg-orange-400', 'bg-amber-400', 'bg-yellow-400', 'bg-lime-400', 'bg-emerald-400', 'bg-teal-400', 'bg-cyan-400'];
