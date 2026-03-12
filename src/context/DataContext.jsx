@@ -212,6 +212,7 @@ export const DataProvider = ({ children }) => {
             if (mealPlansResult.status === 'fulfilled') setMealPlans(mealPlansResult.value.data || []);
             if (mealPlanItemsResult.status === 'fulfilled') setMealPlanItems(mealPlanItemsResult.value.data || []);
             if (recipePhrasesResult.status === 'fulfilled') setRecipePhrases(recipePhrasesResult.value.data || []);
+            if (indicationTemplatesResult.status === 'fulfilled') setIndicationTemplates(indicationTemplatesResult.value.data || []);
             if (appointmentTypesResult.status === 'fulfilled') setAppointmentTypes(appointmentTypesResult.value.data || []);
             if (appointmentsResult.status === 'fulfilled') setAppointments(appointmentsResult.value.data || []);
             if (voucherTypesResult.status === 'fulfilled') setVoucherTypes(voucherTypesResult.value.data || []);
