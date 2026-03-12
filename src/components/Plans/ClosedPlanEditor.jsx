@@ -102,6 +102,10 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     const [showTemplateMenu, setShowTemplateMenu] = useState(false);
     const [activeDetailDay, setActiveDetailDay] = useState('all');
     const [expandedDays, setExpandedDays] = useState(new Set([1])); // default to day 1 open
+    // Planning notes: lightweight text layer, { "1_Desayuno": "café y tostada", ... }
+    const [planningNotes, setPlanningNotes] = useState(() => plan.planning_notes || {});
+    const planningNotesRef = useRef(planningNotes);
+    planningNotesRef.current = planningNotes
 
     const scrollPositions = useRef({});
     const handleDetailDayClick = (tab) => {
@@ -349,8 +353,17 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     const performSave = async (currentGrid) => {
         setSaving(true);
         try {
+            const planUpdate = {};
             if (planName !== plan.name || JSON.stringify(mealNames) !== JSON.stringify(plan.meal_names) || planIndications !== (plan.indications || '')) {
-                await onUpdatePlan({ name: planName, meal_names: mealNames, meals_per_day: mealNames.length, indications: planIndications });
+                planUpdate.name = planName;
+                planUpdate.meal_names = mealNames;
+                planUpdate.meals_per_day = mealNames.length;
+                planUpdate.indications = planIndications;
+            }
+            // Always save planning_notes (they might have changed independently)
+            planUpdate.planning_notes = planningNotesRef.current;
+            if (Object.keys(planUpdate).length > 0) {
+                await onUpdatePlan(planUpdate);
             }
             const newItems = [];
             for (let dayIdx = 1; dayIdx <= 7; dayIdx++) {
@@ -385,7 +398,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             debounceTimer.current = null;
         }, 1500);
         return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
-    }, [grid, planName, mealNames, planIndications]);
+    }, [grid, planName, mealNames, planIndications, planningNotes]);
 
     const flushSaveRef = useRef();
     flushSaveRef.current = () => {
@@ -538,6 +551,49 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             {/* Grid View */}
             {viewMode === 'grid' && (
                 <>
+                    {/* ──────────────── PLANNING NOTES GRID ──────────────── */}
+                    <div className="rounded-2xl border-2 border-amber-200 dark:border-amber-800/60 overflow-x-auto bg-amber-50/40 dark:bg-amber-900/10">
+                        <div className="flex items-center gap-2 px-4 py-2 border-b border-amber-200 dark:border-amber-800/40 bg-amber-100/60 dark:bg-amber-900/20">
+                            <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wide">📋 Planificación previa</span>
+                            <span className="text-xs text-amber-600/70 dark:text-amber-500/70 ml-1">Esquema rápido, sin recetas</span>
+                        </div>
+                        <table className="w-full min-w-[800px]">
+                            <thead>
+                                <tr className="border-b border-amber-200/60 dark:border-amber-800/30">
+                                    <th className="p-2 text-xs font-semibold text-amber-600 text-left w-28 dark:text-amber-400">Comida</th>
+                                    {DAYS.map(day => <th key={day} className="p-2 text-xs font-semibold text-amber-700 text-center dark:text-amber-300">{day}</th>)}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {mealNames.map(meal => (
+                                    <tr key={meal} className="border-b border-amber-100/60 dark:border-amber-800/20 last:border-0">
+                                        <td className="p-2 text-xs font-semibold text-amber-600 whitespace-nowrap dark:text-amber-400">{meal}</td>
+                                        {DAYS.map((_, dayIdx) => {
+                                            const key = `${dayIdx + 1}_${meal}`;
+                                            return (
+                                                <td key={dayIdx} className="p-1" style={{ minWidth: '110px' }}>
+                                                    <input
+                                                        type="text"
+                                                        value={planningNotes[key] || ''}
+                                                        onChange={e => setPlanningNotes(prev => {
+                                                            const next = { ...prev };
+                                                            if (e.target.value.trim()) next[key] = e.target.value;
+                                                            else delete next[key];
+                                                            return next;
+                                                        })}
+                                                        placeholder="Ej: café, tostada..."
+                                                        className="w-full px-2 py-1.5 text-xs rounded-lg border border-amber-200 dark:border-amber-700 bg-white dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 placeholder-amber-300 dark:placeholder-amber-700 outline-none focus:ring-1 focus:ring-amber-400 focus:border-amber-400"
+                                                    />
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* ──────────────── RECIPE GRID ──────────────── */}
                     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-x-auto">
                         <table className="w-full min-w-[800px]">
                             <thead>
@@ -696,6 +752,13 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
 
                                                     return (
                                                         <div key={meal} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm transition-colors hover:border-slate-300 dark:hover:border-slate-600">
+                                                            {/* Planning note badge */}
+                                                            {planningNotes[key] && (
+                                                                <div className="flex items-center gap-1.5 mb-3 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-lg">
+                                                                    <span className="text-amber-500" style={{fontSize:'12px'}}>📋</span>
+                                                                    <span className="text-xs font-medium text-amber-700 dark:text-amber-300 italic">{planningNotes[key]}</span>
+                                                                </div>
+                                                            )}
                                                             <div className="flex flex-col gap-3">
                                                                 <div className="flex items-center justify-between flex-wrap gap-2">
                                                                     <div className="flex items-center gap-3 flex-1 min-w-[200px]">
