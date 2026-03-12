@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import useUndo from '../../hooks/useUndo';
-import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download, PieChart, GripVertical, Loader2, CheckCircle2, CalendarDays, ClipboardCopy } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download, PieChart, GripVertical, Loader2, CheckCircle2, CalendarDays, ClipboardCopy, Calculator } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useToast } from '../../context/ToastContext';
 import { calcSnapshotMacros, recipeToSnapshot, checkRecipeIsSaved } from './ClosedPlanEditor';
@@ -11,6 +11,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '../../supabaseClient';
+import CalorieCalculator from './CalorieCalculator';
 
 function SortableOption({ id, children }) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
@@ -422,6 +423,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                             { mode: 'meals', icon: List, label: 'Comidas' },
                             { mode: 'summary', icon: PieChart, label: 'Resumen' },
                             { mode: 'indications', icon: FileText, label: 'Indicaciones' },
+                            { mode: 'calculator', icon: Calculator, label: 'Calculadora' },
                         ].map(({ mode, icon: Icon, label }) => (
                             <button key={mode} onClick={() => setViewMode(mode)} className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1 ${viewMode === mode ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'}`}>
                                 <Icon size={14} /> {label}
@@ -816,6 +818,14 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Calculator View */}
+            {viewMode === 'calculator' && (
+                <CalorieCalculator
+                    patient={patients.find(p => p.id === plan.patient_id)}
+                    mealNames={mealNames}
+                />
             )}
         </div>
     );

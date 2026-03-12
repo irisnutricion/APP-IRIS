@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import useUndo from '../../hooks/useUndo';
-import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, List, Grid3X3, Table2, Pencil, FileText, ChevronDown, ChevronUp, Download, PieChart, ClipboardCopy, Loader2, CheckCircle2, CalendarDays } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, List, Grid3X3, Table2, Pencil, FileText, ChevronDown, ChevronUp, Download, PieChart, ClipboardCopy, Loader2, CheckCircle2, CalendarDays, Calculator } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useToast } from '../../context/ToastContext';
 import { calcRecipeMacros } from '../Recipes/Recipes';
@@ -8,6 +8,7 @@ import InlineRecipeEditor from './InlineRecipeEditor';
 import { generatePlanPdf } from '../../utils/planPdfGenerator';
 import { generateSchemaPdf } from '../../utils/schemaPdfGenerator';
 import { supabase } from '../../supabaseClient';
+import CalorieCalculator from './CalorieCalculator';
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
@@ -464,6 +465,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                             { mode: 'days', icon: List, label: 'Días' },
                             { mode: 'summary', icon: PieChart, label: 'Resumen' },
                             { mode: 'indications', icon: FileText, label: 'Indicaciones' },
+                            { mode: 'calculator', icon: Calculator, label: 'Calculadora' },
                         ].map(({ mode, icon: Icon, label }) => (
                             <button key={mode} onClick={() => { window.scrollTo(0,0); setViewMode(mode); }} className={`px-3 py-1.5 text-xs font-medium flex items-center gap-1 ${viewMode === mode ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'}`}>
                                 <Icon size={14} /> {label}
@@ -1071,6 +1073,14 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Calculator View */}
+            {viewMode === 'calculator' && (
+                <CalorieCalculator
+                    patient={patients.find(p => p.id === plan.patient_id)}
+                    mealNames={mealNames}
+                />
             )}
         </div>
     );
