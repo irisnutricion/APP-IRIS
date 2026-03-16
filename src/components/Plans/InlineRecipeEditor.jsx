@@ -162,7 +162,7 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
     }, [phraseSearch, recipePhrases]);
 
     const updateQty = (id, qty) => {
-        setIngredients(prev => prev.map(ing => ing.unique_id === id ? { ...ing, quantity_grams: qty } : ing));
+        setIngredients(prev => prev.map(ing => ing.unique_id === id ? { ...ing, quantity_grams: qty === '' ? '' : (parseFloat(qty) || 0) } : ing));
     };
 
     const replaceIngredientFood = (id, newFood, closeUI = true) => {

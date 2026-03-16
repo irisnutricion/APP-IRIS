@@ -1032,7 +1032,8 @@ export const DataProvider = ({ children }) => {
         }
         // Add ingredients
         if (ingredients.length > 0) {
-            await supabase.from('recipe_ingredients').insert(ingredients.map(ing => ({ recipe_id: data.id, food_id: ing.food_id, quantity_grams: ing.quantity_grams })));
+            const { error: ingAddError } = await supabase.from('recipe_ingredients').insert(ingredients.map(ing => ({ recipe_id: data.id, food_id: ing.food_id, quantity_grams: parseFloat(ing.quantity_grams) || 0 })));
+            if (ingAddError) console.error('Error inserting ingredients in addRecipe:', ingAddError);
         }
         
         // Optimistic update
@@ -1042,7 +1043,7 @@ export const DataProvider = ({ children }) => {
             recipe_ingredients: ingredients.map(ing => ({
                 recipe_id: data.id,
                 food_id: ing.food_id,
-                quantity_grams: ing.quantity_grams,
+                quantity_grams: parseFloat(ing.quantity_grams) || 0,
                 foods: foods.find(f => f.id === ing.food_id) || null
             })),
             is_active: true
@@ -1069,7 +1070,7 @@ export const DataProvider = ({ children }) => {
             const { error: ingDelError } = await supabase.from('recipe_ingredients').delete().eq('recipe_id', id);
             if (ingDelError) console.error('Error deleting ingredients:', ingDelError);
             if (ingredients.length > 0) {
-                const { error: ingAddError } = await supabase.from('recipe_ingredients').insert(ingredients.map(ing => ({ recipe_id: id, food_id: ing.food_id, quantity_grams: ing.quantity_grams })));
+                const { error: ingAddError } = await supabase.from('recipe_ingredients').insert(ingredients.map(ing => ({ recipe_id: id, food_id: ing.food_id, quantity_grams: parseFloat(ing.quantity_grams) || 0 })));
                 if (ingAddError) console.error('Error inserting ingredients:', ingAddError);
             }
             await fetchData(true); // Refetch in the background
