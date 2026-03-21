@@ -40,6 +40,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     const [viewMode, setViewMode] = useState(initialViewMode);
     const [showTemplateMenu, setShowTemplateMenu] = useState(false);
     const [activeMealTab, setActiveMealTab] = useState('all'); // 'all' or specific meal name
+    const [calculatorData, setCalculatorData] = useState(() => plan?.calculator_data || null);
 
     const scrollPositions = useRef({});
     const handleMealTabClick = (tab) => {
@@ -96,9 +97,9 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     }, [items, mealNames]);
 
     const recipeResults = useMemo(() => {
-        if (!recipeSearch.trim()) return recipes.filter(r => r.is_active).slice(0, 10);
+        if (!recipeSearch.trim()) return recipes.filter(r => r.is_active);
         const q = recipeSearch.toLowerCase();
-        return recipes.filter(r => r.is_active && r.name.toLowerCase().includes(q)).slice(0, 10);
+        return recipes.filter(r => r.is_active && r.name.toLowerCase().includes(q));
     }, [recipeSearch, recipes]);
 
     const [copyModalInfo, setCopyModalInfo] = useState(null); // { opt, targetMeal: 'all' }
@@ -269,8 +270,17 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     const performSave = async (currentSections) => {
         setSaving(true);
         try {
+            const planUpdate = {};
             if (planName !== plan.name || JSON.stringify(mealNames) !== JSON.stringify(plan.meal_names) || planIndications !== (plan.indications || '')) {
-                await onUpdatePlan({ name: planName, meal_names: mealNames, meals_per_day: mealNames.length, indications: planIndications });
+                planUpdate.name = planName;
+                planUpdate.meal_names = mealNames;
+                planUpdate.meals_per_day = mealNames.length;
+                planUpdate.indications = planIndications;
+            }
+            planUpdate.calculator_data = calculatorData;
+            
+            if (Object.keys(planUpdate).length > 0) {
+                await onUpdatePlan(planUpdate);
             }
             const newItems = [];
             mealNames.forEach(meal => {
@@ -301,7 +311,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             debounceTimer.current = null;
         }, 1500);
         return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
-    }, [sections, planName, mealNames, planIndications]);
+    }, [sections, planName, mealNames, planIndications, calculatorData]);
 
     const flushSaveRef = useRef();
     flushSaveRef.current = () => {
@@ -822,10 +832,14 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
 
             {/* Calculator View */}
             {viewMode === 'calculator' && (
-                <CalorieCalculator
-                    patient={patients.find(p => p.id === plan.patient_id)}
-                    mealNames={mealNames}
-                />
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 p-6">
+                    <CalorieCalculator
+                        patient={patients.find(p => p.id === plan.patient_id)}
+                        mealNames={mealNames}
+                        initialData={calculatorData}
+                        onChange={setCalculatorData}
+                    />
+                </div>
             )}
         </div>
     );

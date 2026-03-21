@@ -149,9 +149,9 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     }, [items]);
 
     const recipeResults = useMemo(() => {
-        if (!recipeSearch.trim()) return recipes.filter(r => r.is_active).slice(0, 10);
+        if (!recipeSearch.trim()) return recipes.filter(r => r.is_active);
         const q = recipeSearch.toLowerCase();
-        return recipes.filter(r => r.is_active && r.name.toLowerCase().includes(q)).slice(0, 10);
+        return recipes.filter(r => r.is_active && r.name.toLowerCase().includes(q));
     }, [recipeSearch, recipes]);
 
     // Select a recipe → clone as snapshot
@@ -403,7 +403,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             debounceTimer.current = null;
         }, 1500);
         return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
-    }, [grid, planName, mealNames, planIndications, planningNotes]);
+    }, [grid, planName, mealNames, planIndications, planningNotes, calculatorData]);
 
     const flushSaveRef = useRef();
     flushSaveRef.current = () => {

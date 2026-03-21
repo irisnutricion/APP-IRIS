@@ -29,13 +29,44 @@ function SortableIngredient({ id, children }) {
  *   onClose() — cierra el panel
  */
 export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe, onUpdateRecipe, onClose }) {
-    const { foods = [], recipePhrases = [] } = useData();
+    const { foods = [], recipePhrases = [], recipes = [] } = useData();
     const [phraseSearch, setPhraseSearch] = useState('');
     const [showPhraseSearch, setShowPhraseSearch] = useState(false);
 
     const initial = snapshot || { name: '', description: '', source_recipe_id: null, ingredients: [] };
     const [name, setName] = useState(snapshot?.name || '');
     const [description, setDescription] = useState(snapshot?.description || '');
+    const [currentSourceRecipeId, setCurrentSourceRecipeId] = useState(snapshot?.source_recipe_id || null);
+    const [showRecipeDropdown, setShowRecipeDropdown] = useState(false);
+    
+    // Derived recipes for autocomplete
+    const activeRecipeResults = useMemo(() => {
+        if (!name.trim()) return [];
+        const q = name.toLowerCase();
+        return recipes.filter(r => r.is_active && r.name.toLowerCase().includes(q));
+    }, [name, recipes]);
+
+    const handleSelectRecipe = (r) => {
+        setName(r.name);
+        setDescription(r.description || '');
+        const ings = r.recipe_ingredients || [];
+        const newIngredients = ings.map(ri => {
+            const food = ri.foods || ri.food;
+            return {
+                unique_id: crypto.randomUUID(),
+                food_id: ri.food_id,
+                food_name: food?.name || 'Alimento',
+                quantity_grams: ri.quantity_grams || '',
+                kcal_per_100g: food?.kcal_per_100g || 0,
+                carbs: food?.carbs_per_100g || 0,
+                protein: food?.protein_per_100g || 0,
+                fat: food?.fat_per_100g || 0,
+            };
+        });
+        setIngredients(newIngredients);
+        setCurrentSourceRecipeId(r.id);
+        setShowRecipeDropdown(false);
+    };
     const [ingredients, setIngredients, undoIngredients, redoIngredients, canUndoIngredients, canRedoIngredients] = useUndo(() => {
         const initialIngs = snapshot?.ingredients || [];
         return initialIngs.map(ing => ({ ...ing, unique_id: ing.unique_id || crypto.randomUUID() }));
@@ -227,9 +258,9 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
     const buildSnapshot = useCallback(() => ({
         name: name.trim() || 'Sin nombre',
         description: description.trim(),
-        source_recipe_id: initial.source_recipe_id || null,
+        source_recipe_id: currentSourceRecipeId,
         ingredients,
-    }), [name, description, ingredients, initial.source_recipe_id]);
+    }), [name, description, ingredients, currentSourceRecipeId]);
 
     // Keep a ref to the latest snapshot builder + onChange so we can flush on unmount
     const onChangeRef = useRef(onChange);
@@ -273,7 +304,7 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
     };
 
     const handleUpdateRecipe = () => {
-        if (onUpdateRecipe && initial.source_recipe_id) {
+        if (onUpdateRecipe && currentSourceRecipeId) {
             onUpdateRecipe(buildSnapshot());
             showSuccessMessage('updated');
         }
@@ -311,14 +342,41 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
             }}
         >
             {/* Header */}
-            <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800">
-                <input
-                    type="text"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    placeholder="Nombre de la receta..."
-                    className="text-base font-bold text-slate-800 dark:text-white bg-transparent border-b-2 border-transparent hover:border-slate-300 focus:border-primary-500 outline-none flex-1 mr-3"
-                />
+            <div className="p-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 relative z-20">
+                <div className="flex items-center justify-between">
+                    <input
+                        type="text"
+                        value={name}
+                        onChange={e => {
+                            setName(e.target.value);
+                            setShowRecipeDropdown(true);
+                        }}
+                        onFocus={() => setShowRecipeDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowRecipeDropdown(false), 200)}
+                        placeholder="Nombre de la receta (escribe para buscar)..."
+                        className="text-base font-bold text-slate-800 dark:text-white bg-transparent border-b-2 border-transparent hover:border-slate-300 focus:border-primary-500 outline-none flex-1 mr-3"
+                    />
+                </div>
+                {showRecipeDropdown && activeRecipeResults.length > 0 && (
+                    <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto w-full">
+                        <div className="p-2 text-xs font-semibold text-slate-500 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 sticky top-0">
+                            Recetas guardadas:
+                        </div>
+                        {activeRecipeResults.map(r => (
+                            <button
+                                key={r.id}
+                                onMouseDown={(e) => {
+                                    e.preventDefault(); // prevent blur from firing before onClick/onMouseDown
+                                    handleSelectRecipe(r);
+                                }}
+                                className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors border-b border-slate-100 dark:border-slate-700 last:border-0"
+                            >
+                                <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">{r.name}</div>
+                                {r.description && <div className="text-xs text-slate-500 truncate">{r.description}</div>}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Totals bar */}
@@ -571,7 +629,7 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
             {/* Footer */}
             <div className="p-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 bg-white dark:bg-slate-900">
                 <div className="flex gap-2 relative">
-                    {initial.source_recipe_id && onUpdateRecipe ? (
+                    {currentSourceRecipeId && onUpdateRecipe ? (
                         <button
                             onClick={handleUpdateRecipe}
                             disabled={statusMsg !== ''}
