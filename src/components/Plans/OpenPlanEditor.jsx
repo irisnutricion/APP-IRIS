@@ -7,7 +7,7 @@ import { calcSnapshotMacros, recipeToSnapshot, checkRecipeIsSaved } from './Clos
 import InlineRecipeEditor from './InlineRecipeEditor';
 import { generatePlanPdf } from '../../utils/planPdfGenerator';
 import { generateSchemaPdf } from '../../utils/schemaPdfGenerator';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, useDroppable } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '../../supabaseClient';
@@ -21,6 +21,11 @@ function SortableOption({ id, children }) {
             {children}
         </div>
     );
+}
+
+function DroppableContainer({ id, children, className }) {
+    const { setNodeRef } = useDroppable({ id });
+    return <div ref={setNodeRef} className={className}>{children}</div>;
 }
 
 export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpdatePlan, onSaveAsTemplate, initialViewMode = 'meals' }) {
@@ -62,18 +67,71 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
     );
 
-    const handleDragEnd = (event, mealName) => {
+    const findContainer = (id) => {
+        if (mealNames.includes(id)) return id;
+        for (const meal of mealNames) {
+            if ((sections[meal] || []).some(opt => opt.local_id === id)) return meal;
+        }
+        return null;
+    };
+
+    const handleDragOver = (event) => {
         const { active, over } = event;
-        if (over && active.id !== over.id) {
-            setSections((prev) => {
-                const list = prev[mealName] || [];
-                const oldIndex = list.findIndex(opt => opt.local_id === active.id);
-                const newIndex = list.findIndex(opt => opt.local_id === over.id);
-                if (oldIndex !== -1 && newIndex !== -1) {
-                    return { ...prev, [mealName]: arrayMove(list, oldIndex, newIndex) };
-                }
-                return prev;
-            });
+        if (!over) return;
+        
+        const activeContainer = findContainer(active.id);
+        const overContainer = findContainer(over.id);
+        
+        if (!activeContainer || !overContainer || activeContainer === overContainer) {
+            return;
+        }
+        
+        setSections((prev) => {
+            const activeItems = prev[activeContainer] || [];
+            const overItems = prev[overContainer] || [];
+            const activeIndex = activeItems.findIndex(i => i.local_id === active.id);
+            const overIndex = mealNames.includes(over.id) ? overItems.length : overItems.findIndex(i => i.local_id === over.id);
+            
+            let newIndex;
+            if (mealNames.includes(over.id)) {
+                newIndex = overItems.length;
+            } else {
+                const isBelowOverItem = over && active.rect.current.translated && active.rect.current.translated.top > over.rect.top + over.rect.height;
+                const modifier = isBelowOverItem ? 1 : 0;
+                newIndex = overIndex >= 0 ? overIndex + modifier : overItems.length;
+            }
+            
+            return {
+                ...prev,
+                [activeContainer]: prev[activeContainer].filter(item => item.local_id !== active.id),
+                [overContainer]: [
+                    ...prev[overContainer].slice(0, newIndex),
+                    activeItems[activeIndex],
+                    ...prev[overContainer].slice(newIndex)
+                ]
+            };
+        });
+    };
+
+    const handleDragEnd = (event) => {
+        const { active, over } = event;
+        if (!over) return;
+        
+        const activeContainer = findContainer(active.id);
+        const overContainer = findContainer(over.id);
+        
+        if (!activeContainer || !overContainer || activeContainer !== overContainer) {
+            return;
+        }
+        
+        const activeIndex = (sections[activeContainer] || []).findIndex(i => i.local_id === active.id);
+        const overIndex = (sections[overContainer] || []).findIndex(i => i.local_id === over.id);
+        
+        if (activeIndex !== overIndex && activeIndex !== -1 && overIndex !== -1) {
+            setSections((prev) => ({
+                ...prev,
+                [overContainer]: arrayMove(prev[overContainer], activeIndex, overIndex)
+            }));
         }
     };
 
@@ -671,25 +729,24 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                 </div>
                             )}
                         </div>
-                        {mealNames.map(meal => {
-                            const opts = sections[meal] || [];
-                            const avgMacros = getMealAvgMacros(meal);
-                            if (opts.length === 0) return null;
-                            return (
-                                <div key={meal} className="border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden mt-4">
-                                    <div className="bg-slate-50/50 dark:bg-slate-800/30 p-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                                        <span className="font-bold text-slate-700 dark:text-slate-300">{meal}</span>
-                                        {avgMacros && (
-                                            <div className="flex gap-4 text-sm font-bold">
-                                                <span className="text-orange-600">Media: {Math.round(avgMacros.kcal)} kcal</span>
-                                                <span className="text-amber-600">{avgMacros.carbs.toFixed(1)}g HC</span>
-                                                <span className="text-blue-600">{avgMacros.protein.toFixed(1)}g P</span>
-                                                <span className="text-rose-600">{avgMacros.fat.toFixed(1)}g G</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                                        <DndContext id={`dnd-${meal}`} sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, meal)}>
+                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+                            {mealNames.map(meal => {
+                                const opts = sections[meal] || [];
+                                const avgMacros = getMealAvgMacros(meal);
+                                return (
+                                    <div key={meal} className="border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden mt-4">
+                                        <div className="bg-slate-50/50 dark:bg-slate-800/30 p-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                                            <span className="font-bold text-slate-700 dark:text-slate-300">{meal}</span>
+                                            {avgMacros && (
+                                                <div className="flex gap-4 text-sm font-bold">
+                                                    <span className="text-orange-600">Media: {Math.round(avgMacros.kcal)} kcal</span>
+                                                    <span className="text-amber-600">{avgMacros.carbs.toFixed(1)}g HC</span>
+                                                    <span className="text-blue-600">{avgMacros.protein.toFixed(1)}g P</span>
+                                                    <span className="text-rose-600">{avgMacros.fat.toFixed(1)}g G</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <DroppableContainer id={meal} className="divide-y divide-slate-100 dark:divide-slate-800 min-h-[40px]">
                                             <SortableContext items={opts.map(o => o.local_id)} strategy={verticalListSortingStrategy}>
                                                 {opts.map((opt, idx) => {
                                                     const macros = getOptMacros(opt);
@@ -719,11 +776,11 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                                     );
                                                 })}
                                             </SortableContext>
-                                        </DndContext>
+                                        </DroppableContainer>
                                     </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
+                        </DndContext>
                     </div>
                 </div>
             )}
