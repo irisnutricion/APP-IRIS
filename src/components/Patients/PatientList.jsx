@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { Search, Plus, Filter, Trash2, CheckCircle, LayoutGrid, List, ChevronRight, Play, Layers } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, differenceInDays } from 'date-fns';
 import PlanStartModal from './PlanStartModal';
 
 const PatientList = () => {
@@ -290,7 +290,10 @@ const PatientList = () => {
                                                         <span className="capitalize font-medium text-slate-600 dark:text-slate-400">{patient.subscription?.type || '-'}</span>
                                                         {patient.subscription?.endDate && (
                                                             <span className={`${getPatientStatus(patient) === 'warning' ? 'text-amber-600 font-bold' : ''}`}>
-                                                                {format(parseISO(patient.subscription.endDate), 'dd/MM/yyyy')}
+                                                                {format(parseISO(patient.subscription.endDate), 'dd/MM/yyyy')} 
+                                                                <span className="ml-1 text-[10px] opacity-75">
+                                                                    ({Math.max(0, differenceInDays(parseISO(patient.subscription.endDate), new Date()))}d)
+                                                                </span>
                                                             </span>
                                                         )}
                                                     </div>
@@ -395,7 +398,14 @@ const PatientList = () => {
                                             </td>
                                             <td className="capitalize text-sm">{p.subscription?.type || '-'}</td>
                                             <td className="text-sm font-mono text-muted">
-                                                {p.subscription?.endDate ? format(parseISO(p.subscription.endDate), 'dd/MM/yyyy') : '-'}
+                                                {p.subscription?.endDate ? (
+                                                    <div className="flex flex-col">
+                                                        <span>{format(parseISO(p.subscription.endDate), 'dd/MM/yyyy')}</span>
+                                                        <span className="text-xs text-slate-400">
+                                                            {Math.max(0, differenceInDays(parseISO(p.subscription.endDate), new Date()))} días rest.
+                                                        </span>
+                                                    </div>
+                                                ) : '-'}
                                             </td>
                                             <td>
                                                 <Link to={`/patients/${p.id}`} className="btn btn-ghost btn-sm btn-icon">
