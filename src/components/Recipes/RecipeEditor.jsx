@@ -449,6 +449,7 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
                                                         type="number"
                                                         value={ing.quantity_grams}
                                                         onChange={e => updateIngredientQty(ing.unique_id, e.target.value)}
+                                                        onWheel={(e) => e.target.blur()}
                                                         min="0"
                                                         step="5"
                                                         className="w-16 px-1.5 py-1 border border-slate-300 rounded text-center text-xs dark:bg-slate-700 dark:border-slate-600 dark:text-white"

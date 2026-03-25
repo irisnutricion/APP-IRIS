@@ -489,6 +489,7 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
                                                         type="number"
                                                         value={ing.quantity_grams}
                                                         onChange={e => updateQty(ing.unique_id, e.target.value)}
+                                                        onWheel={(e) => e.target.blur()}
                                                         onKeyDown={(e) => {
                                                             if (e.key === 'Enter') {
                                                                 e.preventDefault();

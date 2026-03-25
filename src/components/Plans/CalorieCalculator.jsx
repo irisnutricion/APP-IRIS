@@ -139,6 +139,7 @@ export default function CalorieCalculator({ patient, mealNames, initialData, onC
                                             type="number"
                                             value={val}
                                             onChange={e => set(e.target.value)}
+                                            onWheel={(e) => e.target.blur()}
                                             min={min} max={max}
                                             placeholder="—"
                                             className="w-full px-3 py-2 pr-8 text-sm border border-slate-200 dark:border-slate-700 rounded-xl dark:bg-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -183,6 +184,7 @@ export default function CalorieCalculator({ patient, mealNames, initialData, onC
                                 value={customActivity}
                                 min={1} max={2} step={0.01}
                                 onChange={e => setCustomActivity(e.target.value)}
+                                onWheel={(e) => e.target.blur()}
                                 placeholder="Ej: 1.45"
                                 className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-xl dark:bg-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
@@ -215,6 +217,7 @@ export default function CalorieCalculator({ patient, mealNames, initialData, onC
                                     type="number"
                                     value={targetKcal}
                                     onChange={e => setTargetKcal(e.target.value)}
+                                    onWheel={(e) => e.target.blur()}
                                     placeholder={tdee !== null ? tdee.toString() : "Ej: 2000"}
                                     className="w-full px-3 py-2.5 pr-12 text-lg font-bold bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/40 outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 />
@@ -249,6 +252,7 @@ export default function CalorieCalculator({ patient, mealNames, initialData, onC
                                                 type="number"
                                                 value={d.pct}
                                                 onChange={e => updatePct(idx, parseFloat(e.target.value) || 0)}
+                                                onWheel={(e) => e.target.blur()}
                                                 min={0} max={100} step={1}
                                                 className="w-full px-3 py-1.5 pr-7 text-sm border border-slate-200 dark:border-slate-700 rounded-xl dark:bg-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-primary-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                             />
