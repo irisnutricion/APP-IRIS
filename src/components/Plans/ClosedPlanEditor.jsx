@@ -9,6 +9,18 @@ import { generatePlanPdf } from '../../utils/planPdfGenerator';
 import { generateSchemaPdf } from '../../utils/schemaPdfGenerator';
 import { supabase } from '../../supabaseClient';
 import CalorieCalculator from './CalorieCalculator';
+import { DndContext, useDraggable, useDroppable, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+
+function DraggableRecipe({ id, children }) {
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id });
+    const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 50 : 'auto', position: 'relative' } : undefined;
+    return <div ref={setNodeRef} style={style} {...attributes} {...listeners} className={isDragging ? "cursor-grabbing" : "cursor-grab"}>{children}</div>;
+}
+
+function DroppableSlot({ id, children }) {
+    const { setNodeRef, isOver } = useDroppable({ id });
+    return <div ref={setNodeRef} className={`h-full w-full min-h-[48px] rounded-lg transition-colors ${isOver ? 'bg-primary-50 dark:bg-primary-900/20 ring-2 ring-primary-400 ring-inset' : ''}`}>{children}</div>;
+}
 
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
@@ -129,6 +141,34 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     gridRef.current = grid;
 
     const [calculatorData, setCalculatorData] = useState(() => plan?.calculator_data || null);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(KeyboardSensor)
+    );
+
+    const handleDragEnd = (event) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+        
+        setGrid(prev => {
+            const next = { ...prev };
+            const sourceKey = active.id;
+            const targetKey = over.id;
+            
+            const sourceContent = prev[sourceKey];
+            const targetContent = prev[targetKey];
+            
+            if (targetContent) {
+                next[sourceKey] = targetContent;
+            } else {
+                delete next[sourceKey];
+            }
+            next[targetKey] = sourceContent;
+            
+            return next;
+        });
+    };
 
     // Initialize grid from items
     useEffect(() => {
@@ -600,8 +640,9 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                     </div>
 
                     {/* ──────────────── RECIPE GRID ──────────────── */}
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-x-auto">
-                        <table className="w-full min-w-[800px]">
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-x-auto">
+                            <table className="w-full min-w-[800px]">
                             <thead>
                                 <tr className="border-b border-slate-200 dark:border-slate-700">
                                     <th className="p-2 text-xs font-semibold text-slate-500 text-left w-28 dark:text-slate-400">Comida</th>
@@ -618,23 +659,27 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                             const isActive = activeCell === key;
                                             return (
                                                 <td key={dayIdx} className="p-1 relative group/cell" style={{ minWidth: '110px' }}>
-                                                    {!cell ? (
-                                                        <button onClick={() => { setActiveCell(key); setRecipeSearch(''); }} className="w-full h-12 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg text-slate-300 hover:border-primary-300 hover:text-primary-400 flex items-center justify-center transition-all text-xs add-button-container">
-                                                            <Plus size={14} />
-                                                        </button>
-                                                    ) : (
-                                                        <div className="flex flex-col gap-2">
-                                                            <div className="relative p-1.5 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs min-h-[48px] flex items-center cursor-pointer" onClick={() => toggleGridEditor(key)}>
-                                                                <div className="flex items-center gap-1.5 line-clamp-2 pr-8">
-                                                                    {(() => {
-                                                                        const isSaved = checkRecipeIsSaved(cell, recipes);
-                                                                        if (isSaved === true) return <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Guardada en base de datos" />;
-                                                                        if (isSaved === false) return <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" title="Personalizada / No guardada" />;
-                                                                        return null;
-                                                                    })()}
-                                                                    <span className="text-slate-700 dark:text-slate-300">{getCellName(cell)}</span>
-                                                                </div>
-                                                                <div className="absolute top-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover/cell:opacity-100 transition-opacity">
+                                                    <DroppableSlot id={key}>
+                                                        {!cell ? (
+                                                            <button onClick={() => { setActiveCell(key); setRecipeSearch(''); }} className="w-full h-12 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg text-slate-300 hover:border-primary-300 hover:text-primary-400 flex items-center justify-center transition-all text-xs add-button-container">
+                                                                <Plus size={14} />
+                                                            </button>
+                                                        ) : (
+                                                            <div className="flex flex-col gap-2 relative">
+                                                                <DraggableRecipe id={key}>
+                                                                    <div className="relative p-1.5 bg-slate-50 dark:bg-slate-800 rounded-lg text-xs min-h-[48px] flex items-center cursor-pointer" onClick={() => toggleGridEditor(key)}>
+                                                                        <div className="flex items-center gap-1.5 line-clamp-2 pr-8">
+                                                                            {(() => {
+                                                                                const isSaved = checkRecipeIsSaved(cell, recipes);
+                                                                                if (isSaved === true) return <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Guardada en base de datos" />;
+                                                                                if (isSaved === false) return <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0" title="Personalizada / No guardada" />;
+                                                                                return null;
+                                                                            })()}
+                                                                            <span className="text-slate-700 dark:text-slate-300">{getCellName(cell)}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </DraggableRecipe>
+                                                                <div className="absolute top-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover/cell:opacity-100 transition-opacity z-10">
                                                                     <button onClick={(e) => { e.stopPropagation(); setCopyModalInfo({ cell, targetDay: (dayIdx + 1).toString(), targetMeal: '' }); }} className="p-0.5 text-slate-300 hover:text-emerald-500" title="Copiar a otra parte">
                                                                         <ClipboardCopy size={11} />
                                                                     </button>
@@ -645,9 +690,8 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                         <X size={11} />
                                                                     </button>
                                                                 </div>
-                                                            </div>
-                                                            {expandedCells.has(key) && (
-                                                                <div className="w-[500px] z-20">
+                                                                {expandedCells.has(key) && (
+                                                                    <div className="w-[500px] z-20">
                                                                     <InlineRecipeEditor
                                                                         snapshot={cell.custom_recipe_data || recipeToSnapshot(cell.recipes) || null}
                                                                         onChange={s => handleInlineAccept(key, s)}
@@ -658,6 +702,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                             )}
                                                         </div>
                                                     )}
+                                                    </DroppableSlot>
                                                     {/* Recipe search popup */}
                                                     {isActive && (
                                                         <div className="absolute z-30 top-full left-0 mt-1 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl search-popup-container">
@@ -711,7 +756,8 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                 </tr>
                             </tbody>
                         </table>
-                    </div>
+                        </div>
+                    </DndContext>
                 </>
             )}
 
