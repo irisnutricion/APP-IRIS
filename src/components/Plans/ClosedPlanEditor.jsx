@@ -696,6 +696,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                         snapshot={cell.custom_recipe_data || recipeToSnapshot(cell.recipes) || null}
                                                                         onChange={s => handleInlineAccept(key, s)}
                                                                         onSaveAsRecipe={s => handleInlineSaveAsRecipe(key, s)}
+                                                                        onUpdateRecipe={s => handleInlineUpdateRecipe(key, s)}
                                                                         onClose={() => toggleGridEditor(key)}
                                                                     />
                                                                 </div>

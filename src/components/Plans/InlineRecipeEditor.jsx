@@ -627,8 +627,8 @@ export default function InlineRecipeEditor({ snapshot, onChange, onSaveAsRecipe,
             </div>
 
             {/* Footer */}
-            <div className="p-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 bg-white dark:bg-slate-900">
-                <div className="flex gap-2 relative">
+            <div className="p-3 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900">
+                <div className="flex flex-wrap gap-2 relative">
                     {currentSourceRecipeId && onUpdateRecipe ? (
                         <button
                             onClick={handleUpdateRecipe}
