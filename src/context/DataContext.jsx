@@ -1216,6 +1216,7 @@ export const DataProvider = ({ children }) => {
             sort_order: item.sort_order,
             recipe_id: item.recipe_id,
             free_text: item.free_text,
+            custom_recipe_data: item.custom_recipe_data ? JSON.parse(JSON.stringify(item.custom_recipe_data)) : null,
         }));
         await saveMealPlanItems(newPlan.id, newItems);
         return newPlan;
