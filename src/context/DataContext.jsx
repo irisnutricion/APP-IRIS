@@ -642,10 +642,11 @@ export const DataProvider = ({ children }) => {
             const currentEndDate = parseISO(patient.subscription_end || patient.subscription.endDate);
             // Ensure we don't reduce end date if something is weird
             const newEndDate = addDays(currentEndDate, Math.max(0, daysPaused));
+            const newEndDateStr = newEndDate.toISOString().split('T')[0];
 
             dbUpdates = {
                 subscription_status: 'active',
-                subscription_end: newEndDate.toISOString().split('T')[0],
+                subscription_end: newEndDateStr,
                 pause_start_date: null
             };
 
@@ -657,6 +658,21 @@ export const DataProvider = ({ children }) => {
 
                 if (closeError) console.error('Error closing pause record:', closeError);
             }
+
+            // Sync with patient_subscriptions
+            const { data: activeSubs } = await supabase
+                .from('patient_subscriptions')
+                .select('id')
+                .eq('patient_id', id)
+                .order('start_date', { ascending: false })
+                .limit(1);
+
+            if (activeSubs && activeSubs.length > 0) {
+                await supabase
+                    .from('patient_subscriptions')
+                    .update({ end_date: newEndDateStr })
+                    .eq('id', activeSubs[0].id);
+            }
         }
 
         const { data, error } = await supabase.from('patients').update(dbUpdates).eq('id', id).select().single();
@@ -664,19 +680,25 @@ export const DataProvider = ({ children }) => {
             // Refetch pauses to get the updated ID or closed status
             const { data: updatedPauses } = await supabase.from('subscription_pauses').select('*').eq('patient_id', id).order('start_date', { ascending: false });
 
+            // Ensure history is refetched so the newly calculated end_date is available
+            const { data: updatedHistory } = await supabase.from('patient_subscriptions').select('*').eq('patient_id', id).order('start_date', { ascending: false });
+
             setPatients(prev => prev.map(p => {
                 if (p.id !== id) return p;
+
+                const newHistory = updatedHistory || p.subscriptionHistory;
 
                 const dynamicStatus = calculateDynamicPatientStatus(
                     data.subscription_status,
                     data.subscription_start,
                     data.subscription_end,
-                    p.subscriptionHistory
+                    newHistory
                 );
 
                 return {
                     ...p, ...data,
                     subscriptionPauses: updatedPauses || [],
+                    subscriptionHistory: newHistory,
                     subscription_status: dynamicStatus,
                     status: dynamicStatus,
                     subscription: {
