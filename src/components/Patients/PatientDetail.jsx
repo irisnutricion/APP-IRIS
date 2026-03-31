@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
-import { ArrowLeft, User, Activity, Image as ImageIcon, Wallet, Play, Clock, RefreshCw, Edit2, Trash2, Calendar as CalendarIcon, Copy, UtensilsCrossed, PenLine, ChevronDown, Loader2, CheckCircle2, Share2 } from 'lucide-react';
+import { ArrowLeft, User, Activity, Image as ImageIcon, Wallet, Play, Clock, RefreshCw, Edit2, Trash2, Calendar as CalendarIcon, Copy, UtensilsCrossed, PenLine, ChevronDown, Loader2, CheckCircle2, Share2, Pause } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useToast } from '../../context/ToastContext';
 import { supabase } from '../../supabaseClient';
@@ -29,6 +29,8 @@ import PlansTab from './Tabs/PlansTab';
 import EditExtensionModal from './Modals/EditExtensionModal';
 import ExtendSubscriptionModal from './Modals/ExtendSubscriptionModal';
 import ExtensionHistoryModal from './Modals/ExtensionHistoryModal';
+import PauseModal from './PauseModal';
+import ResumeModal from './ResumeModal';
 
 const PatientDetail = () => {
     const { id } = useParams(); const { showToast } = useToast();
@@ -66,6 +68,8 @@ const PatientDetail = () => {
     const [isExtensionHistoryModalOpen, setIsExtensionHistoryModalOpen] = useState(false);
     const [isEditExtensionModalOpen, setIsEditExtensionModalOpen] = useState(false);
     const [editingExtension, setEditingExtension] = useState(null);
+    const [isPauseModalOpen, setIsPauseModalOpen] = useState(false);
+    const [isResumeModalOpen, setIsResumeModalOpen] = useState(false);
 
     const patient = (patients || []).find(p => String(p.id) === String(id));
 
@@ -264,12 +268,31 @@ const PatientDetail = () => {
 
                     <div className="header-controls flex gap-2 flex-wrap justify-end">
                         {patient.subscription?.status === 'active' && (
+                            <>
+                                <button
+                                    onClick={() => setIsPauseModalOpen(true)}
+                                    className="btn btn-outline text-amber-600 border-amber-200 hover:bg-amber-50"
+                                    title="Pausar suscripción"
+                                >
+                                    <Pause size={16} className="md:mr-1" /> <span className="hidden md:inline">Pausar</span>
+                                </button>
+                                <button
+                                    onClick={() => setIsExtendModalOpen(true)}
+                                    className="btn btn-outline text-amber-600 border-amber-200 hover:bg-amber-50"
+                                    title="Extender suscripción"
+                                >
+                                    <Clock size={16} className="md:mr-1" /> <span className="hidden md:inline">Extender</span>
+                                </button>
+                            </>
+                        )}
+
+                        {patient.subscription?.status === 'paused' && (
                             <button
-                                onClick={() => setIsExtendModalOpen(true)}
-                                className="btn btn-outline text-amber-600 border-amber-200 hover:bg-amber-50"
-                                title="Extender suscripción"
+                                onClick={() => setIsResumeModalOpen(true)}
+                                className="btn btn-outline text-green-600 border-green-200 hover:bg-green-50"
+                                title="Reanudar suscripción"
                             >
-                                <Clock size={16} className="md:mr-1" /> <span className="hidden md:inline">Extender</span>
+                                <Play size={16} className="md:mr-1" /> <span className="hidden md:inline">Reanudar</span>
                             </button>
                         )}
 
@@ -544,6 +567,18 @@ const PatientDetail = () => {
                 onClose={() => setIsPlanStartModalOpen(false)}
                 patientId={id}
                 suggestedStartDate={suggestedStartDate}
+            />
+
+            <PauseModal
+                isOpen={isPauseModalOpen}
+                onClose={() => setIsPauseModalOpen(false)}
+                patient={patient}
+            />
+
+            <ResumeModal
+                isOpen={isResumeModalOpen}
+                onClose={() => setIsResumeModalOpen(false)}
+                patient={patient}
             />
         </div>
     );
