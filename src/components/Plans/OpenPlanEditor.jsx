@@ -160,6 +160,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
         return recipes.filter(r => r.is_active && r.name.toLowerCase().includes(q));
     }, [recipeSearch, recipes]);
 
+    const [clearedKcal, setClearedKcal] = useState({});
     const [copyModalInfo, setCopyModalInfo] = useState(null); // { opt, targetMeal: 'all' }
 
     // Unified advanced copy function for OpenPlanEditor
@@ -192,6 +193,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             ...prev,
             [mealName]: [...(prev[mealName] || []), { local_id: crypto.randomUUID(), recipe_id: recipe.id, free_text: null, recipes: recipe, custom_recipe_data: snapshot }],
         }));
+        setClearedKcal(prev => { const next = { ...prev }; delete next[mealName]; return next; });
         setActiveSearch(null);
         setRecipeSearch('');
     };
@@ -202,6 +204,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             ...prev,
             [mealName]: [...(prev[mealName] || []), { local_id: crypto.randomUUID(), recipe_id: null, free_text: text.trim(), recipes: null, custom_recipe_data: null }],
         }));
+        setClearedKcal(prev => { const next = { ...prev }; delete next[mealName]; return next; });
         setActiveSearch(null);
         setRecipeSearch('');
     };
@@ -212,6 +215,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             ...prev,
             [mealName]: [...(prev[mealName] || []), { local_id: crypto.randomUUID(), recipe_id: null, free_text: null, recipes: null, custom_recipe_data: { name: '', source_recipe_id: null, ingredients: [] } }],
         }));
+        setClearedKcal(prev => { const next = { ...prev }; delete next[mealName]; return next; });
         // Note: New items aren't added to collapsedOptions, so they render automatically expanded.
         setActiveSearch(null);
     };
@@ -227,6 +231,13 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     };
 
     const removeOption = (mealName, idx) => {
+        const opt = sections[mealName] ? sections[mealName][idx] : null;
+        if (opt) {
+            const macros = getOptMacros(opt);
+            if (macros && macros.kcal) {
+                setClearedKcal(prev => ({ ...prev, [mealName]: macros.kcal }));
+            }
+        }
         setSections(prev => ({ ...prev, [mealName]: prev[mealName].filter((_, i) => i !== idx) }));
     };
 
@@ -667,6 +678,13 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                         {/* Add option */}
                                         {activeSearch === meal ? (
                                             <div className="mt-3 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden search-popup-container">
+                                                {clearedKcal[meal] && (
+                                                    <div className="px-3 py-2 border-b border-orange-100 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800/50">
+                                                        <span className="text-xs font-semibold text-orange-600 dark:text-orange-400">
+                                                            Plato anterior: {Math.round(clearedKcal[meal])} kcal
+                                                        </span>
+                                                    </div>
+                                                )}
                                                 <div className="p-2">
                                                     <div className="relative">
                                                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />

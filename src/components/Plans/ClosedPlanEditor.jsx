@@ -133,6 +133,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     };
     const [copyModalInfo, setCopyModalInfo] = useState(null); // { cell }
     const [grid, setGrid] = useState({}); // Stores cell data as { "day_meal": { recipe_id, free_text, ... } }
+    const [clearedKcal, setClearedKcal] = useState({});
 
     // Auto-save debounce refs
     const debounceTimer = useRef(null);
@@ -199,6 +200,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
         const key = `${dayIdx}_${mealName}`;
         const snapshot = recipeToSnapshot(recipe);
         setGrid(prev => ({ ...prev, [key]: { recipe_id: recipe.id, free_text: null, recipes: recipe, custom_recipe_data: snapshot } }));
+        setClearedKcal(prev => { const next = { ...prev }; delete next[key]; return next; });
         setActiveCell(null);
         setRecipeSearch('');
     };
@@ -240,10 +242,18 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     const setCellText = (dayIdx, mealName, text) => {
         const key = `${dayIdx}_${mealName}`;
         setGrid(prev => ({ ...prev, [key]: { recipe_id: null, free_text: text, recipes: null, custom_recipe_data: null } }));
+        setClearedKcal(prev => { const next = { ...prev }; delete next[key]; return next; });
     };
 
     const clearCell = (dayIdx, mealName) => {
         const key = `${dayIdx}_${mealName}`;
+        const cell = grid[key];
+        if (cell) {
+            const macros = getCellMacros(cell);
+            if (macros && macros.kcal) {
+                setClearedKcal(prev => ({ ...prev, [key]: macros.kcal }));
+            }
+        }
         setGrid(prev => { const next = { ...prev }; delete next[key]; return next; });
     };
 
@@ -389,6 +399,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             ...prev,
             [key]: { recipe_id: null, free_text: null, recipes: null, custom_recipe_data: { name: '', source_recipe_id: null, ingredients: [] } },
         }));
+        setClearedKcal(prev => { const next = { ...prev }; delete next[key]; return next; });
         setExpandedCells(prev => new Set(prev).add(key));
         setActiveCell(null);
     };
@@ -865,6 +876,13 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                 {/* Empty state search block */}
                                                                 {isActive && !cell && (
                                                                     <div className="mt-2 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 shadow-inner search-popup-container">
+                                                                        {clearedKcal[key] && (
+                                                                            <div className="px-4 py-2 border-b border-orange-100 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800/50">
+                                                                                <span className="text-xs font-semibold text-orange-600 dark:text-orange-400">
+                                                                                    Plato anterior: {Math.round(clearedKcal[key])} kcal
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
                                                                         <div className="p-2 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 relative">
                                                                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                                                                             <input type="text" value={recipeSearch} onChange={e => setRecipeSearch(e.target.value)} placeholder="Buscar receta por nombre..." className="w-full pl-10 pr-3 py-2 text-sm bg-transparent outline-none dark:text-white" autoFocus />
