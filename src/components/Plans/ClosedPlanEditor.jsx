@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import useUndo from '../../hooks/useUndo';
-import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, List, Grid3X3, Table2, Pencil, FileText, ChevronDown, ChevronUp, Download, PieChart, ClipboardCopy, Loader2, CheckCircle2, CalendarDays, Calculator } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, List, Grid3X3, Table2, Pencil, FileText, ChevronDown, ChevronUp, Download, PieChart, ClipboardCopy, Loader2, CheckCircle2, CalendarDays, Calculator, Pin } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useToast } from '../../context/ToastContext';
 import { calcRecipeMacros } from '../Recipes/Recipes';
@@ -133,7 +133,17 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     };
     const [copyModalInfo, setCopyModalInfo] = useState(null); // { cell }
     const [grid, setGrid] = useState({}); // Stores cell data as { "day_meal": { recipe_id, free_text, ... } }
-    const [clearedKcal, setClearedKcal] = useState({});
+    const [pinnedMacros, setPinnedMacros] = useState({});
+
+    const togglePin = (key, macros) => {
+        if (!macros && !pinnedMacros[key]) return;
+        setPinnedMacros(prev => {
+            const next = { ...prev };
+            if (next[key]) delete next[key];
+            else if (macros) next[key] = macros;
+            return next;
+        });
+    };
 
     // Auto-save debounce refs
     const debounceTimer = useRef(null);
@@ -200,7 +210,6 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
         const key = `${dayIdx}_${mealName}`;
         const snapshot = recipeToSnapshot(recipe);
         setGrid(prev => ({ ...prev, [key]: { recipe_id: recipe.id, free_text: null, recipes: recipe, custom_recipe_data: snapshot } }));
-        setClearedKcal(prev => { const next = { ...prev }; delete next[key]; return next; });
         setActiveCell(null);
         setRecipeSearch('');
     };
@@ -242,18 +251,10 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
     const setCellText = (dayIdx, mealName, text) => {
         const key = `${dayIdx}_${mealName}`;
         setGrid(prev => ({ ...prev, [key]: { recipe_id: null, free_text: text, recipes: null, custom_recipe_data: null } }));
-        setClearedKcal(prev => { const next = { ...prev }; delete next[key]; return next; });
     };
 
     const clearCell = (dayIdx, mealName) => {
         const key = `${dayIdx}_${mealName}`;
-        const cell = grid[key];
-        if (cell) {
-            const macros = getCellMacros(cell);
-            if (macros && macros.kcal) {
-                setClearedKcal(prev => ({ ...prev, [key]: macros.kcal }));
-            }
-        }
         setGrid(prev => { const next = { ...prev }; delete next[key]; return next; });
     };
 
@@ -399,7 +400,6 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             ...prev,
             [key]: { recipe_id: null, free_text: null, recipes: null, custom_recipe_data: { name: '', source_recipe_id: null, ingredients: [] } },
         }));
-        setClearedKcal(prev => { const next = { ...prev }; delete next[key]; return next; });
         setExpandedCells(prev => new Set(prev).add(key));
         setActiveCell(null);
     };
@@ -816,6 +816,17 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
 
                                                     return (
                                                         <div key={meal} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm transition-colors hover:border-slate-300 dark:hover:border-slate-600">
+                                                            {pinnedMacros[key] && (
+                                                                <div className="mb-3 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-2 border border-indigo-100 dark:border-indigo-800/50 rounded-lg flex flex-wrap items-center justify-between text-xs font-semibold shadow-sm transition-colors cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-800/40" onClick={() => togglePin(key, null)} title="Haz clic para quitar referencia">
+                                                                    <span className="flex items-center gap-1.5 text-indigo-700 dark:text-indigo-400"><Pin size={12} className="fill-indigo-700 dark:fill-indigo-400" /> Referencia fijada</span>
+                                                                    <div className="text-indigo-600 dark:text-indigo-300 flex items-center gap-2">
+                                                                        <span>{Math.round(pinnedMacros[key].kcal)} kcal</span>
+                                                                        <span>{pinnedMacros[key].carbs.toFixed(1)}g HC</span>
+                                                                        <span>{pinnedMacros[key].protein.toFixed(1)}g P</span>
+                                                                        <span>{pinnedMacros[key].fat.toFixed(1)}g G</span>
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                             {/* Planning note badge */}
                                                             {planningNotes[key] && (
                                                                 <div className="flex items-center gap-1.5 mb-3 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-lg">
@@ -858,6 +869,11 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                                 </button>
                                                                             ) : (
                                                                                 <>
+                                                                                    {cellMacros && (
+                                                                                        <button onClick={(e) => { e.stopPropagation(); togglePin(key, cellMacros); }} className={`p-2 rounded-lg transition-colors ${pinnedMacros[key] ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400' : 'text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-slate-700'}`} title={pinnedMacros[key] ? "Quitar referencia" : "Fijar macros como referencia"}>
+                                                                                            <Pin size={16} className={pinnedMacros[key] ? "fill-indigo-600 dark:fill-indigo-400" : ""} />
+                                                                                        </button>
+                                                                                    )}
                                                                                     <button onClick={() => toggleDayEditor(key)} className={`p-2 rounded-lg transition-colors ${!collapsedCells.has(key) ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-400' : 'text-slate-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-slate-700'}`} title={!collapsedCells.has(key) ? "Ocultar editor" : "Editar opción"}>
                                                                                         <Pencil size={16} />
                                                                                     </button>
@@ -876,13 +892,6 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                 {/* Empty state search block */}
                                                                 {isActive && !cell && (
                                                                     <div className="mt-2 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800 shadow-inner search-popup-container">
-                                                                        {clearedKcal[key] && (
-                                                                            <div className="px-4 py-2 border-b border-orange-100 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800/50">
-                                                                                <span className="text-xs font-semibold text-orange-600 dark:text-orange-400">
-                                                                                    Plato anterior: {Math.round(clearedKcal[key])} kcal
-                                                                                </span>
-                                                                            </div>
-                                                                        )}
                                                                         <div className="p-2 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 relative">
                                                                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                                                                             <input type="text" value={recipeSearch} onChange={e => setRecipeSearch(e.target.value)} placeholder="Buscar receta por nombre..." className="w-full pl-10 pr-3 py-2 text-sm bg-transparent outline-none dark:text-white" autoFocus />

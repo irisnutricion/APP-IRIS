@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import useUndo from '../../hooks/useUndo';
-import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download, PieChart, GripVertical, Loader2, CheckCircle2, CalendarDays, ClipboardCopy, Calculator } from 'lucide-react';
+import { ArrowLeft, Save, Copy, Search, X, Plus, Trash2, Pencil, FileText, ChevronDown, List, Download, PieChart, GripVertical, Loader2, CheckCircle2, CalendarDays, ClipboardCopy, Calculator, Pin } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useToast } from '../../context/ToastContext';
 import { calcSnapshotMacros, recipeToSnapshot, checkRecipeIsSaved } from './ClosedPlanEditor';
@@ -160,7 +160,17 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
         return recipes.filter(r => r.is_active && r.name.toLowerCase().includes(q));
     }, [recipeSearch, recipes]);
 
-    const [clearedKcal, setClearedKcal] = useState({});
+    const [pinnedMacros, setPinnedMacros] = useState({});
+    const togglePin = (id, macros) => {
+        if (!macros && !pinnedMacros[id]) return;
+        setPinnedMacros(prev => {
+            const next = { ...prev };
+            if (next[id]) delete next[id];
+            else if (macros) next[id] = macros;
+            return next;
+        });
+    };
+
     const [copyModalInfo, setCopyModalInfo] = useState(null); // { opt, targetMeal: 'all' }
 
     // Unified advanced copy function for OpenPlanEditor
@@ -193,7 +203,6 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             ...prev,
             [mealName]: [...(prev[mealName] || []), { local_id: crypto.randomUUID(), recipe_id: recipe.id, free_text: null, recipes: recipe, custom_recipe_data: snapshot }],
         }));
-        setClearedKcal(prev => { const next = { ...prev }; delete next[mealName]; return next; });
         setActiveSearch(null);
         setRecipeSearch('');
     };
@@ -204,7 +213,6 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             ...prev,
             [mealName]: [...(prev[mealName] || []), { local_id: crypto.randomUUID(), recipe_id: null, free_text: text.trim(), recipes: null, custom_recipe_data: null }],
         }));
-        setClearedKcal(prev => { const next = { ...prev }; delete next[mealName]; return next; });
         setActiveSearch(null);
         setRecipeSearch('');
     };
@@ -215,7 +223,6 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             ...prev,
             [mealName]: [...(prev[mealName] || []), { local_id: crypto.randomUUID(), recipe_id: null, free_text: null, recipes: null, custom_recipe_data: { name: '', source_recipe_id: null, ingredients: [] } }],
         }));
-        setClearedKcal(prev => { const next = { ...prev }; delete next[mealName]; return next; });
         // Note: New items aren't added to collapsedOptions, so they render automatically expanded.
         setActiveSearch(null);
     };
@@ -231,13 +238,6 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     };
 
     const removeOption = (mealName, idx) => {
-        const opt = sections[mealName] ? sections[mealName][idx] : null;
-        if (opt) {
-            const macros = getOptMacros(opt);
-            if (macros && macros.kcal) {
-                setClearedKcal(prev => ({ ...prev, [mealName]: macros.kcal }));
-            }
-        }
         setSections(prev => ({ ...prev, [mealName]: prev[mealName].filter((_, i) => i !== idx) }));
     };
 
@@ -625,8 +625,20 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                                 const macros = getOptMacros(opt);
                                                 const isExpanded = !collapsedOptions.has(`${meal}_${idx}`);
                                                 const isSaved = checkRecipeIsSaved(opt, recipes);
+                                                const itemId = opt.local_id || `${meal}_${idx}`;
                                                 return (
-                                                    <div key={opt.local_id || idx} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden group transition-all hover:border-slate-300 dark:hover:border-slate-600">
+                                                    <div key={itemId} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden group transition-all hover:border-slate-300 dark:hover:border-slate-600">
+                                                        {pinnedMacros[itemId] && (
+                                                            <div className="bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1.5 border-b border-indigo-100 dark:border-indigo-800/50 flex flex-wrap items-center justify-between text-xs font-semibold shadow-sm transition-colors cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-800/40" onClick={(e) => { e.stopPropagation(); togglePin(itemId, null); }} title="Haz clic para quitar referencia">
+                                                                <span className="flex items-center gap-1.5 text-indigo-700 dark:text-indigo-400"><Pin size={12} className="fill-indigo-700 dark:fill-indigo-400" /> Referencia fijada</span>
+                                                                <div className="text-indigo-600 dark:text-indigo-300 flex items-center gap-2">
+                                                                    <span>{Math.round(pinnedMacros[itemId].kcal)} kcal</span>
+                                                                    <span>{pinnedMacros[itemId].carbs.toFixed(1)}g HC</span>
+                                                                    <span>{pinnedMacros[itemId].protein.toFixed(1)}g P</span>
+                                                                    <span>{pinnedMacros[itemId].fat.toFixed(1)}g G</span>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                         <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50" onClick={() => (opt.custom_recipe_data || opt.recipes) && toggleEditor(meal, idx)}>
                                                             <div className="flex items-center gap-3 flex-1 min-w-0">
                                                                 <span className="text-xs font-bold text-slate-300 dark:text-slate-600 w-6">{idx + 1}</span>
@@ -645,6 +657,9 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                                                         <span className="text-rose-500">{macros.fat.toFixed(1)}g</span>
                                                                     </div>
                                                                 )}
+                                                                <button onClick={(e) => { e.stopPropagation(); togglePin(itemId, getOptMacros(opt)); }} className={`p-1 transition-opacity ${pinnedMacros[itemId] ? 'text-indigo-500 opacity-100' : 'text-slate-300 hover:text-indigo-500 opacity-0 group-hover:opacity-100'}`} title={pinnedMacros[itemId] ? "Quitar referencia superior" : "Fijar macros actuales arriba del plato como referencia"}>
+                                                                    <Pin size={14} className={pinnedMacros[itemId] ? "fill-indigo-500" : ""} />
+                                                                </button>
                                                                 <button onClick={(e) => { e.stopPropagation(); (opt.custom_recipe_data || opt.recipes) && toggleEditor(meal, idx); }} className="p-1 text-slate-300 hover:text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                     <Pencil size={14} />
                                                                 </button>
@@ -678,13 +693,6 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                         {/* Add option */}
                                         {activeSearch === meal ? (
                                             <div className="mt-3 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden search-popup-container">
-                                                {clearedKcal[meal] && (
-                                                    <div className="px-3 py-2 border-b border-orange-100 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800/50">
-                                                        <span className="text-xs font-semibold text-orange-600 dark:text-orange-400">
-                                                            Plato anterior: {Math.round(clearedKcal[meal])} kcal
-                                                        </span>
-                                                    </div>
-                                                )}
                                                 <div className="p-2">
                                                     <div className="relative">
                                                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
