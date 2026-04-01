@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { X, Calendar, Play } from 'lucide-react';
 import { useData } from '../../context/DataContext';
+import { useToast } from '../../context/ToastContext';
 
 const PauseModal = ({ isOpen, onClose, patient }) => {
     const { togglePatientPause } = useData();
+    const { showToast } = useToast();
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [loading, setLoading] = useState(false);
 
@@ -14,9 +16,11 @@ const PauseModal = ({ isOpen, onClose, patient }) => {
         setLoading(true);
         try {
             await togglePatientPause(patient.id, date);
+            showToast('Suscripción pausada correctamente', 'success');
             onClose();
         } catch (error) {
             console.error("Error pausing subscription:", error);
+            showToast('Error al pausar: ' + error.message, 'error');
         } finally {
             setLoading(false);
         }

@@ -676,7 +676,11 @@ export const DataProvider = ({ children }) => {
         }
 
         const { data, error } = await supabase.from('patients').update(dbUpdates).eq('id', id).select().single();
-        if (!error && data) {
+        if (error) {
+            console.error('Error updating patient in togglePatientPause:', error);
+            throw new Error(error.message || 'Error updating patient');
+        }
+        if (data) {
             // Refetch pauses to get the updated ID or closed status
             const { data: updatedPauses } = await supabase.from('subscription_pauses').select('*').eq('patient_id', id).order('start_date', { ascending: false });
 
@@ -1859,6 +1863,7 @@ export const DataProvider = ({ children }) => {
             addPatient,
             updatePatient,
             deletePatient,
+            togglePatientPause,
             addMeasurement,
             updateMeasurement,
             deleteMeasurement,
