@@ -1,4 +1,35 @@
-import { addDays, parseISO } from 'date-fns';
+import { addDays, parseISO, differenceInDays, format } from 'date-fns';
+
+export const getProjectedEndDateStr = (patient) => {
+    if (!patient?.subscription?.endDate && !patient?.subscription_end) return null;
+    
+    const isPaused = patient.subscription_status === 'paused' || patient.subscription?.status === 'paused';
+    const originalEndDateStr = patient.subscription?.endDate || patient.subscription_end;
+    const originalEnd = parseISO(originalEndDateStr);
+    
+    if (!isPaused) {
+        return originalEndDateStr;
+    }
+
+    const pauseStartDateStr = patient.pause_start_date || patient.subscription?.pauseStartDate;
+    if (!pauseStartDateStr) return originalEndDateStr;
+
+    const pauseStart = parseISO(pauseStartDateStr);
+    const today = new Date();
+    const daysPaused = differenceInDays(today, pauseStart);
+    
+    const projectedEnd = addDays(originalEnd, Math.max(0, daysPaused));
+    return format(projectedEnd, 'yyyy-MM-dd');
+};
+
+export const getProjectedDaysRemaining = (patient) => {
+    const projectedEndStr = getProjectedEndDateStr(patient);
+    if (!projectedEndStr) return null;
+    const projectedEnd = parseISO(projectedEndStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // reset time for accurate diff
+    return differenceInDays(projectedEnd, today);
+};
 
 export const calculateSubscriptionTerms = (patient, payments = []) => {
     try {

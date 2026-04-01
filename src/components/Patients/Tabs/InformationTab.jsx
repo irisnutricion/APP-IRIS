@@ -1,7 +1,7 @@
 import { Edit2, PenLine } from 'lucide-react';
 import { useData } from '../../../context/DataContext';
 import { safeFormat, calculateAge } from '../../../utils/dateUtils';
-// date-fns imports removed (differenceInDays, parseISO were unused)
+import { getProjectedEndDateStr, getProjectedDaysRemaining } from '../../../utils/subscriptionUtils';
 
 const InformationTab = ({ patient, onEditSubscription }) => {
     const { clinicalCategories, updatePatient, referralSources, nutritionists } = useData();
@@ -135,14 +135,14 @@ const InformationTab = ({ patient, onEditSubscription }) => {
                     <div className="flex justify-between border-b border-gray-50 dark:border-slate-700 pb-2">
                         <dt className="text-slate-500 dark:text-slate-400 text-sm">Fin</dt>
                         <dd className="font-medium text-slate-800 dark:text-slate-200">
-                            {safeFormat(patient.subscription?.endDate, 'dd/MM/yyyy')}
+                            {safeFormat(getProjectedEndDateStr(patient), 'dd/MM/yyyy') || safeFormat(patient.subscription?.endDate, 'dd/MM/yyyy')}
                         </dd>
                     </div>
                     {patient.days_remaining !== undefined && patient.days_remaining !== null && (
                         <div className="flex justify-between border-b border-gray-50 dark:border-slate-700 pb-2">
                             <dt className="text-slate-500 dark:text-slate-400 text-sm">Días Restantes</dt>
-                            <dd className={`font-bold ${patient.days_remaining < 0 ? 'text-red-500' : patient.days_remaining <= 5 ? 'text-amber-500' : 'text-green-600'}`}>
-                                {patient.days_remaining < 0 ? `Vencido hace ${Math.abs(patient.days_remaining)} días` : `${patient.days_remaining} días`}
+                            <dd className={`font-bold ${getProjectedDaysRemaining(patient) < 0 ? 'text-red-500' : getProjectedDaysRemaining(patient) <= 5 ? 'text-amber-500' : 'text-green-600'}`}>
+                                {getProjectedDaysRemaining(patient) < 0 ? `Vencido hace ${Math.abs(getProjectedDaysRemaining(patient))} días` : `${getProjectedDaysRemaining(patient)} días`}
                             </dd>
                         </div>
                     )}

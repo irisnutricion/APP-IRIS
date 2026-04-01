@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Search, Plus, Filter, Trash2, CheckCircle, LayoutGrid, List, ChevronRight, Play, Layers } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import PlanStartModal from './PlanStartModal';
+import { getProjectedEndDateStr, getProjectedDaysRemaining } from '../../utils/subscriptionUtils';
 
 const PatientList = () => {
     const { patients, updatePatient, paymentCategories, patientVouchers, voucherTypes } = useData();
@@ -288,11 +289,11 @@ const PatientList = () => {
                                                     })()}
                                                     <div className="flex justify-between items-center mt-0.5 mt-1">
                                                         <span className="capitalize font-medium text-slate-600 dark:text-slate-400">{patient.subscription?.type || '-'}</span>
-                                                        {patient.subscription?.endDate && (
+                                                        {(getProjectedEndDateStr(patient) || patient.subscription?.endDate) && (
                                                             <span className={`${getPatientStatus(patient) === 'warning' ? 'text-amber-600 font-bold' : ''}`}>
-                                                                {format(parseISO(patient.subscription.endDate), 'dd/MM/yyyy')} 
+                                                                {format(parseISO(getProjectedEndDateStr(patient) || patient.subscription.endDate), 'dd/MM/yyyy')} 
                                                                 <span className="ml-1 text-[10px] opacity-75">
-                                                                    ({Math.max(0, differenceInDays(parseISO(patient.subscription.endDate), new Date()))}d)
+                                                                    ({Math.max(0, getProjectedDaysRemaining(patient))}d)
                                                                 </span>
                                                             </span>
                                                         )}
@@ -398,11 +399,11 @@ const PatientList = () => {
                                             </td>
                                             <td className="capitalize text-sm">{p.subscription?.type || '-'}</td>
                                             <td className="text-sm font-mono text-muted">
-                                                {p.subscription?.endDate ? (
+                                                {(getProjectedEndDateStr(p) || p.subscription?.endDate) ? (
                                                     <div className="flex flex-col">
-                                                        <span>{format(parseISO(p.subscription.endDate), 'dd/MM/yyyy')}</span>
+                                                        <span>{format(parseISO(getProjectedEndDateStr(p) || p.subscription.endDate), 'dd/MM/yyyy')}</span>
                                                         <span className="text-xs text-slate-400">
-                                                            {Math.max(0, differenceInDays(parseISO(p.subscription.endDate), new Date()))} días rest.
+                                                            {Math.max(0, getProjectedDaysRemaining(p))} días rest.
                                                         </span>
                                                     </div>
                                                 ) : '-'}
