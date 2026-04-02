@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
 import { useToast } from '../../context/ToastContext';
-import { Save, ArrowLeft, User, Activity, Heart } from 'lucide-react';
+import { Save, ArrowLeft, User, Activity, Heart, FolderOpen } from 'lucide-react';
 
 const PatientForm = ({ isOpen, onClose, initialData }) => {
     const { id } = useParams();
@@ -33,6 +33,7 @@ const PatientForm = ({ isOpen, onClose, initialData }) => {
         referralSource: '',
         nutritionistId: '',
         reviewDay: '',
+        driveFolderId: '',
     });
 
 
@@ -88,6 +89,7 @@ const PatientForm = ({ isOpen, onClose, initialData }) => {
                     })(),
                     nutritionistId: patient.nutritionist_id || '',
                     reviewDay: patient.review_day ? String(patient.review_day) : '',
+                    driveFolderId: patient.drive_folder_id || '',
                 });
             }
         }
@@ -381,6 +383,17 @@ const PatientForm = ({ isOpen, onClose, initialData }) => {
                         <option value="5">Viernes</option>
                     </select>
                     <p className="text-xs text-slate-400 mt-1">El sistema calculará las próximas revisiones basándose en este día.</p>
+                </div>
+                <div className="form-group md:col-span-2">
+                    <label className="form-label flex items-center gap-1.5"><FolderOpen size={14} className="text-blue-500" /> ID Carpeta Google Drive</label>
+                    <input
+                        className="form-input font-mono text-sm"
+                        name="driveFolderId"
+                        value={formData.driveFolderId}
+                        onChange={handleChange}
+                        placeholder="Ej. 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
+                    />
+                    <p className="text-xs text-slate-400 mt-1">ID de la carpeta de Google Drive del cliente. Se completará automáticamente si n8n lo guarda al crear la carpeta.</p>
                 </div>
             </div>
 

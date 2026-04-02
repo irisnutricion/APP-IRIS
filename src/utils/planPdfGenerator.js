@@ -668,5 +668,38 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
     const dateToUse = plan?.created_at ? new Date(plan.created_at) : new Date();
     const dateStr = `${String(dateToUse.getDate()).padStart(2, '0')}-${String(dateToUse.getMonth() + 1).padStart(2, '0')}-${dateToUse.getFullYear()}`;
     const patientName = `${patient?.first_name || ''} ${patient?.last_name || ''}`.trim() || 'Paciente';
-    doc.save(`Plan nutricional ${patientName} ${dateStr}.pdf`);
+    const fileName = `Plan nutricional ${patientName} ${dateStr}.pdf`;
+
+    // Always download locally
+    doc.save(fileName);
+
+    // If patient has a Drive folder configured, send to n8n webhook to upload
+    const driveFolderId = patient?.drive_folder_id;
+    const n8nWebhookUrl = import.meta.env.VITE_N8N_DRIVE_WEBHOOK_URL;
+
+    if (driveFolderId && n8nWebhookUrl) {
+        try {
+            const pdfBase64 = doc.output('datauristring').split(',')[1];
+            const response = await fetch(n8nWebhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    folderId: driveFolderId,
+                    fileName: fileName,
+                    fileBase64: pdfBase64,
+                    patientName: patientName,
+                }),
+            });
+            if (!response.ok) {
+                console.error('Error uploading plan to Drive via n8n:', response.statusText);
+                return { success: true, driveUploaded: false, error: response.statusText };
+            }
+            return { success: true, driveUploaded: true };
+        } catch (err) {
+            console.error('Error calling n8n Drive webhook:', err);
+            return { success: true, driveUploaded: false, error: err.message };
+        }
+    }
+
+    return { success: true, driveUploaded: false };
 };

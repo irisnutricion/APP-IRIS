@@ -517,7 +517,12 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                             const patient = patients.find(p => p.id === plan.patient_id);
                             setIsGeneratingPdf(true);
                             try {
-                                await generatePlanPdf(plan, items, userProfile, patient);
+                                const result = await generatePlanPdf(plan, items, userProfile, patient);
+                                if (result?.driveUploaded) {
+                                    showToast('Plan descargado y guardado en Drive ✅', 'success');
+                                } else if (patient?.drive_folder_id && !result?.driveUploaded) {
+                                    showToast('PDF descargado. Error al subir a Drive.', 'warning');
+                                }
                             } catch (err) {
                                 console.error('Error generating PDF:', err);
                             } finally {
