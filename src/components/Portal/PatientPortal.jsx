@@ -296,33 +296,31 @@ export default function PatientPortal() {
                 {/* Global Review Message — collapsed by default */}
                 {reviewMessage && (
                     <div className="bg-white rounded-2xl shadow-sm border border-[#d09a84]/30 overflow-hidden">
-                        <button
-                            onClick={() => setShowReviewMsg(v => !v)}
-                            className="w-full flex items-center justify-between px-5 py-4 hover:bg-[#fff9f6] transition-colors"
-                        >
-                            <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                📝 Mensaje de Revisión
-                            </h4>
-                            <div className="flex items-center gap-2">
-                                {!showReviewMsg && (
-                                    <span className="text-xs text-[#d09a84] font-semibold">Ver mensaje</span>
-                                )}
+                        {/* Header — always visible */}
+                        <div className="flex items-center justify-between px-5 py-4">
+                            <button
+                                onClick={() => setShowReviewMsg(v => !v)}
+                                className="flex items-center gap-2 flex-1 text-left hover:opacity-70 transition-opacity"
+                            >
+                                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                    📝 Mensaje de Revisión
+                                </h4>
                                 {showReviewMsg
-                                    ? <ChevronUp size={16} className="text-slate-400" />
-                                    : <ChevronDown size={16} className="text-slate-400" />}
-                            </div>
-                        </button>
+                                    ? <ChevronUp size={15} className="text-slate-400" />
+                                    : <ChevronDown size={15} className="text-slate-400" />}
+                            </button>
+                            {/* Copy button — always visible */}
+                            <button
+                                onClick={handleCopy}
+                                className="ml-3 shrink-0 px-3 py-1.5 rounded-lg text-[#d09a84] border border-[#d09a84]/40 hover:bg-[#fff3ef] transition-colors flex items-center gap-1.5 text-xs font-semibold"
+                            >
+                                {isCopied ? <><CheckCheck size={13} /> Copiado</> : <><Copy size={13} /> Copiar mensaje</>}
+                            </button>
+                        </div>
 
+                        {/* Body — only visible when expanded */}
                         {showReviewMsg && (
-                            <div className="border-t border-[#d09a84]/20 bg-[#fff9f6] px-5 pb-5 pt-3">
-                                <div className="flex justify-end mb-2">
-                                    <button
-                                        onClick={handleCopy}
-                                        className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider"
-                                    >
-                                        {isCopied ? <><CheckCheck size={14} /> Copiado</> : <><Copy size={14} /> Copiar texto</>}
-                                    </button>
-                                </div>
+                            <div className="border-t border-[#d09a84]/20 bg-[#fff9f6] px-5 pb-5 pt-4">
                                 <div className="text-sm text-slate-600 whitespace-pre-wrap">
                                     {reviewMessage}
                                 </div>
