@@ -24,6 +24,7 @@ import Recipes from './components/Recipes/Recipes';
 import Recommendations from './components/Recommendations/Recommendations';
 import Templates from './components/Plans/Templates';
 import PatientPortal from './components/Portal/PatientPortal';
+import FinancialDashboard from './components/Settings/FinancialDashboard';
 
 // Wrapper that forces a full remount of PatientDetail when the patient ID changes.
 // This prevents stale plan state from leaking when navigating between patients via Ctrl+K.
@@ -57,15 +58,16 @@ function App() {
                   <Route path="templates" element={<Templates />} />
 
                   {/* Admin-only routes */}
-                  <Route element={<ProtectedRoute requireAdmin />}>
-                    <Route path="renewals" element={<Renewals />} />
-                    <Route path="payments" element={<Payments />} />
-                    <Route path="team" element={<Team />} />
-                    <Route path="statistics" element={<Statistics />} />
-                    <Route path="settings" element={<Settings />} />
-                    <Route path="foods" element={<Foods />} />
-                    <Route path="recipes" element={<Recipes />} />
-                  </Route>
+                    <Route element={<ProtectedRoute requireAdmin />}>
+                      <Route path="renewals" element={<Renewals />} />
+                      <Route path="payments" element={<Payments />} />
+                      <Route path="team" element={<Team />} />
+                      <Route path="statistics" element={<Statistics />} />
+                      <Route path="financiero" element={<FinancialDashboard />} />
+                      <Route path="settings" element={<Settings />} />
+                      <Route path="foods" element={<Foods />} />
+                      <Route path="recipes" element={<Recipes />} />
+                    </Route>
 
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>

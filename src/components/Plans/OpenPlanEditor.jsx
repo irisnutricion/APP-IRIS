@@ -760,6 +760,77 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                 </div>
                             )}
                         </div>
+
+                        {/* ── Nutritional Analyzer Panel ── */}
+                        {dailyAvgMacros && calculatorData && (() => {
+                            const target = calculatorData;
+                            const targetKcal = parseFloat(target.targetKcal || target.target_kcal || 0);
+                            const targetProtein = parseFloat(target.protein_g || (targetKcal * (target.proteinPct || target.protein_pct || 30) / 100 / 4) || 0);
+                            const targetCarbs = parseFloat(target.carbs_g || (targetKcal * (target.carbsPct || target.carbs_pct || 40) / 100 / 4) || 0);
+                            const targetFat = parseFloat(target.fat_g || (targetKcal * (target.fatPct || target.fat_pct || 30) / 100 / 9) || 0);
+
+                            const macroRows = [
+                                { label: 'Calorías', current: Math.round(dailyAvgMacros.kcal), target: Math.round(targetKcal), unit: 'kcal', color: 'orange' },
+                                { label: 'Proteínas', current: Math.round(dailyAvgMacros.protein), target: Math.round(targetProtein), unit: 'g', color: 'blue' },
+                                { label: 'H. de Carbono', current: Math.round(dailyAvgMacros.carbs), target: Math.round(targetCarbs), unit: 'g', color: 'amber' },
+                                { label: 'Grasas', current: Math.round(dailyAvgMacros.fat), target: Math.round(targetFat), unit: 'g', color: 'rose' },
+                            ].filter(r => r.target > 0);
+
+                            const barColors = { orange: 'bg-orange-500', blue: 'bg-blue-500', amber: 'bg-amber-500', rose: 'bg-rose-500' };
+                            const trackColors = { orange: 'bg-orange-100 dark:bg-orange-900/20', blue: 'bg-blue-100 dark:bg-blue-900/20', amber: 'bg-amber-100 dark:bg-amber-900/20', rose: 'bg-rose-100 dark:bg-rose-900/20' };
+
+                            if (macroRows.length === 0) return null;
+
+                            return (
+                                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/10 dark:to-teal-900/10 border border-emerald-200 dark:border-emerald-800/40 rounded-xl p-4">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        <h4 className="text-sm font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wide">Análisis Nutricional vs. Objetivo</h4>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {macroRows.map(row => {
+                                            const pct = row.target > 0 ? Math.min((row.current / row.target) * 100, 130) : 0;
+                                            const diff = row.current - row.target;
+                                            const isOk = Math.abs(diff) <= row.target * 0.1;
+                                            const isOver = diff > row.target * 0.1;
+                                            return (
+                                                <div key={row.label} className="bg-white dark:bg-slate-800/60 rounded-lg p-3 border border-slate-100 dark:border-slate-700/50">
+                                                    <div className="flex justify-between items-baseline mb-2">
+                                                        <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{row.label}</span>
+                                                        <div className="text-right">
+                                                            <span className={`text-sm font-bold ${isOk ? 'text-emerald-600' : isOver ? 'text-rose-500' : 'text-amber-500'}`}>
+                                                                {row.current} {row.unit}
+                                                            </span>
+                                                            <span className="text-xs text-slate-400 ml-1">/ {row.target}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className={`w-full h-2 rounded-full ${trackColors[row.color]}`}>
+                                                        <div
+                                                            className={`h-2 rounded-full transition-all ${isOk ? 'bg-emerald-500' : isOver ? 'bg-rose-400' : barColors[row.color]}`}
+                                                            style={{ width: `${Math.min(pct, 100)}%` }}
+                                                        />
+                                                    </div>
+                                                    <p className={`text-[10px] mt-1 font-medium ${isOk ? 'text-emerald-600 dark:text-emerald-400' : isOver ? 'text-rose-500' : 'text-amber-500'}`}>
+                                                        {isOk ? '✓ En objetivo' : isOver ? `+${diff} ${row.unit} sobre el objetivo` : `${Math.abs(diff)} ${row.unit} por debajo del objetivo`}
+                                                    </p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    {macroRows.length < 4 && (
+                                        <p className="text-xs text-emerald-700/60 dark:text-emerald-400/60 mt-2 text-center">
+                                            💡 Configura la distribución de macros en la Calculadora para ver el análisis completo
+                                        </p>
+                                    )}
+                                </div>
+                            );
+                        })()}
+                        {dailyAvgMacros && !calculatorData && (
+                            <div className="bg-slate-50 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center text-sm text-slate-400 dark:text-slate-500">
+                                💡 Activa la <strong>Calculadora</strong> para comparar los macros del plan con los objetivos del paciente
+                            </div>
+                        )}
+
                         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
                             {mealNames.map(meal => {
                                 const opts = sections[meal] || [];

@@ -113,7 +113,7 @@ const ResetPassword = () => {
                 {error?.includes('Enlace inválido') && (
                     <button
                         onClick={() => navigate('/login')}
-                        className="w-full mt-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-4 rounded-lg transition-colors"
+                        className="w-full mt-4 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-white font-bold py-2 px-4 rounded-lg transition-colors"
                     >
                         Volver al Login
                     </button>

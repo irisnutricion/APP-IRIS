@@ -557,10 +557,10 @@ export const DataProvider = ({ children }) => {
 
         const { data, error } = await supabase.from('patients').update(dbUpdates).eq('id', id).select('*').single();
         if (error) {
-            console.error(error);
-            alert('Error al guardar: ' + error.message);
+            console.error('Error updating patient:', error);
             return;
         }
+
 
         setPatients(prev => prev.map(p => {
             if (p.id !== id) return p;
@@ -1864,10 +1864,11 @@ export const DataProvider = ({ children }) => {
             updatePatient,
             deletePatient,
             togglePatientPause,
+            updatePatientPause,
+            deleteSubscriptionPause,
             addMeasurement,
             updateMeasurement,
             deleteMeasurement,
-
 
 
             plans,

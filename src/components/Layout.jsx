@@ -18,7 +18,8 @@ import {
     ChefHat,
     FileText,
     Search,
-    UtensilsCrossed
+    UtensilsCrossed,
+    TrendingUp
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '../utils/cn';
@@ -62,6 +63,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { icon: Wallet, label: 'Pagos', path: '/payments', adminOnly: true },
         { icon: UsersRound, label: 'Equipo', path: '/team', adminOnly: true },
         { icon: PieChart, label: 'Estadísticas', path: '/statistics', adminOnly: true },
+        { icon: TrendingUp, label: 'Financiero', path: '/financiero', adminOnly: true },
         { icon: Settings, label: 'Configuración', path: '/settings', adminOnly: true },
         { icon: Apple, label: 'Alimentos', path: '/foods', adminOnly: true },
         { icon: ChefHat, label: 'Recetas', path: '/recipes', adminOnly: true },

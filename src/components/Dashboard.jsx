@@ -7,6 +7,7 @@ import { es } from 'date-fns/locale';
 import { useAuth } from '../context/AuthContext';
 import { Bar, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Tooltip, Legend, Filler } from 'chart.js';
+import AlertsWidget from './AlertsWidget';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, Tooltip, Legend, Filler);
 
@@ -205,6 +206,9 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Alerts Widget — full width */}
+            <AlertsWidget />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Reviews Section */}
