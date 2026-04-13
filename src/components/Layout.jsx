@@ -44,6 +44,21 @@ const SidebarItem = ({ icon: Icon, label, path, active }) => (
     </Link>
 );
 
+const BottomNavItem = ({ icon: Icon, label, path, active }) => (
+    <Link
+        to={path}
+        className={cn(
+            "flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors",
+            active
+                ? "text-primary-600 dark:text-primary-400"
+                : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
+        )}
+    >
+        <Icon className="w-5 h-5" />
+        <span className="text-[10px] font-medium">{label}</span>
+    </Link>
+);
+
 
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -152,18 +167,13 @@ export default function Layout() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-slate-50 transition-colors duration-300 dark:bg-slate-950">
+        <div className="min-h-screen bg-slate-50 transition-colors duration-300 dark:bg-slate-950 pb-16 md:pb-0">
             <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
             <div className="md:pl-64 flex flex-col min-h-screen transition-all duration-300">
                 <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between md:justify-end px-4 md:px-8 sticky top-0 z-10 transition-colors duration-300 gap-4 dark:bg-slate-900 dark:border-slate-800">
-                    {/* Mobile Menu Button */}
-                    <button
-                        className="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg dark:text-slate-400 dark:hover:bg-slate-800"
-                        onClick={() => setSidebarOpen(true)}
-                    >
-                        <Menu className="w-6 h-6" />
-                    </button>
+                    {/* Mobile Menu Button - Hidden now as it's in bottom nav, but keeping spacing just in case */}
+                    <div className="md:hidden w-10"></div>
 
                     <div className="flex items-center gap-4">
                         <button
@@ -191,6 +201,20 @@ export default function Layout() {
             </div>
 
             <CommandPalette isOpen={paletteOpen} onClose={() => setPaletteOpen(false)} />
+
+            {/* Mobile Bottom Navigation */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 h-[calc(4rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white border-t border-slate-200 flex items-center justify-around z-40 dark:bg-slate-900 dark:border-slate-800">
+                <BottomNavItem icon={LayoutDashboard} label="Inicio" path="/" active={useLocation().pathname === '/'} />
+                <BottomNavItem icon={Users} label="Clientes" path="/patients" active={useLocation().pathname.startsWith('/patients')} />
+                <BottomNavItem icon={CalendarDays} label="Citas" path="/calendar" active={useLocation().pathname.startsWith('/calendar')} />
+                <button
+                    onClick={() => setSidebarOpen(true)}
+                    className="flex flex-col items-center justify-center w-full h-full space-y-1 text-slate-500 hover:text-slate-900 dark:text-slate-400 transition-colors"
+                >
+                    <Menu className="w-5 h-5" />
+                    <span className="text-[10px] font-medium">Más</span>
+                </button>
+            </div>
         </div>
     );
 }
