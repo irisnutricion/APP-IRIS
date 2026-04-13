@@ -267,7 +267,7 @@ const PatientDetail = () => {
                     </div>
 
                     <div className="header-controls flex gap-2 flex-wrap justify-end">
-                        {patient.subscription?.status === 'active' && (
+                        {['active', 'warning', 'expired'].includes(patient.subscription?.status) && (
                             <>
                                 <button
                                     onClick={() => setIsPauseModalOpen(true)}
