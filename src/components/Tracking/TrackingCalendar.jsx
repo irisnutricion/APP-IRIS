@@ -9,7 +9,7 @@ const TrackingCalendar = () => {
     const { patients, reviews, saveReview } = useData();
     const navigate = useNavigate();
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [viewMode, setViewMode] = useState('week'); // Default to 'week'
+    const [viewMode, setViewMode] = useState('list'); // Default to 'list'
     const [onlyReviews, setOnlyReviews] = useState(false); // Filter to show only reviews
 
     // Event type styles

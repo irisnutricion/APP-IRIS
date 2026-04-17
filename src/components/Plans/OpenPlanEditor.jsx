@@ -58,7 +58,9 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
 
     // Auto-save debounce refs
     const debounceTimer = useRef(null);
-    const isInitialLoad = useRef(true);
+    // BUG FIX: Use isGridReady instead of a fragile setTimeout.
+    // Prevents auto-save from firing with empty sections during initialization.
+    const isGridReady = useRef(false);
     const sectionsRef = useRef(sections);
     sectionsRef.current = sections;
 
@@ -136,7 +138,9 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
     };
 
     useEffect(() => {
-        if (!isInitialLoad.current) return;
+        // Only run once on initial mount to populate sections from DB items.
+        // After this, sections is the source of truth.
+        if (isGridReady.current) return;
         const s = {};
         mealNames.forEach(meal => { s[meal] = []; });
         items.forEach(item => {
@@ -150,8 +154,8 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             });
         });
         setSections(s);
-        // Mark initial load as done after first render
-        setTimeout(() => { isInitialLoad.current = false; }, 500);
+        // Mark sections as ready — auto-save will now be allowed to fire.
+        isGridReady.current = true;
     }, [items, mealNames]);
 
     const recipeResults = useMemo(() => {
@@ -357,7 +361,9 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                     newItems.push({
                         meal_name: meal,
                         day_of_week: null,
-                        recipe_id: opt.recipe_id || null,
+                        // BUG FIX: When an option has a custom snapshot, nullify recipe_id to
+                        // prevent FK violations against the recipes table in the DB layer.
+                        recipe_id: opt.custom_recipe_data ? null : (opt.recipe_id || null),
                         free_text: opt.free_text || null,
                         custom_recipe_data: opt.custom_recipe_data || null,
                     });
@@ -366,29 +372,39 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
             await onSaveItems(newItems);
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 2000);
+        } catch (err) {
+            console.error('OpenPlanEditor: performSave failed:', err);
+            showToast('Error al guardar el plan. Inténtalo de nuevo.', 'error');
         } finally {
             setSaving(false);
         }
     };
 
+    // Ref to keep the latest performSave callable from closures (visibility/unmount handlers)
+    const performSaveRef = useRef(performSave);
+    performSaveRef.current = performSave;
+
     // Auto-save with debounce
     useEffect(() => {
-        if (isInitialLoad.current) return;
+        // BUG FIX: Only trigger auto-save when sections are fully ready (populated from DB items).
+        if (!isGridReady.current) return;
         if (debounceTimer.current) clearTimeout(debounceTimer.current);
         debounceTimer.current = setTimeout(() => {
-            performSave(sectionsRef.current);
+            performSaveRef.current(sectionsRef.current);
             debounceTimer.current = null;
         }, 1500);
         return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
     }, [sections, planName, mealNames, planIndications, calculatorData]);
 
+    // BUG FIX: flushSave now returns the promise so callers can await it.
     const flushSaveRef = useRef();
     flushSaveRef.current = () => {
         if (debounceTimer.current) {
             clearTimeout(debounceTimer.current);
-            performSave(sectionsRef.current);
             debounceTimer.current = null;
+            return performSaveRef.current(sectionsRef.current);
         }
+        return Promise.resolve();
     };
 
     // Auto-save on unmount or when user switches browser tab
@@ -399,13 +415,14 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
         document.addEventListener('visibilitychange', handleVisibility);
         return () => {
             document.removeEventListener('visibilitychange', handleVisibility);
+            // On unmount, flush any pending save (fire-and-forget; component is already unmounting)
             if (flushSaveRef.current) flushSaveRef.current();
         };
     }, []);
 
-    // Force save on exit if there are unsaved changes pending
+    // BUG FIX: await the flush so the last edit is never lost when navigating back.
     const handleClose = async () => {
-        flushSaveRef.current();
+        if (flushSaveRef.current) await flushSaveRef.current();
         onBack();
     };
 

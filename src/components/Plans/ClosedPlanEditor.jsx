@@ -147,7 +147,10 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
 
     // Auto-save debounce refs
     const debounceTimer = useRef(null);
-    const isInitialLoad = useRef(true);
+    // BUG FIX: Use isGridReady instead of a fragile setTimeout.
+    // The flag is set to true only once the grid is fully populated from items,
+    // preventing the auto-save from firing with an empty grid during initialization.
+    const isGridReady = useRef(false);
     const gridRef = useRef(grid);
     gridRef.current = grid;
 
@@ -183,7 +186,9 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
 
     // Initialize grid from items
     useEffect(() => {
-        if (!isInitialLoad.current) return;
+        // Only run once on initial mount to populate the grid from the DB items.
+        // After this, the grid is the source of truth.
+        if (isGridReady.current) return;
         const g = {};
         items.forEach(item => {
             const key = `${item.day_of_week}_${item.meal_name}`;
@@ -195,8 +200,9 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             };
         });
         setGrid(g);
-        // Mark initial load as done after first render
-        setTimeout(() => { isInitialLoad.current = false; }, 500);
+        // Mark grid as ready AFTER setting it — this runs after the state update
+        // is committed, so the auto-save useEffect will see the populated grid.
+        isGridReady.current = true;
     }, [items]);
 
     const recipeResults = useMemo(() => {
@@ -430,7 +436,9 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                         newItems.push({
                             meal_name: meal,
                             day_of_week: dayIdx,
-                            recipe_id: cell.recipe_id || null,
+                            // BUG FIX: When a cell has a custom snapshot, nullify recipe_id to
+                            // prevent FK violations against the recipes table in the DB layer.
+                            recipe_id: cell.custom_recipe_data ? null : (cell.recipe_id || null),
                             free_text: cell.free_text || null,
                             custom_recipe_data: cell.custom_recipe_data || null,
                         });
@@ -440,29 +448,41 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
             await onSaveItems(newItems);
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 2000);
+        } catch (err) {
+            console.error('ClosedPlanEditor: performSave failed:', err);
+            showToast('Error al guardar el plan. Inténtalo de nuevo.', 'error');
         } finally {
             setSaving(false);
         }
     };
 
+    // Ref to keep the latest performSave callable from closures (visibility/unmount handlers)
+    const performSaveRef = useRef(performSave);
+    performSaveRef.current = performSave;
+
     // Auto-save with debounce
     useEffect(() => {
-        if (isInitialLoad.current) return;
+        // BUG FIX: Only trigger auto-save when the grid is fully ready (populated from DB items).
+        // Previously used isInitialLoad with a fragile 500ms setTimeout that could fire
+        // before the grid useEffect ran, causing the plan to be saved empty.
+        if (!isGridReady.current) return;
         if (debounceTimer.current) clearTimeout(debounceTimer.current);
         debounceTimer.current = setTimeout(() => {
-            performSave(gridRef.current);
+            performSaveRef.current(gridRef.current);
             debounceTimer.current = null;
         }, 1500);
         return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
     }, [grid, planName, mealNames, planIndications, planningNotes, calculatorData]);
 
+    // BUG FIX: flushSave now returns the promise so callers can await it.
     const flushSaveRef = useRef();
     flushSaveRef.current = () => {
         if (debounceTimer.current) {
             clearTimeout(debounceTimer.current);
-            performSave(gridRef.current);
             debounceTimer.current = null;
+            return performSaveRef.current(gridRef.current);
         }
+        return Promise.resolve();
     };
 
     // Auto-save on unmount or when user switches browser tab
@@ -473,13 +493,14 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
         document.addEventListener('visibilitychange', handleVisibility);
         return () => {
             document.removeEventListener('visibilitychange', handleVisibility);
+            // On unmount, flush any pending save (fire-and-forget; component is already unmounting)
             if (flushSaveRef.current) flushSaveRef.current();
         };
     }, []);
 
-    // Force save on exit if there are unsaved changes pending
+    // BUG FIX: await the flush so the last edit is never lost when navigating back.
     const handleClose = async () => {
-        flushSaveRef.current();
+        if (flushSaveRef.current) await flushSaveRef.current();
         onBack();
     };
 

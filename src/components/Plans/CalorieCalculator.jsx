@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Calculator, User, Activity, Utensils } from 'lucide-react';
 
 const ACTIVITY_PRESETS = [
@@ -18,15 +18,15 @@ const DEFAULT_DISTRIBUTION = [
 ];
 
 export default function CalorieCalculator({ patient, mealNames, initialData, onChange }) {
-    // Derive gender from patient.sex field (check common Spanish/English values)
+    // Derive fallback gender from patient.sex field
     const patientGender = (() => {
         const s = (patient?.sex || '').toLowerCase();
         if (s === 'mujer' || s === 'female' || s === 'f') return 'female';
         if (s === 'hombre' || s === 'male' || s === 'm') return 'male';
-        return 'male'; // default
+        return 'male';
     })();
 
-    // Derive age from birth_date
+    // Derive fallback age from birth_date
     const patientAge = (() => {
         if (!patient?.birth_date) return '';
         const birth = new Date(patient.birth_date);
@@ -37,22 +37,23 @@ export default function CalorieCalculator({ patient, mealNames, initialData, onC
         return age > 0 ? age : '';
     })();
 
-    const [gender, setGender] = useState(patientGender);
-    const [age, setAge]       = useState(patientAge);
-    const [height, setHeight] = useState(() => patient?.height || '');
-    const [weight, setWeight] = useState(() => patient?.weight || '');
-    const [activity, setActivity] = useState(1.55);
-    const [customActivity, setCustomActivity] = useState('');
+    // BUG FIX: Prioritize saved initialData values over patient defaults.
+    // This ensures that modifications made in this calculator are restored on re-open.
+    // Priority: initialData → patient profile → empty/default
+    const [gender, setGender] = useState(() => initialData?.gender || patientGender);
+    const [age, setAge]       = useState(() => initialData?.age ?? patientAge);
+    const [height, setHeight] = useState(() => initialData?.height ?? patient?.height ?? '');
+    const [weight, setWeight] = useState(() => initialData?.weight ?? patient?.weight ?? '');
+    const [activity, setActivity] = useState(() => initialData?.activity ?? 1.55);
+    const [customActivity, setCustomActivity] = useState(() => initialData?.customActivity ?? '');
 
-    // Build distribution rows from plan mealNames if provided, else use defaults
+    // Build distribution rows from plan mealNames if provided, else use saved/defaults
     const initialDist = useMemo(() => {
         if (initialData?.distribution?.length > 0) return initialData.distribution;
         if (!mealNames || mealNames.length === 0) return DEFAULT_DISTRIBUTION;
-        const totalDefault = DEFAULT_DISTRIBUTION.length;
-        return mealNames.map((meal, i) => {
+        return mealNames.map((meal) => {
             const found = DEFAULT_DISTRIBUTION.find(d => d.meal.toLowerCase() === meal.toLowerCase());
             if (found) return { meal, pct: found.pct };
-            // Distribute remaining equally
             return { meal, pct: Math.round(100 / mealNames.length) };
         });
     }, [mealNames, initialData]);
@@ -79,14 +80,33 @@ export default function CalorieCalculator({ patient, mealNames, initialData, onC
     const tdee = bmr !== null ? Math.round(bmr * effectiveActivity) : null;
     const effectiveTdee = targetKcal ? parseInt(targetKcal, 10) : tdee;
 
+    // BUG FIX: Use a ref to skip the onChange call on the very first render.
+    // Previously, the useEffect fired immediately on mount, causing a "ghost save"
+    // that overwrote the stored data with freshly recalculated (potentially different) values.
+    const isFirstRender = useRef(true);
+
     useEffect(() => {
+        // Skip on initial mount to avoid triggering an unnecessary auto-save
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
+        }
         if (onChange) {
+            // BUG FIX: Include ALL calculator parameters in the saved payload, not just
+            // targetKcal and distribution. This allows full restoration on re-open.
             onChange({
                 targetKcal: effectiveTdee,
-                distribution: distribution.map(d => ({ ...d, pct: parseFloat(d.pct) || 0 }))
+                distribution: distribution.map(d => ({ ...d, pct: parseFloat(d.pct) || 0 })),
+                // Calculation parameters — saved so they can be restored exactly as the user left them
+                gender,
+                age: parseFloat(age) || null,
+                height: parseFloat(height) || null,
+                weight: parseFloat(weight) || null,
+                activity,
+                customActivity: customActivity || null,
             });
         }
-    }, [effectiveTdee, distribution]);
+    }, [effectiveTdee, distribution, gender, age, height, weight, activity, customActivity]);
 
     const totalPct = distribution.reduce((s, d) => s + (parseFloat(d.pct) || 0), 0);
 

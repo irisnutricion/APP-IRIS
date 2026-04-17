@@ -121,7 +121,6 @@ const MeasurementModal = ({ isOpen, onClose, onSave, initialData }) => {
                                 className="form-input"
                                 value={formData.weight}
                                 onChange={e => setFormData({ ...formData, weight: e.target.value })}
-                                required
                             />
                         </div>
                     </div>

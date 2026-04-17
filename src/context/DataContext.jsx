@@ -1189,30 +1189,54 @@ export const DataProvider = ({ children }) => {
 
     const saveMealPlanItems = async (planId, items) => {
         const performSave = async () => {
-            // Replace all items for a plan
-            await supabase.from('meal_plan_items').delete().eq('plan_id', planId);
+            // Replace all items for a plan — check DELETE error before proceeding
+            const { error: deleteError } = await supabase.from('meal_plan_items').delete().eq('plan_id', planId);
+            if (deleteError) {
+                console.error('saveMealPlanItems: Error deleting old items:', deleteError);
+                throw deleteError; // Stop here — don't wipe data without being able to reinsert
+            }
+
             if (items.length > 0) {
                 const toInsert = items.map((item, idx) => ({
                     plan_id: planId,
                     meal_name: item.meal_name,
                     day_of_week: item.day_of_week || null,
                     sort_order: idx,
-                    recipe_id: item.recipe_id || null,
+                    // BUG FIX: If the cell has custom_recipe_data (snapshot), clear recipe_id
+                    // to avoid FK violations when the original recipe was deleted or modified.
+                    recipe_id: item.custom_recipe_data ? null : (item.recipe_id || null),
                     free_text: item.free_text || null,
                     custom_recipe_data: item.custom_recipe_data || null,
                 }));
-                await supabase.from('meal_plan_items').insert(toInsert);
+
+                const { error: insertError } = await supabase.from('meal_plan_items').insert(toInsert);
+                if (insertError) {
+                    console.error('saveMealPlanItems: Error inserting new items:', insertError);
+                    throw insertError;
+                }
             }
+
             // Refetch items to get joined recipe data
-            const { data } = await supabase.from('meal_plan_items').select('*, recipes(*, recipe_ingredients(*, foods(*)))').eq('plan_id', planId).order('sort_order', { ascending: true });
+            const { data, error: fetchError } = await supabase
+                .from('meal_plan_items')
+                .select('*, recipes(*, recipe_ingredients(*, foods(*)))')
+                .eq('plan_id', planId)
+                .order('sort_order', { ascending: true });
+
+            if (fetchError) {
+                console.error('saveMealPlanItems: Error refetching items:', fetchError);
+            }
             if (data) {
                 setMealPlanItems(prev => [...prev.filter(i => i.plan_id !== planId), ...data]);
             }
         };
 
-        // Queue saves for the same planId to prevent concurrent DELETE/INSERT which causes duplication
+        // Queue saves for the same planId to prevent concurrent DELETE/INSERT races
         const currentPromise = savePromises.current[planId]
-            ? savePromises.current[planId].then(performSave).catch(performSave)
+            ? savePromises.current[planId].then(performSave).catch(err => {
+                console.error('saveMealPlanItems: queued save failed:', err);
+                return performSave();
+              })
             : performSave();
 
         savePromises.current[planId] = currentPromise;
@@ -1224,7 +1248,7 @@ export const DataProvider = ({ children }) => {
             }
         });
 
-        return savePromises.current[planId];
+        return currentPromise;
     };
 
 
