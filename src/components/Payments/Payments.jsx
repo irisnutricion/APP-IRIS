@@ -219,7 +219,7 @@ const Payments = () => {
                                                 {format(parseISO(p.date), 'dd/MM/yyyy')}
                                             </td>
                                             <td className="font-medium text-slate-900 dark:text-white">
-                                                {patient?.name || (p.payer_email ? <span className="text-slate-500 italic" title="Cliente no encontrado">{p.payer_email}</span> : 'Cliente desconocido')}
+                                                {patient?.name || (p.payer_email ? <span className="text-slate-500 italic" title="Cliente no encontrado">{p.payer_email}</span> : <span className="text-slate-400 italic">General / Sin cliente</span>)}
                                             </td>
                                             <td className="text-sm text-slate-600 dark:text-slate-400 max-w-xs truncate">
                                                 {p.concept || '-'}

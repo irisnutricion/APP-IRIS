@@ -124,6 +124,7 @@ const PaymentModal = ({ isOpen, onClose, initialData = null, defaultPatientId = 
         e.preventDefault();
         const dataToSave = {
             ...formData,
+            patient_id: formData.patient_id || null, // Allow payments without patient
             amount: parseFloat(formData.amount),
             payment_rate_id: formData.plan_id || null, // Map plan_id (holding rate ID) to payment_rate_id
             category: formData.category || null,       // Ensure empty string is null (UUID error fix)
@@ -163,7 +164,7 @@ const PaymentModal = ({ isOpen, onClose, initialData = null, defaultPatientId = 
                                     Email de origen: <strong>{initialData.payer_email}</strong>
                                 </div>
                             )}
-                            <label className="form-label">Cliente</label>
+                            <label className="form-label">Cliente (Opcional)</label>
                             <select
                                 className="form-select"
                                 value={formData.patient_id}
@@ -176,9 +177,8 @@ const PaymentModal = ({ isOpen, onClose, initialData = null, defaultPatientId = 
                                         category: selectedP?.payment_category_id || '' // Auto-select category
                                     });
                                 }}
-                                required
                             >
-                                <option value="">Seleccionar cliente...</option>
+                                <option value="">Ninguno / Sin asignar</option>
                                 {patients.sort((a, b) => a.name.localeCompare(b.name)).map(p => (
                                     <option key={p.id} value={p.id}>{p.name}</option>
                                 ))}
