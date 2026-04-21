@@ -267,7 +267,7 @@ const PatientDetail = () => {
                     </div>
 
                     <div className="header-controls flex gap-2 flex-wrap justify-end">
-                        {['active', 'warning', 'expired'].includes(patient.subscription?.status) && (
+                        {patient.subscription?.status !== 'paused' && patient.subscriptionHistory?.length > 0 && (
                             <>
                                 <button
                                     onClick={() => setIsPauseModalOpen(true)}
@@ -276,13 +276,15 @@ const PatientDetail = () => {
                                 >
                                     <Pause size={16} className="md:mr-1" /> <span className="hidden md:inline">Pausar</span>
                                 </button>
-                                <button
-                                    onClick={() => setIsExtendModalOpen(true)}
-                                    className="btn btn-outline text-amber-600 border-amber-200 hover:bg-amber-50"
-                                    title="Extender suscripción"
-                                >
-                                    <Clock size={16} className="md:mr-1" /> <span className="hidden md:inline">Extender</span>
-                                </button>
+                                {['active', 'warning'].includes(patient.subscription?.status) && (
+                                    <button
+                                        onClick={() => setIsExtendModalOpen(true)}
+                                        className="btn btn-outline text-amber-600 border-amber-200 hover:bg-amber-50"
+                                        title="Extender suscripción"
+                                    >
+                                        <Clock size={16} className="md:mr-1" /> <span className="hidden md:inline">Extender</span>
+                                    </button>
+                                )}
                             </>
                         )}
 

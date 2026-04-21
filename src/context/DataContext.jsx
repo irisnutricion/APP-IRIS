@@ -629,6 +629,21 @@ export const DataProvider = ({ children }) => {
 
             if (pauseError) console.error('Error creating pause record:', pauseError);
 
+            // Also mark the latest patient_subscriptions record as paused
+            const { data: latestSubs } = await supabase
+                .from('patient_subscriptions')
+                .select('id')
+                .eq('patient_id', id)
+                .order('start_date', { ascending: false })
+                .limit(1);
+
+            if (latestSubs && latestSubs.length > 0) {
+                await supabase
+                    .from('patient_subscriptions')
+                    .update({ status: 'paused' })
+                    .eq('id', latestSubs[0].id);
+            }
+
         } else {
             // Resume
             // Find open pause record
@@ -670,7 +685,7 @@ export const DataProvider = ({ children }) => {
             if (activeSubs && activeSubs.length > 0) {
                 await supabase
                     .from('patient_subscriptions')
-                    .update({ end_date: newEndDateStr })
+                    .update({ end_date: newEndDateStr, status: 'active' })
                     .eq('id', activeSubs[0].id);
             }
         }
