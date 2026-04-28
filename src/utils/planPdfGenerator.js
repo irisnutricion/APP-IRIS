@@ -590,6 +590,8 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 const n = getOptName(i);
                 if (!seen.has(n)) { seen.add(n); mealItems.push(i); }
             });
+
+            console.log(`[PDF] Meal: "${meal}", items: ${mealItems.length}, yPos: ${yPos}`);
             if (mealItems.length === 0) continue;
 
             const expected = meal.toLowerCase().includes('desayun') ? 'Desayuno' :
@@ -605,16 +607,25 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                             expected === 'Cena' ? 'Cenas' : meal;
 
             const cover = await loadImageAsBase64(`/covers/${plural}.png`);
+            console.log(`[PDF] Cover for "${plural}": ${cover ? 'loaded' : 'NOT FOUND'}, yPos before: ${yPos}`);
+
+            // Always start each meal section on a fresh page
+            doc.addPage();
+            const contentPageNum = doc.internal.getNumberOfPages();
+            console.log(`[PDF] Content page created: ${contentPageNum}`);
+
             if (cover) {
-                if (yPos > 30) doc.addPage();
+                // Insert the decorative cover BEFORE the content page
+                // We need to go back and insert it, so instead we do: cover first, then content
+                // Strategy: draw cover on current page, then add content page
                 doc.addImage(cover, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
                 coverPages.add(doc.internal.getNumberOfPages());
                 doc.addPage();
-                drawHeader(plural);
-                yPos = 35;
-            } else {
-                checkPageBreak(yPos, 20, plural);
             }
+
+            drawHeader(plural);
+            yPos = 35;
+            console.log(`[PDF] yPos after header: ${yPos}, current page: ${doc.internal.getNumberOfPages()}`);
 
             for (const opt of mealItems) {
                 const name = getOptName(opt);
@@ -623,16 +634,19 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 const lines = doc.splitTextToSize(name, 174);
                 const boxH = (lines.length * 4) + 2;
 
+                console.log(`[PDF]   Recipe: "${name}", yPos: ${yPos}, boxH: ${boxH}`);
+
                 // Ensure title box fits; create new page if needed
                 if (yPos + boxH + 10 > 275) {
+                    console.log(`[PDF]   PAGE BREAK before title, yPos was: ${yPos}`);
                     doc.addPage();
                     drawHeader(plural);
                     yPos = 35;
                 }
 
-                doc.setFillColor(...brandLight);
+                doc.setFillColor(brandLight[0], brandLight[1], brandLight[2]);
                 doc.rect(margins.left, yPos - 3, 180, boxH, 'F');
-                doc.setTextColor(...primaryColor);
+                doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(10);
                 doc.text(lines, 105, yPos + (boxH / 2) - 3, { align: 'center', baseline: 'middle' });
@@ -655,18 +669,19 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
 
                 for (let li = 0; li < maxLines; li++) {
                     if (yPos + lineH > 275) {
+                        console.log(`[PDF]   PAGE BREAK during ingredients li=${li}, yPos=${yPos}`);
                         doc.addPage();
                         drawHeader(plural);
                         yPos = 35;
                     }
                     if (li < ingLines.length) {
-                        doc.setTextColor(...textColor);
+                        doc.setTextColor(textColor[0], textColor[1], textColor[2]);
                         doc.setFont('helvetica', 'normal');
                         doc.setFontSize(9);
                         doc.text(ingLines[li], leftColX, yPos);
                     }
                     if (li < descLines.length) {
-                        doc.setTextColor(...lightColor);
+                        doc.setTextColor(lightColor[0], lightColor[1], lightColor[2]);
                         doc.setFont('helvetica', 'normal');
                         doc.setFontSize(9);
                         doc.text(descLines[li], rightColX, yPos);
