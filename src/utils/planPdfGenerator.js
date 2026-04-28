@@ -209,7 +209,9 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
             doc.addPage();
             drawHeader(sectionName);
             yPos = 35;
+            return 35;
         }
+        return currentY;
     };
 
     // ----- COVER ----- //
@@ -523,11 +525,8 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 const lines = doc.splitTextToSize(titleText, 174);
                 const boxH = (lines.length * 4) + 2;
 
-                let leftH = 0;
-                ings.forEach(ing => { leftH += (doc.splitTextToSize(ing, 85).length * 4.5); });
-                let rightH = (desc ? doc.splitTextToSize(desc, 85).length * 4.4 : 0);
-
-                checkPageBreak(yPos, boxH + Math.max(leftH, rightH) + 15);
+                // Check if at least the meal label + title box fits
+                checkPageBreak(yPos, boxH + 15, dayName);
 
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(11);
@@ -543,21 +542,44 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 doc.text(lines, 105, yPos + (boxH / 2) - 3, { align: 'center', baseline: 'middle' });
 
                 yPos += boxH + 2;
-                let lY = yPos, rY = yPos;
-                doc.setTextColor(...textColor);
-                doc.setFontSize(9);
+
+                // Render ingredients and description with per-line page break checks
+                const leftColX = margins.left + 2;
+                const rightColX = margins.left + 95;
+                const colWidth = 85;
+
+                const ingLines = [];
                 ings.forEach(ing => {
-                    const il = doc.splitTextToSize(ing, 85);
-                    doc.text(il, margins.left + 2, lY);
-                    lY += il.length * 4.5;
+                    const il = doc.splitTextToSize(ing, colWidth);
+                    il.forEach(l => ingLines.push(l));
                 });
-                if (desc) {
-                    doc.setTextColor(...lightColor);
-                    const dl = doc.splitTextToSize(desc, 85);
-                    doc.text(dl, margins.left + 95, rY);
-                    rY += dl.length * 4.4;
+
+                const descLines = desc ? doc.splitTextToSize(desc, colWidth) : [];
+                const maxLines = Math.max(ingLines.length, descLines.length);
+                const lineH = 4.5;
+
+                doc.setFontSize(9);
+                for (let li = 0; li < maxLines; li++) {
+                    if (yPos + lineH > 275) {
+                        doc.addPage();
+                        drawHeader(dayName);
+                        yPos = 35;
+                    }
+
+                    if (li < ingLines.length) {
+                        doc.setTextColor(...textColor);
+                        doc.setFont('helvetica', 'normal');
+                        doc.text(ingLines[li], leftColX, yPos);
+                    }
+                    if (li < descLines.length) {
+                        doc.setTextColor(...lightColor);
+                        doc.setFont('helvetica', 'normal');
+                        doc.text(descLines[li], rightColX, yPos);
+                    }
+                    yPos += lineH;
                 }
-                yPos = Math.max(lY, rY) + 5;
+
+                yPos += 5;
             });
         }
     } else {
@@ -601,11 +623,8 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 const lines = doc.splitTextToSize(name, 174);
                 const boxH = (lines.length * 4) + 2;
 
-                let leftH = 0;
-                ings.forEach(ing => { leftH += (doc.splitTextToSize(ing, 85).length * 4.5); });
-                let rightH = (desc ? doc.splitTextToSize(desc, 85).length * 4.4 : 0);
-
-                checkPageBreak(yPos, boxH + Math.max(leftH, rightH) + 10);
+                // Check if at least the title box fits; if not, new page
+                checkPageBreak(yPos, boxH + 10, plural);
 
                 doc.setFillColor(...brandLight);
                 doc.rect(margins.left, yPos - 3, 180, boxH, 'F');
@@ -615,21 +634,52 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 doc.text(lines, 105, yPos + (boxH / 2) - 3, { align: 'center', baseline: 'middle' });
 
                 yPos += boxH + 2;
-                let lY = yPos, rY = yPos;
+
+                // Render ingredients on the left, checking page breaks per ingredient
                 doc.setTextColor(...textColor);
                 doc.setFontSize(9);
+                doc.setFont('helvetica', 'normal');
+
+                // We render left (ingredients) and right (description) in two passes
+                // First measure to know the column heights, then render with page-break awareness
+                const leftColX = margins.left + 2;
+                const rightColX = margins.left + 95;
+                const colWidth = 85;
+
+                // Render both columns together, line by line, with page break checks
+                const ingLines = [];
                 ings.forEach(ing => {
-                    const il = doc.splitTextToSize(ing, 85);
-                    doc.text(il, margins.left + 2, lY);
-                    lY += il.length * 4.5;
+                    const il = doc.splitTextToSize(ing, colWidth);
+                    il.forEach(l => ingLines.push(l));
                 });
-                if (desc) {
-                    doc.setTextColor(...lightColor);
-                    const dl = doc.splitTextToSize(desc, 85);
-                    doc.text(dl, margins.left + 95, rY);
-                    rY += dl.length * 4.4;
+
+                const descLines = desc ? doc.splitTextToSize(desc, colWidth) : [];
+
+                const maxLines = Math.max(ingLines.length, descLines.length);
+                const lineH = 4.5;
+
+                for (let li = 0; li < maxLines; li++) {
+                    // Check if this line fits on the current page
+                    if (yPos + lineH > 275) {
+                        doc.addPage();
+                        drawHeader(plural);
+                        yPos = 35;
+                    }
+
+                    if (li < ingLines.length) {
+                        doc.setTextColor(...textColor);
+                        doc.setFont('helvetica', 'normal');
+                        doc.text(ingLines[li], leftColX, yPos);
+                    }
+                    if (li < descLines.length) {
+                        doc.setTextColor(...lightColor);
+                        doc.setFont('helvetica', 'normal');
+                        doc.text(descLines[li], rightColX, yPos);
+                    }
+                    yPos += lineH;
                 }
-                yPos = Math.max(lY, rY) + 5;
+
+                yPos += 5;
             });
         }
     }
