@@ -461,30 +461,31 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
         doc.text("Resumen de Opciones", margins.left + 3, yPos + 5.5);
         yPos += 16;
 
-        mealNames.forEach(meal => {
+        for (const meal of mealNames) {
             const mealItems = [];
             const seen = new Set();
             items.filter(i => i.meal_name === meal).forEach(i => {
                 const n = getOptName(i);
                 if (!seen.has(n)) { seen.add(n); mealItems.push(i); }
             });
-            if (mealItems.length === 0) return;
+            if (mealItems.length === 0) continue;
 
-            checkPageBreak(yPos, 15);
+            checkPageBreak(yPos, 15, 'Resumen de Opciones');
             doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...secondaryColor);
+            doc.setTextColor(...secondaryColor);  // reset after possible page break
             doc.text(meal, margins.left, yPos);
             yPos += 5;
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(...textColor);
-            mealItems.forEach(opt => {
+
+            for (const opt of mealItems) {
                 const lines = doc.splitTextToSize(`• ${getOptName(opt)}`, 175);
-                checkPageBreak(yPos, lines.length * 4.5);
+                checkPageBreak(yPos, lines.length * 4.5, 'Resumen de Opciones');
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...textColor);   // CRITICAL: reset after possible page break
                 doc.text(lines, margins.left + 5, yPos);
                 yPos += lines.length * 4.5;
-            });
+            }
             yPos += 4;
-        });
+        }
     }
 
     // --- DETAILS ---
