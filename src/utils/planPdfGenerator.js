@@ -616,15 +616,19 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 checkPageBreak(yPos, 20, plural);
             }
 
-            mealItems.forEach(opt => {
+            for (const opt of mealItems) {
                 const name = getOptName(opt);
                 const desc = getOptDescription(opt);
                 const ings = getOptIngredients(opt);
                 const lines = doc.splitTextToSize(name, 174);
                 const boxH = (lines.length * 4) + 2;
 
-                // Check if at least the title box fits; if not, new page
-                checkPageBreak(yPos, boxH + 10, plural);
+                // Ensure title box fits; create new page if needed
+                if (yPos + boxH + 10 > 275) {
+                    doc.addPage();
+                    drawHeader(plural);
+                    yPos = 35;
+                }
 
                 doc.setFillColor(...brandLight);
                 doc.rect(margins.left, yPos - 3, 180, boxH, 'F');
@@ -632,55 +636,45 @@ export const generatePlanPdf = async (plan, items, nutritionist, patient) => {
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(10);
                 doc.text(lines, 105, yPos + (boxH / 2) - 3, { align: 'center', baseline: 'middle' });
-
                 yPos += boxH + 2;
 
-                // Render ingredients on the left, checking page breaks per ingredient
-                doc.setTextColor(...textColor);
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'normal');
-
-                // We render left (ingredients) and right (description) in two passes
-                // First measure to know the column heights, then render with page-break awareness
+                // Flatten all ingredient lines
                 const leftColX = margins.left + 2;
                 const rightColX = margins.left + 95;
                 const colWidth = 85;
-
-                // Render both columns together, line by line, with page break checks
-                const ingLines = [];
-                ings.forEach(ing => {
-                    const il = doc.splitTextToSize(ing, colWidth);
-                    il.forEach(l => ingLines.push(l));
-                });
-
-                const descLines = desc ? doc.splitTextToSize(desc, colWidth) : [];
-
-                const maxLines = Math.max(ingLines.length, descLines.length);
                 const lineH = 4.5;
 
+                const ingLines = [];
+                for (const ing of ings) {
+                    for (const l of doc.splitTextToSize(ing, colWidth)) {
+                        ingLines.push(l);
+                    }
+                }
+                const descLines = desc ? doc.splitTextToSize(desc, colWidth) : [];
+                const maxLines = Math.max(ingLines.length, descLines.length);
+
                 for (let li = 0; li < maxLines; li++) {
-                    // Check if this line fits on the current page
                     if (yPos + lineH > 275) {
                         doc.addPage();
                         drawHeader(plural);
                         yPos = 35;
                     }
-
                     if (li < ingLines.length) {
                         doc.setTextColor(...textColor);
                         doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(9);
                         doc.text(ingLines[li], leftColX, yPos);
                     }
                     if (li < descLines.length) {
                         doc.setTextColor(...lightColor);
                         doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(9);
                         doc.text(descLines[li], rightColX, yPos);
                     }
                     yPos += lineH;
                 }
-
                 yPos += 5;
-            });
+            }
         }
     }
 
