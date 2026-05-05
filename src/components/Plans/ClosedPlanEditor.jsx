@@ -717,7 +717,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                     </div>
                                                                 </DraggableRecipe>
                                                                 <div className="absolute top-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover/cell:opacity-100 transition-opacity z-10">
-                                                                    <button onClick={(e) => { e.stopPropagation(); setCopyModalInfo({ cell, targetDay: (dayIdx + 1).toString(), targetMeal: '' }); }} className="p-0.5 text-slate-300 hover:text-emerald-500" title="Copiar a otra parte">
+                                                                    <button onClick={(e) => { e.stopPropagation(); setCopyModalInfo({ cell, targetDay: (dayIdx + 1).toString(), targetMeal: meal }); }} className="p-0.5 text-slate-300 hover:text-emerald-500" title="Copiar a otra parte">
                                                                         <ClipboardCopy size={11} />
                                                                     </button>
                                                                     <button onClick={(e) => { e.stopPropagation(); toggleGridEditor(key); }} className="p-0.5 text-slate-300 hover:text-primary-500">
@@ -903,7 +903,7 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                                                                                     <button onClick={() => toggleDayEditor(key)} className={`p-2 rounded-lg transition-colors ${!collapsedCells.has(key) ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-400' : 'text-slate-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-slate-700'}`} title={!collapsedCells.has(key) ? "Ocultar editor" : "Editar opción"}>
                                                                                         <Pencil size={16} />
                                                                                     </button>
-                                                                                    <button onClick={() => setCopyModalInfo({ cell, targetDay: (dayIdx + 1).toString(), targetMeal: '' })} className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Copiar receta a otra comida o día">
+                                                                                    <button onClick={() => setCopyModalInfo({ cell, targetDay: (dayIdx + 1).toString(), targetMeal: meal })} className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Copiar receta a otra comida o día">
                                                                                         <ClipboardCopy size={16} />
                                                                                     </button>
                                                                                     <button onClick={() => clearCell(dayIdx + 1, meal)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-slate-700 rounded-lg transition-colors" title="Eliminar opción">

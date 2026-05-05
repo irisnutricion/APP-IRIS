@@ -685,7 +685,7 @@ export default function OpenPlanEditor({ plan, items, onBack, onSaveItems, onUpd
                                                                 <button onClick={(e) => { e.stopPropagation(); (opt.custom_recipe_data || opt.recipes) && toggleEditor(meal, idx); }} className="p-1 text-slate-300 hover:text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                     <Pencil size={14} />
                                                                 </button>
-                                                                <button onClick={(e) => { e.stopPropagation(); setCopyModalInfo({ opt, targetMeal: '' }); }} className="p-1 text-slate-300 hover:text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Copiar receta a otra comida">
+                                                                <button onClick={(e) => { e.stopPropagation(); setCopyModalInfo({ opt, targetMeal: meal }); }} className="p-1 text-slate-300 hover:text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Copiar receta a otra comida">
                                                                     <ClipboardCopy size={14} />
                                                                 </button>
                                                                 <button onClick={(e) => { e.stopPropagation(); duplicateOption(meal, opt, idx); }} className="p-1 text-slate-300 hover:text-green-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Duplicar en esta misma comida">
