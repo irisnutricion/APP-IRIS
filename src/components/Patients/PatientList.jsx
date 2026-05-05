@@ -78,7 +78,7 @@ const PatientList = () => {
             }
         });
         return groups;
-    }, [patients, searchTerm, filterByScope, filterCategory]);
+    }, [patients, searchTerm, filterByScope, filterCategory, activeTab]);
 
     // List View Filtered Data
     const filteredListPatients = useMemo(() => {
@@ -107,7 +107,7 @@ const PatientList = () => {
             if (sortOption === 'date_asc') return new Date(a.created_at || 0) - new Date(b.created_at || 0);
             return 0;
         });
-    }, [patients, searchTerm, filterStatus, sortOption, filterByScope, filterCategory]);
+    }, [patients, searchTerm, filterStatus, sortOption, filterByScope, filterCategory, activeTab]);
 
     // Drag Handlers
     const handleDragStart = (e, patientId) => {
