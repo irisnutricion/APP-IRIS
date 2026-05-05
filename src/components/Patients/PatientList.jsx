@@ -8,7 +8,7 @@ import PlanStartModal from './PlanStartModal';
 import { getProjectedEndDateStr, getProjectedDaysRemaining } from '../../utils/subscriptionUtils';
 
 const PatientList = () => {
-    const { patients, updatePatient, paymentCategories, patientVouchers, voucherTypes } = useData();
+    const { patients, updatePatient, paymentCategories, patientVouchers, voucherTypes, appointments } = useData();
     const { isAdmin, nutritionistId } = useAuth();
     const navigate = useNavigate(); // Hook initialized
     const [searchTerm, setSearchTerm] = useState('');
@@ -17,6 +17,7 @@ const PatientList = () => {
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterScope, setFilterScope] = useState('all'); // 'all' (everyone) or 'mine' (only my cases)
     const [filterCategory, setFilterCategory] = useState('all'); // filtering by tag/category
+    const [activeTab, setActiveTab] = useState('online'); // 'online' or 'presencial'
 
     const [planStartModalOpen, setPlanStartModalOpen] = useState(false);
     const [selectedPatientId, setSelectedPatientId] = useState(null);
@@ -58,6 +59,10 @@ const PatientList = () => {
         const groups = { waiting: [], active: [], warning: [], pending_payment: [], paused: [], finished: [], expired: [] };
 
         patients.forEach(p => {
+            // Modality Filter
+            const pModality = p.modality || 'online';
+            if (pModality !== activeTab) return;
+
             // Scope Filter
             if (!filterByScope(p)) return;
 
@@ -78,6 +83,10 @@ const PatientList = () => {
     // List View Filtered Data
     const filteredListPatients = useMemo(() => {
         let result = patients.filter(p => {
+            // Modality Filter
+            const pModality = p.modality || 'online';
+            if (pModality !== activeTab) return false;
+
             if (!filterByScope(p)) return false;
 
             // Category Filter
@@ -146,6 +155,21 @@ const PatientList = () => {
                             />
                         </div>
 
+                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm p-1 rounded-lg flex">
+                            <button
+                                onClick={() => setActiveTab('online')}
+                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'online' ? 'bg-primary-50 text-primary-700 shadow-sm dark:bg-primary-900/50 dark:text-primary-100' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
+                            >
+                                Online
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('presencial')}
+                                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === 'presencial' ? 'bg-primary-50 text-primary-700 shadow-sm dark:bg-primary-900/50 dark:text-primary-100' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'}`}
+                            >
+                                Presencial
+                            </button>
+                        </div>
+
                         <select
                             className="form-select text-sm py-2 shadow-sm border-slate-200 dark:border-slate-700 w-full md:w-48 bg-white dark:bg-slate-800"
                             value={filterCategory}
@@ -177,22 +201,24 @@ const PatientList = () => {
                             </div>
                         )}
 
-                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm p-1 rounded-lg flex">
-                            <button
-                                onClick={() => setViewMode('list')}
-                                className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-slate-100 text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                                title="Vista de Lista"
-                            >
-                                <List size={18} />
-                            </button>
-                            <button
-                                onClick={() => setViewMode('board')}
-                                className={`p-1.5 rounded-md transition-colors ${viewMode === 'board' ? 'bg-slate-100 text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                                title="Vista de Tablero"
-                            >
-                                <LayoutGrid size={18} />
-                            </button>
-                        </div>
+                        {activeTab === 'online' && (
+                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm p-1 rounded-lg flex">
+                                <button
+                                    onClick={() => setViewMode('list')}
+                                    className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-slate-100 text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                    title="Vista de Lista"
+                                >
+                                    <List size={18} />
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('board')}
+                                    className={`p-1.5 rounded-md transition-colors ${viewMode === 'board' ? 'bg-slate-100 text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                    title="Vista de Tablero"
+                                >
+                                    <LayoutGrid size={18} />
+                                </button>
+                            </div>
+                        )}
 
                         <Link to="/patients/new" className="btn btn-primary shadow-md btn-sm text-sm" style={{ padding: '0.5rem 1rem' }}>
                             <Plus size={16} /> Nuevo
@@ -201,7 +227,7 @@ const PatientList = () => {
                 </div>
             </div>
 
-            {viewMode === 'board' ? (
+            {activeTab === 'online' && viewMode === 'board' ? (
                 <div className="flex flex-col h-full overflow-hidden">
                     {/* Drop Zone for Finished - Only visible when dragging */}
                     <div
@@ -313,20 +339,22 @@ const PatientList = () => {
                     {/* Toolbar */}
                     <div className="card-header flex flex-col md:flex-row gap-4 mb-4 justify-between items-center" style={{ alignItems: 'center' }}>
                         <div className="flex gap-4 w-full md:w-auto">
-                            <select
-                                className="form-select text-sm w-full md:w-48"
-                                value={filterStatus}
-                                onChange={(e) => setFilterStatus(e.target.value)}
-                            >
-                                <option value="all">Todos los Estados</option>
-                                <option value="active">Activos</option>
-                                <option value="waiting">A la espera</option>
-                                <option value="warning">Última Semana</option>
-                                <option value="pending_payment">Pendiente Pago</option>
-                                <option value="paused">Pausados</option>
-                                <option value="expired">Caducados</option>
-                                <option value="finished">Finalizados</option>
-                            </select>
+                                {activeTab === 'online' && (
+                                    <select
+                                        className="form-select text-sm w-full md:w-48"
+                                        value={filterStatus}
+                                        onChange={(e) => setFilterStatus(e.target.value)}
+                                    >
+                                        <option value="all">Todos los Estados</option>
+                                        <option value="active">Activos</option>
+                                        <option value="waiting">A la espera</option>
+                                        <option value="warning">Última Semana</option>
+                                        <option value="pending_payment">Pendiente Pago</option>
+                                        <option value="paused">Pausados</option>
+                                        <option value="expired">Caducados</option>
+                                        <option value="finished">Finalizados</option>
+                                    </select>
+                                )}
 
                             <select
                                 className="form-select text-sm w-full md:w-48"
@@ -346,9 +374,10 @@ const PatientList = () => {
                                 <tr>
                                     <th>Cliente</th>
                                     <th>Etiqueta</th>
-                                    <th>Estado</th>
-                                    <th>Plan</th>
-                                    <th>Renovación</th>
+                                    {activeTab === 'online' && <th>Estado</th>}
+                                    {activeTab === 'online' && <th>Plan</th>}
+                                    {activeTab === 'online' && <th>Renovación</th>}
+                                    {activeTab === 'presencial' && <th>Próxima / Última Cita</th>}
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
@@ -392,22 +421,56 @@ const PatientList = () => {
                                                     );
                                                 })()}
                                             </td>
-                                            <td>
-                                                <span className={`badge badge-${getPatientStatus(p) === 'active' ? 'success' : 'warning'}`}>
-                                                    {columns[getPatientStatus(p)]?.title || getPatientStatus(p)}
-                                                </span>
-                                            </td>
-                                            <td className="capitalize text-sm">{p.subscription?.type || '-'}</td>
-                                            <td className="text-sm font-mono text-muted">
-                                                {(getProjectedEndDateStr(p) || p.subscription?.endDate) ? (
-                                                    <div className="flex flex-col">
-                                                        <span>{format(parseISO(getProjectedEndDateStr(p) || p.subscription.endDate), 'dd/MM/yyyy')}</span>
-                                                        <span className="text-xs text-slate-400">
-                                                            {Math.max(0, getProjectedDaysRemaining(p))} días rest.
-                                                        </span>
-                                                    </div>
-                                                ) : '-'}
-                                            </td>
+                                            {activeTab === 'online' && (
+                                                <td>
+                                                    <span className={`badge badge-${getPatientStatus(p) === 'active' ? 'success' : 'warning'}`}>
+                                                        {columns[getPatientStatus(p)]?.title || getPatientStatus(p)}
+                                                    </span>
+                                                </td>
+                                            )}
+                                            {activeTab === 'online' && (
+                                                <td className="capitalize text-sm">{p.subscription?.type || '-'}</td>
+                                            )}
+                                            {activeTab === 'online' && (
+                                                <td className="text-sm font-mono text-muted">
+                                                    {(getProjectedEndDateStr(p) || p.subscription?.endDate) ? (
+                                                        <div className="flex flex-col">
+                                                            <span>{format(parseISO(getProjectedEndDateStr(p) || p.subscription.endDate), 'dd/MM/yyyy')}</span>
+                                                            <span className="text-xs text-slate-400">
+                                                                {Math.max(0, getProjectedDaysRemaining(p))} días rest.
+                                                            </span>
+                                                        </div>
+                                                    ) : '-'}
+                                                </td>
+                                            )}
+                                            {activeTab === 'presencial' && (
+                                                <td className="text-sm font-mono text-muted">
+                                                    {(() => {
+                                                        const patientAppointments = appointments?.filter(a => a.patient_id === p.id).sort((a, b) => new Date(a.start_time) - new Date(b.start_time)) || [];
+                                                        if (patientAppointments.length === 0) return '-';
+                                                        
+                                                        const now = new Date();
+                                                        const futureAppointments = patientAppointments.filter(a => new Date(a.start_time) >= now);
+                                                        const pastAppointments = patientAppointments.filter(a => new Date(a.start_time) < now);
+                                                        
+                                                        if (futureAppointments.length > 0) {
+                                                            return (
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-primary-600 font-medium">Próx: {format(parseISO(futureAppointments[0].start_time), 'dd/MM/yyyy')}</span>
+                                                                </div>
+                                                            );
+                                                        } else if (pastAppointments.length > 0) {
+                                                            const last = pastAppointments[pastAppointments.length - 1];
+                                                            return (
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-slate-500">Últ: {format(parseISO(last.start_time), 'dd/MM/yyyy')}</span>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return '-';
+                                                    })()}
+                                                </td>
+                                            )}
                                             <td>
                                                 <Link to={`/patients/${p.id}`} className="btn btn-ghost btn-sm btn-icon">
                                                     <ChevronRight size={18} />

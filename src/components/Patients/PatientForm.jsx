@@ -34,6 +34,7 @@ const PatientForm = ({ isOpen, onClose, initialData }) => {
         nutritionistId: '',
         reviewDay: '',
         driveFolderId: '',
+        modality: 'online', // Default to online
     });
 
 
@@ -90,6 +91,7 @@ const PatientForm = ({ isOpen, onClose, initialData }) => {
                     nutritionistId: patient.nutritionist_id || '',
                     reviewDay: patient.review_day ? String(patient.review_day) : '',
                     driveFolderId: patient.drive_folder_id || '',
+                    modality: patient.modality || 'online',
                 });
             }
         }
@@ -240,6 +242,33 @@ const PatientForm = ({ isOpen, onClose, initialData }) => {
                         ))}
                     </select>
                     <p className="text-xs text-gray-400 mt-1">Esta etiqueta se asignará automáticamente a los pagos de este cliente.</p>
+                </div>
+                <div className="form-group md:col-span-2">
+                    <label className="form-label">Modalidad del Cliente</label>
+                    <div className="flex gap-4 mt-1">
+                        <label className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-slate-50 flex-1 transition-colors">
+                            <input
+                                type="radio"
+                                name="modality"
+                                value="online"
+                                checked={formData.modality === 'online'}
+                                onChange={handleChange}
+                                className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                            />
+                            <span className="font-medium text-slate-700">Online (Suscripciones)</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer p-3 border rounded-lg hover:bg-slate-50 flex-1 transition-colors">
+                            <input
+                                type="radio"
+                                name="modality"
+                                value="presencial"
+                                checked={formData.modality === 'presencial'}
+                                onChange={handleChange}
+                                className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                            />
+                            <span className="font-medium text-slate-700">Presencial (Consultas sueltas)</span>
+                        </label>
+                    </div>
                 </div>
             </div>
 

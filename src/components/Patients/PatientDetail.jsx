@@ -267,53 +267,57 @@ const PatientDetail = () => {
                     </div>
 
                     <div className="header-controls flex gap-2 flex-wrap justify-end">
-                        {patient.subscription?.status !== 'paused' && patient.subscriptionHistory?.length > 0 && (
+                        {patient.modality !== 'presencial' && (
                             <>
-                                <button
-                                    onClick={() => setIsPauseModalOpen(true)}
-                                    className="btn btn-outline text-amber-600 border-amber-200 hover:bg-amber-50"
-                                    title="Pausar suscripción"
-                                >
-                                    <Pause size={16} className="md:mr-1" /> <span className="hidden md:inline">Pausar</span>
-                                </button>
-                                {['active', 'warning'].includes(patient.subscription?.status) && (
+                                {patient.subscription?.status !== 'paused' && patient.subscriptionHistory?.length > 0 && (
+                                    <>
+                                        <button
+                                            onClick={() => setIsPauseModalOpen(true)}
+                                            className="btn btn-outline text-amber-600 border-amber-200 hover:bg-amber-50"
+                                            title="Pausar suscripción"
+                                        >
+                                            <Pause size={16} className="md:mr-1" /> <span className="hidden md:inline">Pausar</span>
+                                        </button>
+                                        {['active', 'warning'].includes(patient.subscription?.status) && (
+                                            <button
+                                                onClick={() => setIsExtendModalOpen(true)}
+                                                className="btn btn-outline text-amber-600 border-amber-200 hover:bg-amber-50"
+                                                title="Extender suscripción"
+                                            >
+                                                <Clock size={16} className="md:mr-1" /> <span className="hidden md:inline">Extender</span>
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+
+                                {patient.subscription?.status === 'paused' && (
                                     <button
-                                        onClick={() => setIsExtendModalOpen(true)}
-                                        className="btn btn-outline text-amber-600 border-amber-200 hover:bg-amber-50"
-                                        title="Extender suscripción"
+                                        onClick={() => setIsResumeModalOpen(true)}
+                                        className="btn btn-outline text-green-600 border-green-200 hover:bg-green-50"
+                                        title="Reanudar suscripción"
                                     >
-                                        <Clock size={16} className="md:mr-1" /> <span className="hidden md:inline">Extender</span>
+                                        <Play size={16} className="md:mr-1" /> <span className="hidden md:inline">Reanudar</span>
+                                    </button>
+                                )}
+
+                                {(!patient.subscriptionHistory || patient.subscriptionHistory.length === 0) && patient.subscription?.status !== 'active' && (
+                                    <button
+                                        onClick={() => setIsPlanStartModalOpen(true)}
+                                        className="btn btn-primary"
+                                    >
+                                        <Play size={16} className="md:mr-1" /> <span className="hidden md:inline">Iniciar Plan</span>
+                                    </button>
+                                )}
+
+                                {(patient.subscription?.status === 'active' || (patient.subscriptionHistory && patient.subscriptionHistory.length > 0)) && (
+                                    <button
+                                        onClick={() => setIsRenewalModalOpen(true)}
+                                        className="btn btn-outline text-blue-600 border-blue-200 hover:bg-blue-50"
+                                    >
+                                        <RefreshCw size={16} className="md:mr-1" /> <span className="hidden md:inline">Renovar</span>
                                     </button>
                                 )}
                             </>
-                        )}
-
-                        {patient.subscription?.status === 'paused' && (
-                            <button
-                                onClick={() => setIsResumeModalOpen(true)}
-                                className="btn btn-outline text-green-600 border-green-200 hover:bg-green-50"
-                                title="Reanudar suscripción"
-                            >
-                                <Play size={16} className="md:mr-1" /> <span className="hidden md:inline">Reanudar</span>
-                            </button>
-                        )}
-
-                        {(!patient.subscriptionHistory || patient.subscriptionHistory.length === 0) && patient.subscription?.status !== 'active' && (
-                            <button
-                                onClick={() => setIsPlanStartModalOpen(true)}
-                                className="btn btn-primary"
-                            >
-                                <Play size={16} className="md:mr-1" /> <span className="hidden md:inline">Iniciar Plan</span>
-                            </button>
-                        )}
-
-                        {(patient.subscription?.status === 'active' || (patient.subscriptionHistory && patient.subscriptionHistory.length > 0)) && (
-                            <button
-                                onClick={() => setIsRenewalModalOpen(true)}
-                                className="btn btn-outline text-blue-600 border-blue-200 hover:bg-blue-50"
-                            >
-                                <RefreshCw size={16} className="md:mr-1" /> <span className="hidden md:inline">Renovar</span>
-                            </button>
                         )}
 
                         <button onClick={() => setIsEditModalOpen(true)} className="btn btn-outline" title="Editar datos">

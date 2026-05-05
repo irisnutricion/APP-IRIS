@@ -110,52 +110,54 @@ const InformationTab = ({ patient, onEditSubscription }) => {
                 </dl>
             </div>
 
-            <div className="card relative group">
-                <div className="card-header border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                    <h3 className="card-title text-primary dark:text-primary-400 font-bold">Suscripción</h3>
-                    <button
-                        onClick={() => onEditSubscription()}
-                        className="p-1 text-slate-400 hover:text-primary-600 transition-colors rounded hover:bg-slate-100 dark:hover:bg-slate-700"
-                        title="Editar suscripción"
-                    >
-                        <Edit2 size={16} />
-                    </button>
-                </div>
-                <dl className="space-y-4 p-6">
-                    <div className="flex justify-between border-b border-gray-50 dark:border-slate-700 pb-2">
-                        <dt className="text-slate-500 dark:text-slate-400 text-sm">Plan</dt>
-                        <dd className="font-medium capitalize text-slate-800 dark:text-slate-200">{patient.subscription?.type}</dd>
+            {patient.modality !== 'presencial' && (
+                <div className="card relative group">
+                    <div className="card-header border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                        <h3 className="card-title text-primary dark:text-primary-400 font-bold">Suscripción</h3>
+                        <button
+                            onClick={() => onEditSubscription()}
+                            className="p-1 text-slate-400 hover:text-primary-600 transition-colors rounded hover:bg-slate-100 dark:hover:bg-slate-700"
+                            title="Editar suscripción"
+                        >
+                            <Edit2 size={16} />
+                        </button>
                     </div>
-                    <div className="flex justify-between border-b border-gray-50 dark:border-slate-700 pb-2">
-                        <dt className="text-slate-500 dark:text-slate-400 text-sm">Inicio</dt>
-                        <dd className="font-medium text-slate-800 dark:text-slate-200">
-                            {safeFormat(patient.subscription?.startDate, 'dd/MM/yyyy')}
-                        </dd>
-                    </div>
-                    <div className="flex justify-between border-b border-gray-50 dark:border-slate-700 pb-2">
-                        <dt className="text-slate-500 dark:text-slate-400 text-sm">Fin</dt>
-                        <dd className="font-medium text-slate-800 dark:text-slate-200">
-                            {safeFormat(getProjectedEndDateStr(patient), 'dd/MM/yyyy') || safeFormat(patient.subscription?.endDate, 'dd/MM/yyyy')}
-                        </dd>
-                    </div>
-                    {patient.days_remaining !== undefined && patient.days_remaining !== null && (
+                    <dl className="space-y-4 p-6">
                         <div className="flex justify-between border-b border-gray-50 dark:border-slate-700 pb-2">
-                            <dt className="text-slate-500 dark:text-slate-400 text-sm">Días Restantes</dt>
-                            <dd className={`font-bold ${getProjectedDaysRemaining(patient) < 0 ? 'text-red-500' : getProjectedDaysRemaining(patient) <= 5 ? 'text-amber-500' : 'text-green-600'}`}>
-                                {getProjectedDaysRemaining(patient) < 0 ? `Vencido hace ${Math.abs(getProjectedDaysRemaining(patient))} días` : `${getProjectedDaysRemaining(patient)} días`}
+                            <dt className="text-slate-500 dark:text-slate-400 text-sm">Plan</dt>
+                            <dd className="font-medium capitalize text-slate-800 dark:text-slate-200">{patient.subscription?.type}</dd>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-50 dark:border-slate-700 pb-2">
+                            <dt className="text-slate-500 dark:text-slate-400 text-sm">Inicio</dt>
+                            <dd className="font-medium text-slate-800 dark:text-slate-200">
+                                {safeFormat(patient.subscription?.startDate, 'dd/MM/yyyy')}
                             </dd>
                         </div>
-                    )}
-                    <div className="flex justify-between pt-2">
-                        <dt className="text-muted text-sm">Estado</dt>
-                        <dd>
-                            <span className={statusInfo.badgeClass}>
-                                {statusInfo.label}
-                            </span>
-                        </dd>
-                    </div>
-                </dl>
-            </div>
+                        <div className="flex justify-between border-b border-gray-50 dark:border-slate-700 pb-2">
+                            <dt className="text-slate-500 dark:text-slate-400 text-sm">Fin</dt>
+                            <dd className="font-medium text-slate-800 dark:text-slate-200">
+                                {safeFormat(getProjectedEndDateStr(patient), 'dd/MM/yyyy') || safeFormat(patient.subscription?.endDate, 'dd/MM/yyyy')}
+                            </dd>
+                        </div>
+                        {patient.days_remaining !== undefined && patient.days_remaining !== null && (
+                            <div className="flex justify-between border-b border-gray-50 dark:border-slate-700 pb-2">
+                                <dt className="text-slate-500 dark:text-slate-400 text-sm">Días Restantes</dt>
+                                <dd className={`font-bold ${getProjectedDaysRemaining(patient) < 0 ? 'text-red-500' : getProjectedDaysRemaining(patient) <= 5 ? 'text-amber-500' : 'text-green-600'}`}>
+                                    {getProjectedDaysRemaining(patient) < 0 ? `Vencido hace ${Math.abs(getProjectedDaysRemaining(patient))} días` : `${getProjectedDaysRemaining(patient)} días`}
+                                </dd>
+                            </div>
+                        )}
+                        <div className="flex justify-between pt-2">
+                            <dt className="text-muted text-sm">Estado</dt>
+                            <dd>
+                                <span className={statusInfo.badgeClass}>
+                                    {statusInfo.label}
+                                </span>
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+            )}
 
             {/* Notas / Anotaciones */}
             <div className="card md:col-span-2">

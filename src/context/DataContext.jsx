@@ -3,7 +3,8 @@ import { addDays, differenceInDays, parseISO, format } from 'date-fns';
 import { supabase } from '../supabaseClient';
 import { useAuth } from './AuthContext';
 
-export const calculateDynamicPatientStatus = (dbStatus, startDateStr, endDateStr, history = []) => {
+export const calculateDynamicPatientStatus = (dbStatus, startDateStr, endDateStr, history = [], modality = 'online') => {
+    if (modality === 'presencial') return 'active';
     if (['pending_payment', 'paused', 'finished'].includes(dbStatus)) {
         return dbStatus;
     }
@@ -162,10 +163,11 @@ export const DataProvider = ({ children }) => {
                         subscriptionsHistoryData.filter(h => h.patient_id === p.id).sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
                         : [];
 
-                    const dynamicStatus = calculateDynamicPatientStatus(p.subscription_status, p.subscription_start, p.subscription_end, mappedHistory);
+                    const dynamicStatus = calculateDynamicPatientStatus(p.subscription_status, p.subscription_start, p.subscription_end, mappedHistory, p.modality || 'online');
 
                     return {
                         ...p,
+                        modality: p.modality || 'online',
                         name: (p.first_name || p.last_name) ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : (p.name || 'Cliente'),
                         subscriptionHistory: mappedHistory,
                         subscriptionPauses: [],
@@ -265,6 +267,7 @@ export const DataProvider = ({ children }) => {
             referral_source: patient.referralSource || null, // Ensure empty string becomes null for UUID
             nutritionist_id: patient.nutritionistId || null,
             payment_category_id: patient.paymentCategoryId || null, // Center / Channel
+            modality: patient.modality || 'online',
             subscription_type: patient.subscription?.type,
             subscription_type_id: patient.subscription?.subscriptionTypeId || null,
             payment_rate_id: patient.subscription?.paymentRateId || null,
@@ -540,6 +543,7 @@ export const DataProvider = ({ children }) => {
         }
         // Handle referralSource -> referral_source mapping
         if (updates.referralSource !== undefined) dbUpdates.referral_source = updates.referralSource || null;
+        if (updates.modality !== undefined) dbUpdates.modality = updates.modality;
         // Handle nutritionistId -> nutritionist_id mapping
         if (updates.nutritionistId !== undefined) dbUpdates.nutritionist_id = updates.nutritionistId || null;
         // Handle dislikedFoods -> disliked_foods mapping
