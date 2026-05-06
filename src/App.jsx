@@ -17,14 +17,13 @@ import Settings from './components/Settings/Settings';
 import Statistics from './components/Settings/Statistics';
 import TrackingCalendar from './components/Tracking/TrackingCalendar';
 import Tasks from './components/Tasks/Tasks';
-import Payments from './components/Payments/Payments';
-import Team from './components/Team/Team';
-import Foods from './components/Foods/Foods';
-import Recipes from './components/Recipes/Recipes';
-import Recommendations from './components/Recommendations/Recommendations';
-import Templates from './components/Plans/Templates';
 import PatientPortal from './components/Portal/PatientPortal';
-import FinancialDashboard from './components/Settings/FinancialDashboard';
+
+// Manager Components
+import TemplatesManager from './components/Templates/TemplatesManager';
+import AccountingManager from './components/Accounting/AccountingManager';
+import DatabaseManager from './components/Database/DatabaseManager';
+import AdministrationManager from './components/Administration/AdministrationManager';
 
 // Wrapper that forces a full remount of PatientDetail when the patient ID changes.
 // This prevents stale plan state from leaking when navigating between patients via Ctrl+K.
@@ -54,19 +53,14 @@ function App() {
                   <Route path="calendar" element={<AppointmentsCalendar />} />
                   <Route path="tracking" element={<TrackingCalendar />} />
                   <Route path="tasks" element={<Tasks />} />
-                  <Route path="recommendations" element={<Recommendations />} />
-                  <Route path="templates" element={<Templates />} />
+                  <Route path="templates" element={<TemplatesManager />} />
 
                   {/* Admin-only routes */}
                     <Route element={<ProtectedRoute requireAdmin />}>
-                      <Route path="renewals" element={<Renewals />} />
-                      <Route path="payments" element={<Payments />} />
-                      <Route path="team" element={<Team />} />
+                      <Route path="accounting" element={<AccountingManager />} />
+                      <Route path="database" element={<DatabaseManager />} />
+                      <Route path="admin" element={<AdministrationManager />} />
                       <Route path="statistics" element={<Statistics />} />
-                      <Route path="financiero" element={<FinancialDashboard />} />
-                      <Route path="settings" element={<Settings />} />
-                      <Route path="foods" element={<Foods />} />
-                      <Route path="recipes" element={<Recipes />} />
                     </Route>
 
                   <Route path="*" element={<Navigate to="/" replace />} />

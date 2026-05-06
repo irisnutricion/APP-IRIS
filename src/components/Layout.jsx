@@ -72,16 +72,11 @@ const Sidebar = ({ isOpen, onClose }) => {
         { icon: Users, label: 'Clientes', path: '/patients', adminOnly: false },
         { icon: Activity, label: 'Seguimiento', path: '/tracking', adminOnly: false },
         { icon: ClipboardList, label: 'Tareas', path: '/tasks', adminOnly: false },
-        { icon: FileText, label: 'Plantillas', path: '/recommendations', adminOnly: false },
-        { icon: UtensilsCrossed, label: 'Plantillas Planes', path: '/templates', adminOnly: false },
-        { icon: Repeat, label: 'Renovaciones', path: '/renewals', adminOnly: true },
-        { icon: Wallet, label: 'Pagos', path: '/payments', adminOnly: true },
-        { icon: UsersRound, label: 'Equipo', path: '/team', adminOnly: true },
+        { icon: FileText, label: 'Plantillas', path: '/templates', adminOnly: false },
+        { icon: Wallet, label: 'Contabilidad', path: '/accounting', adminOnly: true },
+        { icon: Apple, label: 'Bases de Datos', path: '/database', adminOnly: true },
         { icon: PieChart, label: 'Estadísticas', path: '/statistics', adminOnly: true },
-        { icon: TrendingUp, label: 'Financiero', path: '/financiero', adminOnly: true },
-        { icon: Settings, label: 'Configuración', path: '/settings', adminOnly: true },
-        { icon: Apple, label: 'Alimentos', path: '/foods', adminOnly: true },
-        { icon: ChefHat, label: 'Recetas', path: '/recipes', adminOnly: true },
+        { icon: Settings, label: 'Administración', path: '/admin', adminOnly: true },
     ];
 
     const navItems = allNavItems.filter(item => isAdmin || !item.adminOnly);

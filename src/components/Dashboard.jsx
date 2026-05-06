@@ -182,7 +182,7 @@ const Dashboard = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     <QuickAction icon={UserPlus} label="Nuevo Cliente" to="/patients/new" color="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400" />
                     <QuickAction icon={Utensils} label="Planes Nutricionales" to="/patients" color="bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400" />
-                    <QuickAction icon={DollarSign} label="Gestión de Pagos" to="/payments" color="bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400" />
+                    <QuickAction icon={DollarSign} label="Gestión de Pagos" to="/accounting" color="bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400" />
                     <QuickAction icon={CheckSquare} label="Mis Tareas" to="/tasks" color="bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400" />
                 </div>
             </div>

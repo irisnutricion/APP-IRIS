@@ -9,14 +9,11 @@ const PAGES = [
     { label: 'Nuevo Cliente', path: '/patients/new', icon: Users, type: 'page' },
     { label: 'Seguimiento', path: '/tracking', icon: Activity, type: 'page' },
     { label: 'Tareas', path: '/tasks', icon: ClipboardList, type: 'page' },
-    { label: 'Plantillas', path: '/recommendations', icon: FileText, type: 'page' },
-    { label: 'Renovaciones', path: '/renewals', icon: Repeat, type: 'page' },
-    { label: 'Pagos', path: '/payments', icon: Wallet, type: 'page' },
-    { label: 'Equipo', path: '/team', icon: UsersRound, type: 'page' },
+    { label: 'Plantillas', path: '/templates', icon: FileText, type: 'page' },
+    { label: 'Contabilidad', path: '/accounting', icon: Wallet, type: 'page' },
+    { label: 'Bases de Datos', path: '/database', icon: Apple, type: 'page' },
     { label: 'Estadísticas', path: '/statistics', icon: PieChart, type: 'page' },
-    { label: 'Configuración', path: '/settings', icon: Settings, type: 'page' },
-    { label: 'Alimentos', path: '/foods', icon: Apple, type: 'page' },
-    { label: 'Recetas', path: '/recipes', icon: ChefHat, type: 'page' },
+    { label: 'Administración', path: '/admin', icon: Settings, type: 'page' },
 ];
 
 export default function CommandPalette({ isOpen, onClose }) {
