@@ -332,7 +332,8 @@ const PatientList = () => {
                                                         
                                                         const daysRemaining = Math.max(0, getProjectedDaysRemaining(patient));
                                                         const totalDays = Math.max(1, differenceInDays(parseISO(projectedEnd), parseISO(start)));
-                                                        const percentage = Math.min(100, Math.max(0, (daysRemaining / totalDays) * 100));
+                                                        const daysElapsed = Math.max(0, totalDays - daysRemaining);
+                                                        const percentage = Math.min(100, Math.max(0, (daysElapsed / totalDays) * 100));
                                                         
                                                         let colorClass = 'bg-green-500';
                                                         if (daysRemaining <= 7) colorClass = 'bg-red-500';
@@ -469,7 +470,8 @@ const PatientList = () => {
                                                                 
                                                                 const daysRemaining = Math.max(0, getProjectedDaysRemaining(p));
                                                                 const totalDays = Math.max(1, differenceInDays(parseISO(projectedEnd), parseISO(start)));
-                                                                const percentage = Math.min(100, Math.max(0, (daysRemaining / totalDays) * 100));
+                                                                const daysElapsed = Math.max(0, totalDays - daysRemaining);
+                                                                const percentage = Math.min(100, Math.max(0, (daysElapsed / totalDays) * 100));
                                                                 
                                                                 let colorClass = 'bg-green-500';
                                                                 if (daysRemaining <= 7) colorClass = 'bg-red-500';
