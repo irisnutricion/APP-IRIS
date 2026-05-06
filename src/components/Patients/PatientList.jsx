@@ -324,6 +324,26 @@ const PatientList = () => {
                                                             </span>
                                                         )}
                                                     </div>
+                                                    {/* Progress Bar */}
+                                                    {(() => {
+                                                        const projectedEnd = getProjectedEndDateStr(patient) || patient.subscription?.endDate;
+                                                        const start = patient.subscription?.startDate || patient.subscription_start;
+                                                        if (!projectedEnd || !start) return null;
+                                                        
+                                                        const daysRemaining = Math.max(0, getProjectedDaysRemaining(patient));
+                                                        const totalDays = Math.max(1, differenceInDays(parseISO(projectedEnd), parseISO(start)));
+                                                        const percentage = Math.min(100, Math.max(0, (daysRemaining / totalDays) * 100));
+                                                        
+                                                        let colorClass = 'bg-green-500';
+                                                        if (daysRemaining <= 7) colorClass = 'bg-red-500';
+                                                        else if (daysRemaining <= 14) colorClass = 'bg-orange-500';
+                                                        
+                                                        return (
+                                                            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 mt-1.5 overflow-hidden shadow-inner">
+                                                                <div className={`h-1.5 rounded-full ${colorClass} transition-all duration-500`} style={{ width: `${percentage}%` }}></div>
+                                                            </div>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </div>
                                         ))}
@@ -434,11 +454,33 @@ const PatientList = () => {
                                             {activeTab === 'online' && (
                                                 <td className="text-sm font-mono text-muted">
                                                     {(getProjectedEndDateStr(p) || p.subscription?.endDate) ? (
-                                                        <div className="flex flex-col">
-                                                            <span>{format(parseISO(getProjectedEndDateStr(p) || p.subscription.endDate), 'dd/MM/yyyy')}</span>
-                                                            <span className="text-xs text-slate-400">
-                                                                {Math.max(0, getProjectedDaysRemaining(p))} días rest.
-                                                            </span>
+                                                        <div className="flex flex-col w-full max-w-[120px]">
+                                                            <div className="flex justify-between items-center w-full">
+                                                                <span>{format(parseISO(getProjectedEndDateStr(p) || p.subscription.endDate), 'dd/MM/yyyy')}</span>
+                                                                <span className="text-xs text-slate-400">
+                                                                    {Math.max(0, getProjectedDaysRemaining(p))}d
+                                                                </span>
+                                                            </div>
+                                                            {/* Progress Bar */}
+                                                            {(() => {
+                                                                const projectedEnd = getProjectedEndDateStr(p) || p.subscription?.endDate;
+                                                                const start = p.subscription?.startDate || p.subscription_start;
+                                                                if (!projectedEnd || !start) return null;
+                                                                
+                                                                const daysRemaining = Math.max(0, getProjectedDaysRemaining(p));
+                                                                const totalDays = Math.max(1, differenceInDays(parseISO(projectedEnd), parseISO(start)));
+                                                                const percentage = Math.min(100, Math.max(0, (daysRemaining / totalDays) * 100));
+                                                                
+                                                                let colorClass = 'bg-green-500';
+                                                                if (daysRemaining <= 7) colorClass = 'bg-red-500';
+                                                                else if (daysRemaining <= 14) colorClass = 'bg-orange-500';
+                                                                
+                                                                return (
+                                                                    <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1 mt-1 overflow-hidden">
+                                                                        <div className={`h-1 rounded-full ${colorClass} transition-all duration-500`} style={{ width: `${percentage}%` }}></div>
+                                                                    </div>
+                                                                );
+                                                            })()}
                                                         </div>
                                                     ) : '-'}
                                                 </td>

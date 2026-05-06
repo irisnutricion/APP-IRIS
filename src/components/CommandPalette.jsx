@@ -9,11 +9,16 @@ const PAGES = [
     { label: 'Nuevo Cliente', path: '/patients/new', icon: Users, type: 'page' },
     { label: 'Seguimiento', path: '/tracking', icon: Activity, type: 'page' },
     { label: 'Tareas', path: '/tasks', icon: ClipboardList, type: 'page' },
-    { label: 'Plantillas', path: '/templates', icon: FileText, type: 'page' },
-    { label: 'Contabilidad', path: '/accounting', icon: Wallet, type: 'page' },
-    { label: 'Bases de Datos', path: '/database', icon: Apple, type: 'page' },
+    { label: 'Plantillas', path: '/templates?tab=planes', icon: FileText, type: 'page' },
+    { label: 'Textos de Recomendaciones', path: '/templates?tab=recomendaciones', icon: FileText, type: 'page' },
+    { label: 'Contabilidad (Financiero)', path: '/accounting?tab=financiero', icon: Wallet, type: 'page' },
+    { label: 'Pagos', path: '/accounting?tab=pagos', icon: Wallet, type: 'page' },
+    { label: 'Renovaciones', path: '/accounting?tab=renovaciones', icon: Repeat, type: 'page' },
+    { label: 'Bases de Datos (Alimentos)', path: '/database?tab=alimentos', icon: Apple, type: 'page' },
+    { label: 'Recetas', path: '/database?tab=recetas', icon: ChefHat, type: 'page' },
     { label: 'Estadísticas', path: '/statistics', icon: PieChart, type: 'page' },
-    { label: 'Administración', path: '/admin', icon: Settings, type: 'page' },
+    { label: 'Administración (Config)', path: '/admin?tab=configuracion', icon: Settings, type: 'page' },
+    { label: 'Equipo', path: '/admin?tab=equipo', icon: UsersRound, type: 'page' },
 ];
 
 export default function CommandPalette({ isOpen, onClose }) {
