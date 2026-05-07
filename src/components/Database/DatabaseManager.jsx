@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Apple, ChefHat } from 'lucide-react';
 import Foods from '../Foods/Foods';
@@ -9,18 +9,10 @@ export default function DatabaseManager() {
     const tabFromUrl = searchParams.get('tab');
     const validTabs = ['alimentos', 'recetas'];
     
-    const [activeTab, setActiveTab] = useState(
-        (tabFromUrl && validTabs.includes(tabFromUrl)) ? tabFromUrl : 'alimentos'
-    );
-
-    useEffect(() => {
-        if (tabFromUrl && validTabs.includes(tabFromUrl)) {
-            setActiveTab(tabFromUrl);
-        }
-    }, [tabFromUrl]);
+    // Derive state directly
+    const activeTab = (tabFromUrl && validTabs.includes(tabFromUrl)) ? tabFromUrl : 'alimentos';
 
     const handleTabChange = (tab) => {
-        setActiveTab(tab);
         setSearchParams({ tab });
     };
 

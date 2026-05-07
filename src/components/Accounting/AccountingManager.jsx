@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Wallet, TrendingUp, Repeat } from 'lucide-react';
 import Payments from '../Payments/Payments';
@@ -11,19 +11,11 @@ export default function AccountingManager() {
     const tabFromUrl = searchParams.get('tab');
     const validTabs = ['financiero', 'pagos', 'renovaciones'];
 
-    const [activeTab, setActiveTab] = useState(
-        (tabFromUrl && validTabs.includes(tabFromUrl)) ? tabFromUrl : 'financiero'
-    );
+    // Derive state directly
+    const activeTab = (tabFromUrl && validTabs.includes(tabFromUrl)) ? tabFromUrl : 'financiero';
     const { isAdmin } = useAuth();
 
-    useEffect(() => {
-        if (tabFromUrl && validTabs.includes(tabFromUrl)) {
-            setActiveTab(tabFromUrl);
-        }
-    }, [tabFromUrl]);
-
     const handleTabChange = (tab) => {
-        setActiveTab(tab);
         setSearchParams({ tab });
     };
 

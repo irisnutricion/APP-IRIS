@@ -31,14 +31,13 @@ const iconBg = {
 export default function AlertsWidget() {
     const { patients = [], payments = [], patientVouchers = [] } = useData();
     const navigate = useNavigate();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
     const alerts = useMemo(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
         const result = [];
 
         patients.forEach(p => {
-            const name = `${p.first_name} ${p.last_name}`;
+            const name = p.name;
             const isActive = p.subscription_status === 'active' || p.subscription_status === 'warning';
 
             // 1. Subscription expiring in ≤7 days

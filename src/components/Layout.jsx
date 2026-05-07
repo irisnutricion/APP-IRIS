@@ -145,6 +145,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 };
 
 export default function Layout() {
+    const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [paletteOpen, setPaletteOpen] = useState(false);
     const { signOut } = useAuth();
@@ -199,9 +200,9 @@ export default function Layout() {
 
             {/* Mobile Bottom Navigation */}
             <div className="md:hidden fixed bottom-0 left-0 right-0 h-[calc(4rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] bg-white border-t border-slate-200 flex items-center justify-around z-40 dark:bg-slate-900 dark:border-slate-800">
-                <BottomNavItem icon={LayoutDashboard} label="Inicio" path="/" active={useLocation().pathname === '/'} />
-                <BottomNavItem icon={Users} label="Clientes" path="/patients" active={useLocation().pathname.startsWith('/patients')} />
-                <BottomNavItem icon={CalendarDays} label="Citas" path="/calendar" active={useLocation().pathname.startsWith('/calendar')} />
+                <BottomNavItem icon={LayoutDashboard} label="Inicio" path="/" active={location.pathname === '/'} />
+                <BottomNavItem icon={Users} label="Clientes" path="/patients" active={location.pathname.startsWith('/patients')} />
+                <BottomNavItem icon={CalendarDays} label="Citas" path="/calendar" active={location.pathname.startsWith('/calendar')} />
                 <button
                     onClick={() => setSidebarOpen(true)}
                     className="flex flex-col items-center justify-center w-full h-full space-y-1 text-slate-500 hover:text-slate-900 dark:text-slate-400 transition-colors"

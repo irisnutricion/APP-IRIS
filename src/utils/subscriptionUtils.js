@@ -48,7 +48,7 @@ export const calculateSubscriptionTerms = (patient, payments = []) => {
             const payment = payments.find(p => p.subscription_id === sub.id);
 
             const today = new Date().toISOString().split('T')[0];
-            const isCurrentTime = sub.start_date <= today && sub.end_date >= today;
+            const isCurrentTime = sub.start_date <= today && (!sub.end_date || sub.end_date >= today);
             const isFuture = sub.start_date > today;
 
             let derivedStatus = 'archived';

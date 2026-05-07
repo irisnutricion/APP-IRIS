@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FileText, UtensilsCrossed } from 'lucide-react';
 import Templates from '../Plans/Templates';
@@ -9,18 +9,10 @@ export default function TemplatesManager() {
     const tabFromUrl = searchParams.get('tab');
     const validTabs = ['planes', 'recomendaciones'];
 
-    const [activeTab, setActiveTab] = useState(
-        (tabFromUrl && validTabs.includes(tabFromUrl)) ? tabFromUrl : 'planes'
-    );
-
-    useEffect(() => {
-        if (tabFromUrl && validTabs.includes(tabFromUrl)) {
-            setActiveTab(tabFromUrl);
-        }
-    }, [tabFromUrl]);
+    // Derive state directly
+    const activeTab = (tabFromUrl && validTabs.includes(tabFromUrl)) ? tabFromUrl : 'planes';
 
     const handleTabChange = (tab) => {
-        setActiveTab(tab);
         setSearchParams({ tab });
     };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Settings, UsersRound } from 'lucide-react';
 import SettingsComponent from '../Settings/Settings';
@@ -9,18 +9,10 @@ export default function AdministrationManager() {
     const tabFromUrl = searchParams.get('tab');
     const validTabs = ['configuracion', 'equipo'];
 
-    const [activeTab, setActiveTab] = useState(
-        (tabFromUrl && validTabs.includes(tabFromUrl)) ? tabFromUrl : 'configuracion'
-    );
-
-    useEffect(() => {
-        if (tabFromUrl && validTabs.includes(tabFromUrl)) {
-            setActiveTab(tabFromUrl);
-        }
-    }, [tabFromUrl]);
+    // Derive state directly
+    const activeTab = (tabFromUrl && validTabs.includes(tabFromUrl)) ? tabFromUrl : 'configuracion';
 
     const handleTabChange = (tab) => {
-        setActiveTab(tab);
         setSearchParams({ tab });
     };
 

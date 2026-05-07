@@ -219,8 +219,6 @@ export const DataProvider = ({ children }) => {
             if (appointmentsResult.status === 'fulfilled') setAppointments(appointmentsResult.value.data || []);
             if (voucherTypesResult.status === 'fulfilled') setVoucherTypes(voucherTypesResult.value.data || []);
             if (patientVouchersResult.status === 'fulfilled') setPatientVouchers(patientVouchersResult.value.data || []);
-            if (voucherTypesResult.status === 'fulfilled') setVoucherTypes(voucherTypesResult.value.data || []);
-            if (patientVouchersResult.status === 'fulfilled') setPatientVouchers(patientVouchersResult.value.data || []);
 
             if (reviewsResult.status === 'fulfilled' && reviewsResult.value.data) {
                 const reviewsObj = reviewsResult.value.data.reduce((acc, r) => {
@@ -833,16 +831,16 @@ export const DataProvider = ({ children }) => {
     const updateMeasurement = async (measurementId, patientId, updates) => {
         const dbUpdates = {
             date: updates.date || undefined,
-            weight: updates.weight ? parseFloat(updates.weight) : null,
-            pecho: updates.pecho ? parseFloat(updates.pecho) : null,
-            brazo_izq: updates.brazo_izq ? parseFloat(updates.brazo_izq) : null,
-            brazo_der: updates.brazo_der ? parseFloat(updates.brazo_der) : null,
-            sobre_ombligo: updates.sobre_ombligo ? parseFloat(updates.sobre_ombligo) : null,
-            ombligo: updates.ombligo ? parseFloat(updates.ombligo) : null,
-            bajo_ombligo: updates.bajo_ombligo ? parseFloat(updates.bajo_ombligo) : null,
-            cadera: updates.cadera ? parseFloat(updates.cadera) : null,
-            muslo_izq: updates.muslo_izq ? parseFloat(updates.muslo_izq) : null,
-            muslo_der: updates.muslo_der ? parseFloat(updates.muslo_der) : null,
+            weight: updates.weight !== undefined && updates.weight !== '' ? parseFloat(updates.weight) : null,
+            pecho: updates.pecho !== undefined && updates.pecho !== '' ? parseFloat(updates.pecho) : null,
+            brazo_izq: updates.brazo_izq !== undefined && updates.brazo_izq !== '' ? parseFloat(updates.brazo_izq) : null,
+            brazo_der: updates.brazo_der !== undefined && updates.brazo_der !== '' ? parseFloat(updates.brazo_der) : null,
+            sobre_ombligo: updates.sobre_ombligo !== undefined && updates.sobre_ombligo !== '' ? parseFloat(updates.sobre_ombligo) : null,
+            ombligo: updates.ombligo !== undefined && updates.ombligo !== '' ? parseFloat(updates.ombligo) : null,
+            bajo_ombligo: updates.bajo_ombligo !== undefined && updates.bajo_ombligo !== '' ? parseFloat(updates.bajo_ombligo) : null,
+            cadera: updates.cadera !== undefined && updates.cadera !== '' ? parseFloat(updates.cadera) : null,
+            muslo_izq: updates.muslo_izq !== undefined && updates.muslo_izq !== '' ? parseFloat(updates.muslo_izq) : null,
+            muslo_der: updates.muslo_der !== undefined && updates.muslo_der !== '' ? parseFloat(updates.muslo_der) : null,
             photo: updates.photo !== undefined ? updates.photo : undefined
         };
         // Remove undefined values
@@ -1275,7 +1273,7 @@ export const DataProvider = ({ children }) => {
     const cloneMealPlan = async (sourcePlanId, overrides = {}) => {
         const sourcePlan = mealPlans.find(p => p.id === sourcePlanId);
         if (!sourcePlan) return null;
-        const { id, created_at, ...planData } = sourcePlan;
+        const { id: _id, created_at: _created_at, ...planData } = sourcePlan;
         const newPlan = await addMealPlan({ ...planData, ...overrides, is_template: false });
         if (!newPlan) return null;
         const sourceItems = mealPlanItems.filter(i => i.plan_id === sourcePlanId);
@@ -1813,7 +1811,7 @@ export const DataProvider = ({ children }) => {
                     patient_id: patientId,
                     amount: type.price,
                     date: format(new Date(), 'yyyy-MM-dd'),
-                    payment_method_id: 'efectivo', // Default to cash or general
+                    payment_method: paymentMethods && paymentMethods.length > 0 ? paymentMethods[0].id : 'efectivo', // Provide safe fallback
                     payment_category_id: type.category_id || null, // Ensure category matches
                     status: 'pendiente',
                     notes: `Bono: ${type.name}`

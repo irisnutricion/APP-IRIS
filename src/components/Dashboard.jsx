@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { Users, Clock, AlertTriangle, Plus, ChevronDown, MoreVertical, Search, Filter, TrendingUp, TrendingDown, CheckSquare, Square, DollarSign, UserPlus, Utensils, ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { addDays, isBefore, parseISO, format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { addDays, parseISO, format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '../context/AuthContext';
 import { Bar, Line } from 'react-chartjs-2';
@@ -29,10 +29,10 @@ const MetricItem = ({ title, value, change, isPositive, icon: Icon }) => (
     </div>
 );
 
-const QuickAction = ({ icon: Icon, label, to, color }) => (
+const QuickAction = ({ icon: ActionIcon, label, to, color }) => (
     <Link to={to} className={`flex items-center gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all group bg-white dark:bg-slate-800`}>
         <div className={`p-2 rounded-lg ${color}`}>
-            <Icon size={18} />
+            <ActionIcon size={18} />
         </div>
         <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white">{label}</span>
         <ArrowRight size={14} className="ml-auto text-slate-300 group-hover:text-primary-500 transition-colors" />
