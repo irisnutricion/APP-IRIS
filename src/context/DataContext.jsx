@@ -77,13 +77,30 @@ export const DataProvider = ({ children }) => {
     const [mealPlanItems, setMealPlanItems] = useState([]);
     const [indicationTemplates, setIndicationTemplates] = useState([]);
     const [recipePhrases, setRecipePhrases] = useState([]);
+    const fetchAllPaginated = async (queryFn) => {
+        let allData = [];
+        let from = 0;
+        const step = 1000;
+        while (true) {
+            const { data, error } = await queryFn().range(from, from + step - 1);
+            if (error) return { data: null, error };
+            if (data && data.length > 0) {
+                allData = [...allData, ...data];
+                from += step;
+                if (data.length < step) break;
+            } else {
+                break;
+            }
+        }
+        return { data: allData, error: null };
+    };
 
     const fetchData = useCallback(async (background = false) => {
         if (!background) setLoading(true);
         try {
             // Parallel fetching with allSettled to prevent one failure from blocking everything
             const results = await Promise.allSettled([
-                supabase.from('patients').select('*, payment_category_id, measurements(*), days_remaining'),
+                fetchAllPaginated(() => supabase.from('patients').select('*, payment_category_id, measurements(*), days_remaining')),
 
                 supabase.from('plans').select('*'),
                 supabase.from('tasks').select('*'),
@@ -102,31 +119,11 @@ export const DataProvider = ({ children }) => {
                 supabase.from('payment_rates').select('*').order('amount', { ascending: true }),
                 supabase.from('subscription_extensions').select('*').order('created_at', { ascending: false }),
                 supabase.from('nutritionists').select('*').order('label', { ascending: true }),
-                supabase.from('foods').select('*').order('name', { ascending: true }),
+                fetchAllPaginated(() => supabase.from('foods').select('*').order('name', { ascending: true })),
                 supabase.from('recipe_categories').select('*').order('label', { ascending: true }),
-                supabase.from('recipes').select('*, recipe_category_links(category_id), recipe_ingredients(*, foods(*)))').order('name', { ascending: true }),
-                supabase.from('meal_plans').select('*').order('created_at', { ascending: false }),
-                (async () => {
-                    let allData = [];
-                    let from = 0;
-                    const step = 1000;
-                    while (true) {
-                        const { data, error } = await supabase
-                            .from('meal_plan_items')
-                            .select('*, recipes(*, recipe_ingredients(*, foods(*)))')
-                            .order('sort_order', { ascending: true })
-                            .range(from, from + step - 1);
-                        if (error) return { data: null, error };
-                        if (data && data.length > 0) {
-                            allData = [...allData, ...data];
-                            from += step;
-                            if (data.length < step) break;
-                        } else {
-                            break;
-                        }
-                    }
-                    return { data: allData, error: null };
-                })(),
+                fetchAllPaginated(() => supabase.from('recipes').select('*, recipe_category_links(category_id), recipe_ingredients(*, foods(*)))').order('name', { ascending: true })),
+                fetchAllPaginated(() => supabase.from('meal_plans').select('*').order('created_at', { ascending: false })),
+                fetchAllPaginated(() => supabase.from('meal_plan_items').select('*, recipes(*, recipe_ingredients(*, foods(*)))').order('sort_order', { ascending: true })),
                 supabase.from('indication_templates').select('*'),
                 supabase.from('recipe_phrases').select('*').order('name', { ascending: true }),
                 supabase.from('appointment_types').select('*').order('name', { ascending: true }),
