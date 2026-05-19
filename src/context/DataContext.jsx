@@ -3,8 +3,10 @@ import { addDays, differenceInDays, parseISO, format } from 'date-fns';
 import { supabase } from '../supabaseClient';
 import { useAuth } from './AuthContext';
 
-export const calculateDynamicPatientStatus = (dbStatus, startDateStr, endDateStr, history = [], modality = 'online') => {
+export const calculateDynamicPatientStatus = (dbStatus, startDateStr, endDateStr, history = [], modality = 'online', hasPendingPayment = false) => {
     if (modality === 'presencial') return 'active';
+    if (hasPendingPayment) return 'pending_payment';
+
     if (['pending_payment', 'paused', 'finished'].includes(dbStatus)) {
         return dbStatus;
     }
@@ -104,7 +106,27 @@ export const DataProvider = ({ children }) => {
                 supabase.from('recipe_categories').select('*').order('label', { ascending: true }),
                 supabase.from('recipes').select('*, recipe_category_links(category_id), recipe_ingredients(*, foods(*)))').order('name', { ascending: true }),
                 supabase.from('meal_plans').select('*').order('created_at', { ascending: false }),
-                supabase.from('meal_plan_items').select('*, recipes(*, recipe_ingredients(*, foods(*)))').order('sort_order', { ascending: true }),
+                (async () => {
+                    let allData = [];
+                    let from = 0;
+                    const step = 1000;
+                    while (true) {
+                        const { data, error } = await supabase
+                            .from('meal_plan_items')
+                            .select('*, recipes(*, recipe_ingredients(*, foods(*)))')
+                            .order('sort_order', { ascending: true })
+                            .range(from, from + step - 1);
+                        if (error) return { data: null, error };
+                        if (data && data.length > 0) {
+                            allData = [...allData, ...data];
+                            from += step;
+                            if (data.length < step) break;
+                        } else {
+                            break;
+                        }
+                    }
+                    return { data: allData, error: null };
+                })(),
                 supabase.from('indication_templates').select('*'),
                 supabase.from('recipe_phrases').select('*').order('name', { ascending: true }),
                 supabase.from('appointment_types').select('*').order('name', { ascending: true }),
@@ -157,13 +179,17 @@ export const DataProvider = ({ children }) => {
             if (patientsResult.status === 'fulfilled' && patientsResult.value.data) {
                 const patientsData = patientsResult.value.data;
                 const subscriptionsHistoryData = subscriptionsHistoryResult.status === 'fulfilled' ? subscriptionsHistoryResult.value.data : [];
+                const paymentsData = paymentsResult.status === 'fulfilled' ? paymentsResult.value.data : [];
 
                 const hydratedPatients = patientsData.map(p => {
                     const mappedHistory = subscriptionsHistoryData ?
                         subscriptionsHistoryData.filter(h => h.patient_id === p.id).sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
                         : [];
 
-                    const dynamicStatus = calculateDynamicPatientStatus(p.subscription_status, p.subscription_start, p.subscription_end, mappedHistory, p.modality || 'online');
+                    const patientPayments = paymentsData.filter(pay => pay.patient_id === p.id);
+                    const hasPendingPayment = patientPayments.some(pay => pay.status === 'pendiente');
+
+                    const dynamicStatus = calculateDynamicPatientStatus(p.subscription_status, p.subscription_start, p.subscription_end, mappedHistory, p.modality || 'online', hasPendingPayment);
 
                     return {
                         ...p,
