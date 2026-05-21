@@ -23,7 +23,7 @@ export default function CopyPlanModal({ plan, isOpen, onClose }) {
         if (!selectedPatientId || !plan) return;
         setCopying(true);
         try {
-            await cloneMealPlan(plan.id, selectedPatientId);
+            await cloneMealPlan(plan.id, { patient_id: selectedPatientId });
             showToast('Plan duplicado correctamente', 'success');
             onClose();
         } catch (err) {

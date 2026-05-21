@@ -1297,14 +1297,14 @@ export const DataProvider = ({ children }) => {
         const sourcePlan = mealPlans.find(p => p.id === sourcePlanId);
         if (!sourcePlan) return null;
         const { id: _id, created_at: _created_at, ...planData } = sourcePlan;
-        const newPlan = await addMealPlan({ ...planData, ...overrides, is_template: false });
+        const newPlan = await addMealPlan({ ...planData, is_template: false, ...overrides });
         if (!newPlan) return null;
         const sourceItems = mealPlanItems.filter(i => i.plan_id === sourcePlanId);
         const newItems = sourceItems.map(item => ({
             meal_name: item.meal_name,
             day_of_week: item.day_of_week,
             sort_order: item.sort_order,
-            recipe_id: item.recipe_id,
+            recipe_id: item.custom_recipe_data ? null : (item.recipe_id || null),
             free_text: item.free_text,
             custom_recipe_data: item.custom_recipe_data ? JSON.parse(JSON.stringify(item.custom_recipe_data)) : null,
         }));
