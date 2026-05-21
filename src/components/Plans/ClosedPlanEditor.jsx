@@ -556,7 +556,27 @@ export default function ClosedPlanEditor({ plan, items, onBack, onSaveItems, onU
                             const patient = patients.find(p => p.id === plan.patient_id);
                             setIsGeneratingPdf(true);
                             try {
-                                const result = await generatePlanPdf(plan, items, userProfile, patient);
+                                const currentItems = [];
+                                DAYS.forEach((_, d) => {
+                                    mealNames.forEach(meal => {
+                                        const key = `${d + 1}_${meal}`;
+                                        const cell = gridRef.current[key];
+                                        if (cell) {
+                                            currentItems.push({
+                                                meal_name: meal,
+                                                day_of_week: d + 1,
+                                                sort_order: 0,
+                                                recipe_id: cell.custom_recipe_data ? null : (cell.recipe_id || null),
+                                                free_text: cell.free_text || null,
+                                                custom_recipe_data: cell.custom_recipe_data || null,
+                                                recipes: cell.recipes || null
+                                            });
+                                        }
+                                    });
+                                });
+
+                                const currentPlan = { ...plan, indications: planIndications };
+                                const result = await generatePlanPdf(currentPlan, currentItems, userProfile, patient);
                                 if (result?.driveUploaded) {
                                     showToast('Plan descargado y guardado en Drive ✅', 'success');
                                 } else if (patient?.drive_folder_id && !result?.driveUploaded) {
