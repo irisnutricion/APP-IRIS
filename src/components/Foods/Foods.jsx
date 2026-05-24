@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
-import { Plus, Search, Pencil, Trash2, Apple, Copy } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, Apple, Copy, Download } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import FoodModal, { ALL_TAGS } from './FoodModal';
+import { downloadCSV } from '../../utils/exportCsv';
 
 export default function Foods() {
     const { foods = [], addFood, updateFood, deleteFood, nutritionists = [] } = useData();
@@ -68,6 +69,19 @@ export default function Foods() {
         return nutri?.profiles?.full_name || nutri?.label || nutriId;
     };
 
+    const handleExportCSV = () => {
+        const columns = [
+            { header: 'Nombre', key: 'name' },
+            { header: 'Kcal (100g)', key: 'kcal_per_100g' },
+            { header: 'Hidratos (g)', key: 'carbs_per_100g' },
+            { header: 'Proteínas (g)', key: 'protein_per_100g' },
+            { header: 'Grasas (g)', key: 'fat_per_100g' },
+            { header: 'Etiquetas', getValue: (food) => (food.tags || []).map(tId => ALL_TAGS.find(t => t.id === tId)?.label).filter(Boolean).join('; ') },
+            { header: 'Creador', getValue: (food) => getCreatorName(food.nutritionist_id) }
+        ];
+        downloadCSV('alimentos', filteredFoods, columns);
+    };
+
     return (
         <div className="dashboard-container">
             {/* Header */}
@@ -83,6 +97,9 @@ export default function Foods() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        <button onClick={handleExportCSV} className="btn btn-outline" title="Exportar a CSV">
+                            <Download size={18} /> <span className="hidden sm:inline">Exportar</span>
+                        </button>
                         <button onClick={handleNew} className="btn btn-primary">
                             <Plus size={18} /> Añadir alimento
                         </button>
