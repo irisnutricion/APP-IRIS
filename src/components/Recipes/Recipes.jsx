@@ -115,6 +115,18 @@ export default function Recipes() {
         const columns = [
             { header: 'Nombre', key: 'name' },
             { 
+                header: 'Alimentos', 
+                getValue: (recipe) => (recipe.recipe_ingredients || []).map(ri => (ri.foods || ri.food)?.name).filter(Boolean).join('; ') 
+            },
+            { 
+                header: 'Cantidades', 
+                getValue: (recipe) => (recipe.recipe_ingredients || []).map(ri => ri.quantity_grams ? `${ri.quantity_grams}g` : '').filter(Boolean).join('; ') 
+            },
+            { 
+                header: 'Notas', 
+                getValue: (recipe) => recipe.description || ''
+            },
+            { 
                 header: 'Kcal', 
                 getValue: (recipe) => Math.round(calcRecipeMacros(recipe).kcal) 
             },
