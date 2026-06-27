@@ -125,34 +125,6 @@ export default function Recipes() {
             { 
                 header: 'Notas', 
                 getValue: (recipe) => recipe.description || ''
-            },
-            { 
-                header: 'Kcal', 
-                getValue: (recipe) => Math.round(calcRecipeMacros(recipe).kcal) 
-            },
-            { 
-                header: 'Hidratos (g)', 
-                getValue: (recipe) => calcRecipeMacros(recipe).carbs.toFixed(1) 
-            },
-            { 
-                header: 'Proteínas (g)', 
-                getValue: (recipe) => calcRecipeMacros(recipe).protein.toFixed(1) 
-            },
-            { 
-                header: 'Grasas (g)', 
-                getValue: (recipe) => calcRecipeMacros(recipe).fat.toFixed(1) 
-            },
-            { 
-                header: 'Categorías', 
-                getValue: (recipe) => (recipe.recipe_category_links || []).map(l => recipeCategories.find(c => c.id === l.category_id)?.label).filter(Boolean).join('; ') 
-            },
-            { 
-                header: 'Etiquetas', 
-                getValue: (recipe) => calcRecipeTags(recipe).map(tId => ALL_TAGS.find(t => t.id === tId)?.label).filter(Boolean).join('; ') 
-            },
-            { 
-                header: 'Creador', 
-                getValue: (recipe) => getCreatorName(recipe.nutritionist_id) 
             }
         ];
         downloadCSV('recetas', filteredRecipes, columns);
