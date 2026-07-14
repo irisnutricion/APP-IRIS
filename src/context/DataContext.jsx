@@ -121,7 +121,7 @@ export const DataProvider = ({ children }) => {
                 supabase.from('nutritionists').select('*').order('label', { ascending: true }),
                 fetchAllPaginated(() => supabase.from('foods').select('*').order('name', { ascending: true }).order('id', { ascending: true })),
                 supabase.from('recipe_categories').select('*').order('label', { ascending: true }),
-                fetchAllPaginated(() => supabase.from('recipes').select('*, recipe_category_links(category_id), recipe_ingredients(*, foods(*)))').order('name', { ascending: true }).order('id', { ascending: true })),
+                fetchAllPaginated(() => supabase.from('recipes').select('*, recipe_category_links(category_id), recipe_ingredients(*, foods(*))').order('name', { ascending: true }).order('id', { ascending: true })),
                 fetchAllPaginated(() => supabase.from('meal_plans').select('*').order('created_at', { ascending: false }).order('id', { ascending: true })),
                 fetchAllPaginated(() => supabase.from('meal_plan_items').select('*, recipes(*, recipe_ingredients(*, foods(*)))').order('sort_order', { ascending: true }).order('id', { ascending: true })),
                 supabase.from('indication_templates').select('*'),
