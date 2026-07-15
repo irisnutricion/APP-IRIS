@@ -392,7 +392,10 @@ export const DataProvider = ({ children }) => {
                     subscriptionHistory: updatedHistory,
                 };
             }));
+            return data;
         }
+        console.error('Error updating subscription history:', error);
+        return null;
     };
 
     const deleteSubscription = async (id) => {
