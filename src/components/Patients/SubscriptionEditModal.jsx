@@ -91,7 +91,6 @@ const SubscriptionEditModal = ({ isOpen, onClose, patient, subscriptionData, onS
             subscription_type_id: formData.subscriptionTypeId,
             payment_rate_id: formData.paymentRateId,
             plan_name: selectedType.label, // Legacy/Display
-            type: selectedType.label,     // Legacy/Display
             price: selectedRate.amount,
             start_date: formData.startDate,
             end_date: formData.endDate,
