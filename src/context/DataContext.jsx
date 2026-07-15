@@ -180,13 +180,32 @@ export const DataProvider = ({ children }) => {
 
                 const hydratedPatients = patientsData.map(p => {
                     const mappedHistory = subscriptionsHistoryData ?
-                        subscriptionsHistoryData.filter(h => h.patient_id === p.id).sort((a, b) => new Date(b.start_date) - new Date(a.start_date))
+                        subscriptionsHistoryData.filter(h => h.patient_id === p.id).sort((a, b) => {
+                            const dateA = new Date(a.end_date || a.start_date);
+                            const dateB = new Date(b.end_date || b.start_date);
+                            return dateB - dateA;
+                        })
                         : [];
 
                     const patientPayments = paymentsData.filter(pay => pay.patient_id === p.id);
                     const hasPendingPayment = patientPayments.some(pay => pay.status === 'pendiente');
 
-                    const dynamicStatus = calculateDynamicPatientStatus(p.subscription_status, p.subscription_start, p.subscription_end, mappedHistory, p.modality || 'online', hasPendingPayment);
+                    let subType = p.subscription_type;
+                    let subStart = p.subscription_start;
+                    let subEnd = p.subscription_end;
+                    let subTypeId = p.subscription_type_id;
+                    let paymentRateId = p.payment_rate_id;
+
+                    if (mappedHistory.length > 0) {
+                        const latest = mappedHistory[0];
+                        subType = latest.plan_name || subType;
+                        subStart = latest.start_date || subStart;
+                        subEnd = latest.end_date || subEnd;
+                        subTypeId = latest.subscription_type_id || subTypeId;
+                        paymentRateId = latest.payment_rate_id || paymentRateId;
+                    }
+
+                    const dynamicStatus = calculateDynamicPatientStatus(p.subscription_status, subStart, subEnd, mappedHistory, p.modality || 'online', hasPendingPayment);
 
                     return {
                         ...p,
@@ -199,13 +218,13 @@ export const DataProvider = ({ children }) => {
                         status: dynamicStatus, // Map to top-level status
                         review_day: p.review_day, // Explicitly map to ensure it's available
                         subscription: {
-                            type: p.subscription_type,
-                            startDate: p.subscription_start,
-                            endDate: p.subscription_end,
+                            type: subType,
+                            startDate: subStart,
+                            endDate: subEnd,
                             status: dynamicStatus,
                             pauseStartDate: p.pause_start_date,
-                            subscriptionTypeId: p.subscription_type_id,
-                            paymentRateId: p.payment_rate_id
+                            subscriptionTypeId: subTypeId,
+                            paymentRateId: paymentRateId
                         }
                     };
                 });
