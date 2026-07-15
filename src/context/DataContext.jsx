@@ -383,14 +383,70 @@ export const DataProvider = ({ children }) => {
     const updateSubscriptionHistory = async (id, updates) => {
         const { data, error } = await supabase.from('patient_subscriptions').update(updates).eq('id', id).select().single();
         if (!error && data) {
+            
+            // Re-evaluate patient's current subscription state based on updated history
+            const { data: latestHistory } = await supabase
+                .from('patient_subscriptions')
+                .select('*')
+                .eq('patient_id', data.patient_id)
+                .order('end_date', { ascending: false });
+
+            let patientUpdates = {};
+            let newSubscription = null;
+
+            if (latestHistory && latestHistory.length > 0) {
+                const latest = latestHistory[0];
+                const today = new Date().toISOString().split('T')[0];
+                let newStatus = latest.status;
+                if (latest.end_date && latest.end_date < today) {
+                    newStatus = 'inactive';
+                } else if (latest.start_date && latest.start_date > today) {
+                    newStatus = 'future';
+                }
+
+                patientUpdates = {
+                    subscription_status: newStatus,
+                    subscription_type: latest.plan_name,
+                    subscription_type_id: latest.subscription_type_id,
+                    payment_rate_id: latest.payment_rate_id,
+                    subscription_start: latest.start_date,
+                    subscription_end: latest.end_date,
+                    days_remaining: latest.end_date ? differenceInDays(parseISO(latest.end_date), new Date()) : null
+                };
+
+                newSubscription = {
+                    type: latest.plan_name,
+                    startDate: latest.start_date,
+                    endDate: latest.end_date,
+                    status: newStatus,
+                    subscriptionTypeId: latest.subscription_type_id,
+                    paymentRateId: latest.payment_rate_id
+                };
+                
+                await supabase.from('patients').update(patientUpdates).eq('id', data.patient_id);
+            }
+
             setPatients(prev => prev.map(p => {
                 if (p.id !== data.patient_id) return p;
+                
                 // Merge the updated subscription into history
                 const updatedHistory = p.subscriptionHistory?.map(h => h.id === id ? data : h) || [];
-                return {
+                
+                let mergedP = {
                     ...p,
+                    ...patientUpdates,
                     subscriptionHistory: updatedHistory,
                 };
+
+                if (newSubscription) {
+                    mergedP.subscription = {
+                        ...p.subscription,
+                        ...newSubscription,
+                        pauseStartDate: p.subscription?.pauseStartDate
+                    };
+                }
+                
+                return mergedP;
             }));
             return data;
         }
